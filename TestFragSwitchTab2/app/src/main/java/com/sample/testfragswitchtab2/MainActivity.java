@@ -18,6 +18,7 @@ public class MainActivity extends AppCompatActivity {
 		ViewPager2 viewPager2 = findViewById(R.id.view_pager2);
 		viewPager2.setAdapter(new FragmentFactoryAdapter(this));
 		viewPager2.setUserInputEnabled(false);
+		viewPager2.setCurrentItem(1,false);
 
 		new TabLayoutMediator(findViewById(R.id.tabs), viewPager2,
 				(tab, idx) -> tab.setText(idx==0 ? "初期設定" : "検索画面")
