@@ -14,6 +14,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter;
 
 import com.sample.testfragswitchtab2.R;
 import com.sample.testfragswitchtab2.ui.Frag1Init;
+import com.sample.testfragswitchtab2.ui.Frag2Search;
 
 /**
  * A [FragmentPagerAdapter] that returns a fragment corresponding to
@@ -27,9 +28,15 @@ public class FragmentFactoryAdapter extends FragmentStateAdapter {
 	@NonNull
 	@Override
 	public Fragment createFragment(int idx) {
-		if(idx==0) return Frag1Init.newInstance();
+		switch(idx) {
+			case 0:
+				return Frag1Init.newInstance();
+			case 1:
+				return Frag2Search.newInstance();
+		}
 
-		return PlaceholderFragment.newInstance(idx);
+		/* デフォルトは検索画面 */
+		return Frag2Search.newInstance();
 	}
 
 	@Override
