@@ -14,22 +14,22 @@ import android.view.ViewGroup;
 
 import com.sample.testfragswitchtab2.R;
 
-public class Frag1Init extends Fragment {
+public class Frag0Init extends Fragment {
 
-	private Frag1InitViewModel mViewModel;
+	private Frag0InitViewModel mViewModel;
 
-	public static Frag1Init newInstance() {
-		return new Frag1Init();
+	public static Frag0Init newInstance() {
+		return new Frag0Init();
 	}
 
 	@Override
 	public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-		return inflater.inflate(R.layout.frag1_init, container, false);
+		return inflater.inflate(R.layout.frag0_init, container, false);
 	}
 
 	@Override
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
-		mViewModel = new ViewModelProvider(this).get(Frag1InitViewModel.class);
+		mViewModel = new ViewModelProvider(this).get(Frag0InitViewModel.class);
 	}
 }
