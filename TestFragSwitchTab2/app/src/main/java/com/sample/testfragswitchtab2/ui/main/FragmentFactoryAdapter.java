@@ -1,6 +1,7 @@
 package com.sample.testfragswitchtab2.ui.main;
 
 import android.content.Context;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -12,19 +13,22 @@ import androidx.fragment.app.FragmentPagerAdapter;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 
 import com.sample.testfragswitchtab2.R;
+import com.sample.testfragswitchtab2.ui.Frag1Init;
 
 /**
  * A [FragmentPagerAdapter] that returns a fragment corresponding to
  * one of the sections/tabs/pages.
  */
-public class SectionsFragmentStateAdapter extends FragmentStateAdapter {
-	public SectionsFragmentStateAdapter(FragmentActivity activity) {
+public class FragmentFactoryAdapter extends FragmentStateAdapter {
+	public FragmentFactoryAdapter(FragmentActivity activity) {
 		super(activity);
 	}
 
 	@NonNull
 	@Override
 	public Fragment createFragment(int idx) {
+		if(idx==0) return Frag1Init.newInstance();
+
 		return PlaceholderFragment.newInstance(idx);
 	}
 
