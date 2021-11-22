@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:icon="@mipmap/ic_launcher"
+        android:title="タイトル1"/>
+
+    <item
+        android:icon="@mipmap/ic_launcher"
+        android:title="タイトル2"/>
+
+    <item
+        android:icon="@mipmap/ic_launcher"
+        android:title="タイトル3"/>
+
+    <item
+        android:icon="@mipmap/ic_launcher"
+        android:title="タイトル4"/>
+
+    <item
+        android:icon="@mipmap/ic_launcher"
+        android:title="タイトル5"/>
+
+    <item
+        android:icon="@mipmap/ic_launcher"
+        android:title="タイトル6"/>
+
+    <item
+        android:icon="@mipmap/ic_launcher"
+        android:title="タイトル7"/>
+</menu>
