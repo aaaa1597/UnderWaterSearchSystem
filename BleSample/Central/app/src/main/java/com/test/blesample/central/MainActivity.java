@@ -4,6 +4,9 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.Manifest;
 import android.app.Activity;
@@ -16,32 +19,52 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.util.Log;
-import android.widget.Toast;
+import android.os.Handler;
+import android.os.Looper;
+
+import com.google.android.material.snackbar.Snackbar;
+
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-	private BluetoothAdapter	mBluetoothAdapter = null;
-	ActivityResultLauncher<Intent> mStartForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+	private BluetoothAdapter						mBluetoothAdapter = null;
+	private final ActivityResultLauncher<Intent>	mStartForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
 			result -> {
-				Log.d("aaaaa", "bt-onResult() s");
 				if (result.getResultCode() == Activity.RESULT_OK) {
 					/* Bluetooth機能ONになった */
-					Log.d("aaaaa", "Bluetooth OFF -> ON");
+					TLog.d("Bluetooth OFF -> ON");
 					startCentral();
 				}
 				else {
 					ErrPopUp.create(MainActivity.this).setErrMsg("Bluetoothを有効にする必要があります。").Show(MainActivity.this);
 				}
-				Log.d("aaaaa", "bt-onResult() e");
 			});
-	private final static int REQUEST_PERMISSIONS = 0x2222;
+	private RecyclerView							mDeviceListRvw;
+	private DeviceListAdapter						mDeviceListAdapter;
+	private Handler									mHandler;
+	private ScanCallback							mScanCallback = null;
+	private final static int  REQUEST_PERMISSIONS	= 0x2222;
+	private final static long SCAN_PERIOD			= 30000;	/* m秒 */
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		Log.d("aaaaa","aaaaa aaaaaaaaaaaaaa=");
+		/* BLEデバイスリストの初期化 */
+		mDeviceListRvw = findViewById(R.id.rvw_devices);
+		mDeviceListRvw.setHasFixedSize(true);
+		mDeviceListRvw.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
+		mDeviceListAdapter = new DeviceListAdapter((deviceName, deviceAddress) -> {
+//			Intent intent = new Intent(this, DeviceConnectActivity.class);
+//			intent.putExtra(DeviceConnectActivity.EXTRAS_DEVICE_NAME, deviceName);
+//			intent.putExtra(DeviceConnectActivity.EXTRAS_DEVICE_ADDRESS, deviceAddress);
+//			startActivity(intent);
+		});
+		mDeviceListRvw.setAdapter(mDeviceListAdapter);
+
+		/* UIスレッド非同期管理 */
+		mHandler = new Handler(Looper.getMainLooper());
 
 		/* Bluetoothのサポート状況チェック 未サポート端末なら起動しない */
 		if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
@@ -50,9 +73,7 @@ public class MainActivity extends AppCompatActivity {
 
 		/* 権限が許可されていない場合はリクエスト. */
 		if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-			Log.d("aaaaa", "requestPermissions s");
 			requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, REQUEST_PERMISSIONS);
-			Log.d("aaaaa", "requestPermissions e");
 		}
 
 		final BluetoothManager bluetoothManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
@@ -74,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
 
 	@Override
 	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-		Log.d("aaaaa", "onRequestPermissionsResult s");
+		TLog.d("onRequestPermissionsResult s");
 		/* 権限リクエストの結果を取得する. */
 		if (requestCode == REQUEST_PERMISSIONS) {
 			if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -88,54 +109,88 @@ public class MainActivity extends AppCompatActivity {
 		else {
 			super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 		}
-		Log.d("aaaaa", "onRequestPermissionsResult e");
+		TLog.d("onRequestPermissionsResult e");
 	}
 
 	/* セントラルとして起動 */
 	private void startCentral() {
-		Log.d("aaaaa", "startCentral() *******************");
-		/* Bluetooth機能がONになってないのでreturn */
-		if( !mBluetoothAdapter.isEnabled()) {
-			Log.d("aaaaa", "startPrepare() e Bluetooth機能がOFFってる。");
+		TLog.d("startCentral() *******************");
+		if(mScanCallback != null) {
+			TLog.d("e すでにscan中。");
 			return;
 		}
-		Log.d("aaaaa", "Bluetooth ON.");
+
+		/* Bluetooth機能がONになってないのでreturn */
+		if( !mBluetoothAdapter.isEnabled()) {
+			TLog.d("e Bluetooth機能がOFFってる。");
+			Snackbar.make(findViewById(R.id.rootview), "Bluetooth機能をONにして下さい。", Snackbar.LENGTH_LONG).show();
+			return;
+		}
+		TLog.d("Bluetooth ON.");
 
 		/* Bluetooth使用の権限がないのでreturn */
 		if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-			Log.d("aaaaa", "startPrepare() e Bluetooth使用の権限が拒否られた。");
+			TLog.d( "startPrepare() e Bluetooth使用の権限が拒否られた。");
+			ErrPopUp.create(MainActivity.this).setErrMsg("このアプリに権限を与えて下さい。").Show(MainActivity.this);
 			return;
 		}
-		Log.d("aaaaa", "Bluetooth使用権限OK.");
+		TLog.d( "Bluetooth使用権限OK.");
+
+
+		mScanCallback = new ScanCallback() {
+			@Override
+			public void onBatchScanResults(List<ScanResult> results) {
+				super.onBatchScanResults(results);
+				mDeviceListAdapter.addDevice(results);
+				for(ScanResult result : results) {
+					TLog.d("---------------------------------- size=" + results.size());
+					TLog.d("aaaaa AdvertisingSid             =" + result.getAdvertisingSid());
+					TLog.d("aaaaa devices                    =" + result.getDevice());
+					TLog.d("aaaaa DataStatus                 =" + result.getDataStatus());
+					TLog.d("aaaaa PeriodicAdvertisingInterval=" + result.getPeriodicAdvertisingInterval());
+					TLog.d("aaaaa PrimaryPhy                 =" + result.getPrimaryPhy());
+					TLog.d("aaaaa Rssi                       =" + result.getRssi());
+					TLog.d("aaaaa ScanRecord                 =" + result.getScanRecord());
+					TLog.d("aaaaa TimestampNanos             =" + result.getTimestampNanos());
+					TLog.d("aaaaa TxPower                    =" + result.getTxPower());
+					TLog.d("aaaaa Class                      =" + result.getClass());
+					TLog.d("----------------------------------");
+				}
+			}
+
+			@Override
+			public void onScanResult(int callbackType, ScanResult result) {
+				super.onScanResult(callbackType, result);
+				mDeviceListAdapter.addDevice(result);
+				if(result !=null && result.getDevice() != null) {
+					TLog.d("----------------------------------");
+					TLog.d("aaaaa AdvertisingSid             =" + result.getAdvertisingSid());
+					TLog.d("aaaaa devices                    =" + result.getDevice());
+					TLog.d("aaaaa DataStatus                 =" + result.getDataStatus());
+					TLog.d("aaaaa PeriodicAdvertisingInterval=" + result.getPeriodicAdvertisingInterval());
+					TLog.d("aaaaa PrimaryPhy                 =" + result.getPrimaryPhy());
+					TLog.d("aaaaa Rssi                       =" + result.getRssi());
+					TLog.d("aaaaa ScanRecord                 =" + result.getScanRecord());
+					TLog.d("aaaaa TimestampNanos             =" + result.getTimestampNanos());
+					TLog.d("aaaaa TxPower                    =" + result.getTxPower());
+					TLog.d("aaaaa Class                      =" + result.getClass());
+					TLog.d("----------------------------------");
+				}
+			}
+
+			@Override
+			public void onScanFailed(int errorCode) {
+				super.onScanFailed(errorCode);
+				TLog.d("aaaaa Bluetoothのscan失敗!! errorCode=" + errorCode);
+			}
+		};
 
 		/* Bluetoothサポート有,Bluetooth使用権限有,Bluetooth ONなので、セントラルとして起動 */
 		BluetoothLeScanner bLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
 		bLeScanner.startScan(mScanCallback);
+		mHandler.postDelayed(() -> {
+			bLeScanner.stopScan(mScanCallback);
+			mScanCallback = null;
+		}, SCAN_PERIOD);
 	}
-
-	private final ScanCallback mScanCallback = new ScanCallback() {
-		@Override
-		public void onScanResult(int callbackType, ScanResult result) {
-			super.onScanResult(callbackType, result);
-			if(result !=null && result.getDevice() != null) {
-				Log.d("aaaaa","aaaaa AdvertisingSid             =" + result.getAdvertisingSid());
-				Log.d("aaaaa","aaaaa devices                    =" + result.getDevice());
-				Log.d("aaaaa","aaaaa DataStatus                 =" + result.getDataStatus());
-				Log.d("aaaaa","aaaaa PeriodicAdvertisingInterval=" + result.getPeriodicAdvertisingInterval());
-				Log.d("aaaaa","aaaaa PrimaryPhy                 =" + result.getPrimaryPhy());
-				Log.d("aaaaa","aaaaa Rssi                       =" + result.getRssi());
-				Log.d("aaaaa","aaaaa ScanRecord                 =" + result.getScanRecord());
-				Log.d("aaaaa","aaaaa TimestampNanos             =" + result.getTimestampNanos());
-				Log.d("aaaaa","aaaaa TxPower                    =" + result.getTxPower());
-				Log.d("aaaaa","aaaaa Class                      =" + result.getClass());
-			}
-		}
-
-		@Override
-		public void onScanFailed(int errorCode) {
-			super.onScanFailed(errorCode);
-			Log.d("aaaaa","aaaaa Bluetoothのscan失敗!! errorCode=" + errorCode);
-		}
-	};
-
 }
