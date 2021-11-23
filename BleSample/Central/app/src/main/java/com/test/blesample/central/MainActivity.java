@@ -42,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
 	private DeviceListAdapter						mDeviceListAdapter;
 	private Handler									mHandler;
 	private ScanCallback							mScanCallback = null;
+	private BluetoothLeScanner						mBLeScanner;
 	private final static int  REQUEST_PERMISSIONS	= 0x2222;
 	private final static long SCAN_PERIOD			= 30000;	/* m秒 */
 
@@ -57,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
 		mDeviceListAdapter = new DeviceListAdapter(new DeviceListAdapter.DeviceListAdapterListener() {
 			@Override
 			public void onDeviceItemClick(String deviceName, String deviceAddress) {
+				mBLeScanner.stopScan(mScanCallback);
 				Intent intent = new Intent(MainActivity.this, DeviceConnectActivity.class);
 				intent.putExtra(DeviceConnectActivity.EXTRAS_DEVICE_NAME	, deviceName);
 				intent.putExtra(DeviceConnectActivity.EXTRAS_DEVICE_ADDRESS , deviceAddress);
@@ -215,10 +217,10 @@ public class MainActivity extends AppCompatActivity {
 		};
 
 		/* Bluetoothサポート有,Bluetooth使用権限有,Bluetooth ONなので、セントラルとして起動 */
-		BluetoothLeScanner bLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
-		bLeScanner.startScan(mScanCallback);
+		mBLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
+		mBLeScanner.startScan(mScanCallback);
 		mHandler.postDelayed(() -> {
-			bLeScanner.stopScan(mScanCallback);
+			mBLeScanner.stopScan(mScanCallback);
 			Button btn = findViewById(R.id.btnScan);
 			btn.setText("scan開始");
 			btn.setEnabled(true);

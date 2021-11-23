@@ -53,7 +53,7 @@
         tools:ignore="HardcodedText" />
 
     <TextView
-        android:id="@+id/txtDeviceStatus222"
+        android:id="@+id/txtServerCharacteristicValue"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toTopOf="@+id/lbl_ServerCharacteristicValue"
@@ -65,8 +65,8 @@
         android:layout_height="wrap_content"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/lbl_ServerCharacteristicValue"
+        android:layout_marginTop="10dp"
         android:text="読込み要求送信"
         tools:ignore="HardcodedText" />
 
