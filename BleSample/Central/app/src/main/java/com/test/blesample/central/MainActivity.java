@@ -4,7 +4,6 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -21,6 +20,7 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.widget.Button;
 
 import com.google.android.material.snackbar.Snackbar;
 
@@ -33,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
 				if (result.getResultCode() == Activity.RESULT_OK) {
 					/* Bluetooth機能ONになった */
 					TLog.d("Bluetooth OFF -> ON");
-					startCentral();
+					startScan();
 				}
 				else {
 					ErrPopUp.create(MainActivity.this).setErrMsg("Bluetoothを有効にする必要があります。").Show(MainActivity.this);
@@ -63,6 +63,10 @@ public class MainActivity extends AppCompatActivity {
 		});
 		mDeviceListRvw.setAdapter(mDeviceListAdapter);
 
+		findViewById(R.id.btnScan).setOnClickListener(view -> {
+			startScan();
+		});
+
 		/* UIスレッド非同期管理 */
 		mHandler = new Handler(Looper.getMainLooper());
 
@@ -89,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
 		}
 		else {
 			/* Bluetooth機能ONだった */
-			startCentral();
+			startScan();
 		}
 	}
 
@@ -100,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
 		if (requestCode == REQUEST_PERMISSIONS) {
 			if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 				/* Bluetooth使用の権限を得た */
-				startCentral();
+				startScan();
 			} else {
 				ErrPopUp.create(MainActivity.this).setErrMsg("失敗しました。\n\"許可\"を押下して、このアプリにBluetoothの権限を与えて下さい。\n終了します。").Show(MainActivity.this);
 			}
@@ -113,8 +117,9 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	/* セントラルとして起動 */
-	private void startCentral() {
-		TLog.d("startCentral() *******************");
+	private void startScan() {
+		TLog.d("s");
+
 		if(mScanCallback != null) {
 			TLog.d("e すでにscan中。");
 			return;
@@ -136,6 +141,13 @@ public class MainActivity extends AppCompatActivity {
 		}
 		TLog.d( "Bluetooth使用権限OK.");
 
+		TLog.d("scan開始");
+		mDeviceListAdapter.clearDevice();
+		runOnUiThread(() -> {
+			Button btn = findViewById(R.id.btnScan);
+			btn.setText("scan中");
+			btn.setEnabled(false);
+		});
 
 		mScanCallback = new ScanCallback() {
 			@Override
@@ -145,7 +157,14 @@ public class MainActivity extends AppCompatActivity {
 				for(ScanResult result : results) {
 					TLog.d("---------------------------------- size=" + results.size());
 					TLog.d("aaaaa AdvertisingSid             =" + result.getAdvertisingSid());
-					TLog.d("aaaaa devices                    =" + result.getDevice());
+					TLog.d("aaaaa device                     =" + result.getDevice());
+					TLog.d("            Name                 =" + result.getDevice().getName());
+					TLog.d("            Address              =" + result.getDevice().getAddress());
+					TLog.d("            Class                =" + result.getDevice().getClass());
+					TLog.d("            BluetoothClass       =" + result.getDevice().getBluetoothClass());
+					TLog.d("            BondState            =" + result.getDevice().getBondState());
+					TLog.d("            Type                 =" + result.getDevice().getType());
+					TLog.d("            Uuids                =" + result.getDevice().getUuids());
 					TLog.d("aaaaa DataStatus                 =" + result.getDataStatus());
 					TLog.d("aaaaa PeriodicAdvertisingInterval=" + result.getPeriodicAdvertisingInterval());
 					TLog.d("aaaaa PrimaryPhy                 =" + result.getPrimaryPhy());
@@ -165,7 +184,14 @@ public class MainActivity extends AppCompatActivity {
 				if(result !=null && result.getDevice() != null) {
 					TLog.d("----------------------------------");
 					TLog.d("aaaaa AdvertisingSid             =" + result.getAdvertisingSid());
-					TLog.d("aaaaa devices                    =" + result.getDevice());
+					TLog.d("aaaaa device                     =" + result.getDevice());
+					TLog.d("            Name                 =" + result.getDevice().getName());
+					TLog.d("            Address              =" + result.getDevice().getAddress());
+					TLog.d("            Class                =" + result.getDevice().getClass());
+					TLog.d("            BluetoothClass       =" + result.getDevice().getBluetoothClass());
+					TLog.d("            BondState            =" + result.getDevice().getBondState());
+					TLog.d("            Type                 =" + result.getDevice().getType());
+					TLog.d("            Uuids                =" + result.getDevice().getUuids());
 					TLog.d("aaaaa DataStatus                 =" + result.getDataStatus());
 					TLog.d("aaaaa PeriodicAdvertisingInterval=" + result.getPeriodicAdvertisingInterval());
 					TLog.d("aaaaa PrimaryPhy                 =" + result.getPrimaryPhy());
@@ -190,6 +216,10 @@ public class MainActivity extends AppCompatActivity {
 		bLeScanner.startScan(mScanCallback);
 		mHandler.postDelayed(() -> {
 			bLeScanner.stopScan(mScanCallback);
+			Button btn = findViewById(R.id.btnScan);
+			btn.setText("scan開始");
+			btn.setEnabled(true);
+			TLog.d("scan終了");
 			mScanCallback = null;
 		}, SCAN_PERIOD);
 	}

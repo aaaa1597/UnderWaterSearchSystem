@@ -96,4 +96,9 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		if (isNotify)
 			notifyDataSetChanged();
 	}
+
+	public void clearDevice() {
+		mDeviceList.clear();
+		notifyDataSetChanged();
+	}
 }
