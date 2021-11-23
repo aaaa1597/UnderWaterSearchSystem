@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".DeviceConnectActivity">
+
+    <TextView
+        android:id="@+id/lbl_devicename"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        android:layout_marginTop="64dp"
+        android:layout_marginStart="64dp"
+        android:text="接続デバイス : "
+        tools:ignore="HardcodedText" />
+
+    <TextView
+        android:id="@+id/txtConnectedDeviceName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="@+id/lbl_devicename"
+        app:layout_constraintLeft_toRightOf="@+id/lbl_devicename"/>
+
+    <TextView
+        android:id="@+id/lbl_devicestatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        app:layout_constraintTop_toTopOf="@+id/lbl_devicename"
+        app:layout_constraintLeft_toLeftOf="@+id/lbl_devicename"
+        android:text="接続状態 : "
+        tools:ignore="HardcodedText" />
+
+    <TextView
+        android:id="@+id/txtDeviceStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="@+id/lbl_devicestatus"
+        app:layout_constraintLeft_toRightOf="@+id/lbl_devicestatus"/>
+
+    <TextView
+        android:id="@+id/lbl_ServerCharacteristicValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        app:layout_constraintTop_toTopOf="@+id/lbl_devicestatus"
+        app:layout_constraintLeft_toLeftOf="@+id/lbl_devicename"
+        android:text="現在の値 : "
+        tools:ignore="HardcodedText" />
+
+    <TextView
+        android:id="@+id/txtDeviceStatus222"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="@+id/lbl_ServerCharacteristicValue"
+        app:layout_constraintLeft_toRightOf="@+id/lbl_ServerCharacteristicValue"/>
+
+    <Button
+        android:id="@+id/btnReqReadCharacteristic"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:text="読込み要求送信"
+        tools:ignore="HardcodedText" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

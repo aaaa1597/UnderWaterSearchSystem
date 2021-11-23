@@ -5,9 +5,13 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.snackbar.Snackbar;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -15,13 +19,15 @@ import java.util.stream.IntStream;
 public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.ViewHolder> {
 	/* サブクラス : DeviceListAdapter.ViewHolder */
 	static class ViewHolder extends RecyclerView.ViewHolder {
-		TextView mTxtDeviceName;
-		TextView mTxtDeviceAddress;
+		TextView	mTxtDeviceName;
+		TextView	mTxtDeviceAddress;
+		Button		mBtnConnectDevice;
 
 		ViewHolder(View view) {
 			super(view);
-			mTxtDeviceName		= (TextView)view.findViewById(R.id.txtDeviceName);
-			mTxtDeviceAddress	= (TextView)view.findViewById(R.id.txtDeviceAddress);
+			mTxtDeviceName		= view.findViewById(R.id.txtDeviceName);
+			mTxtDeviceAddress	= view.findViewById(R.id.txtDeviceAddress);
+			mBtnConnectDevice	= view.findViewById(R.id.btnConnectDevice);
 		}
 	}
 
@@ -53,11 +59,22 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 
 		holder.mTxtDeviceName   .setText(TextUtils.isEmpty(deviceName)    ? "" : deviceName);
 		holder.mTxtDeviceAddress.setText(TextUtils.isEmpty(deviceAddress) ? "" : deviceAddress);
-		holder.itemView.setOnClickListener(view -> {
-			if (!TextUtils.isEmpty(deviceName) && !TextUtils.isEmpty(deviceAddress)) {
-				if (mListener != null) {
-					mListener.onDeviceItemClick(deviceName, deviceAddress);
-				}
+		holder.mBtnConnectDevice.setOnClickListener(view -> {
+			/* デバイス名なし */
+			if(TextUtils.isEmpty(deviceName)) {
+				Snackbar.make(view, "デバイス名不明のデバイスには接続できません!!", Snackbar.LENGTH_LONG).show();
+				return;
+			}
+
+			/* アドレスなし */
+			if(TextUtils.isEmpty(deviceAddress)) {
+				Snackbar.make(view, "アドレス不明のデバイスには接続できません!!", Snackbar.LENGTH_LONG).show();
+				return;
+			}
+
+
+			if (mListener != null) {
+				mListener.onDeviceItemClick(deviceName, deviceAddress);
 			}
 		});
 	}

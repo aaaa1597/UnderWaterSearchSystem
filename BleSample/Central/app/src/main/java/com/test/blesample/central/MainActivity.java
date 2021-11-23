@@ -39,7 +39,6 @@ public class MainActivity extends AppCompatActivity {
 					ErrPopUp.create(MainActivity.this).setErrMsg("Bluetoothを有効にする必要があります。").Show(MainActivity.this);
 				}
 			});
-	private RecyclerView							mDeviceListRvw;
 	private DeviceListAdapter						mDeviceListAdapter;
 	private Handler									mHandler;
 	private ScanCallback							mScanCallback = null;
@@ -52,16 +51,20 @@ public class MainActivity extends AppCompatActivity {
 		setContentView(R.layout.activity_main);
 
 		/* BLEデバイスリストの初期化 */
-		mDeviceListRvw = findViewById(R.id.rvw_devices);
-		mDeviceListRvw.setHasFixedSize(true);
-		mDeviceListRvw.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
-		mDeviceListAdapter = new DeviceListAdapter((deviceName, deviceAddress) -> {
-//			Intent intent = new Intent(this, DeviceConnectActivity.class);
-//			intent.putExtra(DeviceConnectActivity.EXTRAS_DEVICE_NAME, deviceName);
-//			intent.putExtra(DeviceConnectActivity.EXTRAS_DEVICE_ADDRESS, deviceAddress);
-//			startActivity(intent);
+		RecyclerView deviceListRvw = findViewById(R.id.rvw_devices);
+		deviceListRvw.setHasFixedSize(true);
+		deviceListRvw.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
+		mDeviceListAdapter = new DeviceListAdapter(new DeviceListAdapter.DeviceListAdapterListener() {
+			@Override
+			public void onDeviceItemClick(String deviceName, String deviceAddress) {
+				Intent intent = new Intent(MainActivity.this, DeviceConnectActivity.class);
+				intent.putExtra(DeviceConnectActivity.EXTRAS_DEVICE_NAME	, deviceName);
+				intent.putExtra(DeviceConnectActivity.EXTRAS_DEVICE_ADDRESS , deviceAddress);
+				startActivity(intent);
+			}
 		});
-		mDeviceListRvw.setAdapter(mDeviceListAdapter);
+
+		deviceListRvw.setAdapter(mDeviceListAdapter);
 
 		findViewById(R.id.btnScan).setOnClickListener(view -> {
 			startScan();
