@@ -1,4 +1,4 @@
-package com.test.blesample.central;
+package com.tks.uwsunit00.central;
 
 import android.bluetooth.le.ScanResult;
 import android.support.v7.widget.RecyclerView;

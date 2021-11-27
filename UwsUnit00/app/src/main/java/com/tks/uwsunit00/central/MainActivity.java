@@ -1,4 +1,4 @@
-package com.test.blesample.central;
+package com.tks.uwsunit00.central;
 
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;

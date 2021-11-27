@@ -1,4 +1,4 @@
-package com.test.blesample.central;
+package com.tks.uwsunit00.central;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
@@ -20,9 +20,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static com.test.blesample.central.Constants.UWS_CHARACTERISTIC_SAMLE_UUID;
-import static com.test.blesample.central.Constants.UWS_SERVICE_UUID;
-import static com.test.blesample.central.Constants.BLEMSG_1;
+import static com.tks.uwsunit00.central.Constants.UWS_CHARACTERISTIC_SAMLE_UUID;
+import static com.tks.uwsunit00.central.Constants.UWS_SERVICE_UUID;
+import static com.tks.uwsunit00.central.Constants.BLEMSG_1;
 
 public class DeviceConnectActivity extends AppCompatActivity {
 	public static final String EXTRAS_DEVICE_NAME	= "com.tks.uws.DEVICE_NAME";

@@ -1,4 +1,4 @@
-package com.test.blesample.central;
+package com.tks.uwsunit00.central;
 
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
@@ -16,8 +16,8 @@ import android.os.IBinder;
 
 import java.util.List;
 
-import static com.test.blesample.central.Constants.UWS_CHARACTERISTIC_SAMLE_UUID;
-import static com.test.blesample.central.DeviceConnectActivity.EXTRAS_DEVICE_ADDRESS;
+import static com.tks.uwsunit00.central.Constants.UWS_CHARACTERISTIC_SAMLE_UUID;
+import static com.tks.uwsunit00.central.DeviceConnectActivity.EXTRAS_DEVICE_ADDRESS;
 
 
 public class BleMngService extends Service {

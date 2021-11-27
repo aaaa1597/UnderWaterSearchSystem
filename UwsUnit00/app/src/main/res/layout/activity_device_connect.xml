@@ -8,7 +8,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center_horizontal"
-    tools:context="com.test.blesample.central.DeviceConnectActivity">
+    tools:context="com.tks.uwsunit00.central.DeviceConnectActivity">
 
     <TextView
         android:id="@+id/lbl_name"

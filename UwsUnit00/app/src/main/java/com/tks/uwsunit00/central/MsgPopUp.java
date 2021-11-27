@@ -1,4 +1,4 @@
-package com.test.blesample.central;
+package com.tks.uwsunit00.central;
 
 import android.app.Activity;
 import android.support.v4.content.res.ResourcesCompat;
