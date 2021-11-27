@@ -9,6 +9,9 @@ import android.location.Location;
 import android.os.Bundle;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -45,10 +48,16 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 		FusedLocationProviderClient flpc = LocationServices.getFusedLocationProviderClient(this);
 		flpc.getLastLocation().addOnSuccessListener(this, location -> {
 			TLog.d("");
-			if(location == null)
-				return;
-
-			mLocation = location;
+			if(location == null) {
+				/* 位置が取れない時は、小城消防署で */
+				Location loc = new Location(location.getProvider());
+				loc.setLongitude(130.20307019743947);
+				loc.setLatitude(33.25923509336276);
+				mLocation = loc;
+			}
+			else {
+				mLocation = location;
+			}
 			initDraw(mLocation, mMap);
 		});
 	}
