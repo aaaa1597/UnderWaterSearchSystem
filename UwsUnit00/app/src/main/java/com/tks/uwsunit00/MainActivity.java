@@ -47,13 +47,12 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 		/* 位置情報管理オブジェクト */
 		FusedLocationProviderClient flpc = LocationServices.getFusedLocationProviderClient(this);
 		flpc.getLastLocation().addOnSuccessListener(this, location -> {
-			TLog.d("");
+			TLog.d("mLocation={0} mMap={1}",mLocation, mMap);
 			if(location == null) {
 				/* 位置が取れない時は、小城消防署で */
-				Location loc = new Location(location.getProvider());
-				loc.setLongitude(130.20307019743947);
-				loc.setLatitude(33.25923509336276);
-				mLocation = loc;
+				mLocation = new Location("");
+				mLocation.setLongitude(130.20307019743947);
+				mLocation.setLatitude(33.25923509336276);
 			}
 			else {
 				mLocation = location;
@@ -64,7 +63,13 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
 	@Override
 	public void onMapReady(@NonNull GoogleMap googleMap) {
-		TLog.d("");
+		TLog.d("mLocation={0} googleMap={1}",mLocation, googleMap);
+		if(mLocation == null) {
+			/* 位置が取れない時は、小城消防署で */
+			mLocation = new Location("");
+			mLocation.setLongitude(130.20307019743947);
+			mLocation.setLatitude(33.25923509336276);
+		}
 		mMap = googleMap;
 		initDraw(mLocation, mMap);
 	}
