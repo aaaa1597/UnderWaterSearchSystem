@@ -23,7 +23,11 @@
             </intent-filter>
         </activity>
         <activity android:name=".DeviceConnectActivity" />
-        <service android:name=".BleService" android:exported="true" ></service>
+        <service android:name=".BleService" android:exported="true" android:process=":worker">
+            <intent-filter>
+                <action android:name="com.tsk.uws.blecentral.BIND_BLESERVICE" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

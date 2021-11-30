@@ -35,4 +35,29 @@
         android:padding="8dp"
         android:elevation="4dp"/>
 
+    <Button
+        android:id="@+id/btnSetStr"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:text="文字列設定"
+        app:layout_constraintLeft_toRightOf="@+id/btnScan"
+        app:layout_constraintTop_toTopOf="@+id/btnScan"/>
+    
+    <TextView
+        android:id="@+id/txtTmp1"
+        android:text="aaaaa"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintLeft_toRightOf="@+id/btnSetStr"
+        app:layout_constraintTop_toTopOf="@+id/btnScan"/>
+
+    <TextView
+        android:id="@+id/txtTmp2"
+        android:text="aaaaa"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintLeft_toRightOf="@+id/txtTmp1"
+        app:layout_constraintTop_toTopOf="@+id/btnScan"/>
+
 </android.support.constraint.ConstraintLayout>

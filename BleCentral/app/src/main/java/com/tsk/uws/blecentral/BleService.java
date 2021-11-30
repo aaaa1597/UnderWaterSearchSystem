@@ -1,5 +1,6 @@
 package com.tsk.uws.blecentral;
 
+import android.Manifest;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -9,37 +10,302 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
+import android.bluetooth.le.BluetoothLeScanner;
+import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanFilter;
+import android.bluetooth.le.ScanResult;
+import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
+import android.os.Message;
+import android.os.RemoteException;
+import android.support.annotation.NonNull;
+import android.widget.Button;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.tsk.uws.blecentral.Constants.UWS_CHARACTERISTIC_SAMLE_UUID;
-import static com.tsk.uws.blecentral.DeviceConnectActivity.EXTRAS_DEVICE_ADDRESS;
 
 
 public class BleService extends Service {
+	/* ↓↓↓デバッグ用 */
+	private String mAddStr = "new item";
+	private String mMoveStr= "old item";
+	/* ↑↑↑デバッグ用 */
+
+	List<ScanResult>			mScanResultList;
+	ScanResult					mScanResult;
+	private BluetoothAdapter	mBluetoothAdapter;
+	private BluetoothLeScanner	mBLeScanner;
+	private IBleServiceCallback	mListener;	/* 常に後発のみにCallbackする */
+	private Handler				mHandler;
+	private final static long	SCAN_PERIOD = 30000;	/* m秒 */
+
+	/* メッセージID */
+	public final static String UWS_SERVICE_WAKEUP_OK		= "com.tks.uws.blecentral.SERVICE_WAKEUP_OK";
+	public final static String UWS_SERVICE_WAKEUP_NG		= "com.tks.uws.blecentral.SERVICE_WAKEUP_NG";
+	public final static String UWS_KEY_WAKEUP_NG_REASON		= "com.tks.uws.blecentral.SERVICE_WAKEUP_NG_REASON";
+	public final static int    UWS_NG_REASON_SUCCESS			= 0;
+	public final static int    UWS_NG_REASON_SERVICE_NOTFOUND	= -1;
+	public final static int    UWS_NG_REASON_BTADAPTER_NOTFOUND = -2;
+	public final static int    UWS_NG_REASON_BT_OFF				= -3;
+	public final static int    UWS_NG_REASON_PERMISSION_DENIED	= -4;
+	public final static int    UWS_NG_REASON_CONNECTBLE			= -5;
+	public final static int    UWS_NG_REASON_DEVICENOTFOUND		= -6;
+	public final static String UWS_GATT_CONNECTED			= "com.tks.uws.blecentral.GATT_CONNECTED";
+	public final static String UWS_GATT_DISCONNECTED		= "com.tks.uws.blecentral.GATT_DISCONNECTED";
+	public final static String UWS_GATT_SERVICES_DISCOVERED	= "com.tks.uws.blecentral.GATT_SERVICES_DISCOVERED";
+	public final static String UWS_DATA_AVAILABLE			= "com.tks.uws.blecentral.DATA_AVAILABLE";
+	public final static String UWS_DATA						= "com.tks.uws.blecentral.DATA";
+
+	@Override
+	public IBinder onBind(Intent intent) {
+		TLog.d("onBind() s-e");
+		handler.sendEmptyMessageDelayed(0, 5000);
+
+		mHandler = new Handler(Looper.getMainLooper());
+
+		/* Bluetooth初期化(サービス取得) */
+		final BluetoothManager bluetoothManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
+		if(bluetoothManager == null) {
+			Intent resintent = new Intent(UWS_SERVICE_WAKEUP_NG);
+			resintent.putExtra(UWS_KEY_WAKEUP_NG_REASON, UWS_NG_REASON_SERVICE_NOTFOUND);
+			sendBroadcast(resintent);
+			stopSelf();	/* サービス未起動失敗にする */
+			return null;
+		}
+
+		mBluetoothAdapter = bluetoothManager.getAdapter();
+		/* Bluetooth未サポート判定 未サポートならエラーpopupで終了 */
+		if (mBluetoothAdapter == null) {
+			Intent resintent = new Intent(UWS_SERVICE_WAKEUP_NG);
+			resintent.putExtra(UWS_KEY_WAKEUP_NG_REASON, UWS_NG_REASON_BTADAPTER_NOTFOUND);
+			sendBroadcast(resintent);
+			stopSelf();	/* サービス未起動失敗にする */
+			return null;
+		}
+		/* Bluetooth ON/OFF判定 -> OFFならONにするようにリクエスト */
+		else if( !mBluetoothAdapter.isEnabled()) {
+			Intent resintent = new Intent(UWS_SERVICE_WAKEUP_NG);
+			resintent.putExtra(UWS_KEY_WAKEUP_NG_REASON, UWS_NG_REASON_BT_OFF);
+			sendBroadcast(resintent);
+			stopSelf();	/* サービス未起動失敗にする */
+			return null;
+		}
+
+		Binder binder = new IBleService.Stub() {
+			@Override
+			public boolean addCallback(IBleServiceCallback callback) throws RemoteException {
+				mListener = callback;
+				return true;
+			}
+
+			@Override
+			public boolean removeCallback(IBleServiceCallback callback) throws RemoteException {
+				mListener = null;
+				return true;
+			}
+
+			@Override
+			public String startScan() throws RemoteException {
+				return startBLEScan();
+			}
+
+			@Override
+			public String stopScan() throws RemoteException {
+				return stopBLEScan();
+			}
+
+			@Override
+			public List<ScanResult> getScanResultlist() throws RemoteException {
+				return mScanResultList;
+			}
+
+			@Override
+			public ScanResult getScanResult() throws RemoteException {
+				return mScanResult;
+			}
+
+			@Override
+			public boolean setAddStr(String str) throws RemoteException {
+				mAddStr = str;
+				return true;
+			}
+
+			@Override
+			public boolean setRemoceStr(String str) throws RemoteException {
+				mMoveStr = str;
+				return true;
+			}
+		};
+
+		return binder;
+	}
+
+	private String startBLEScan() {
+		if(mScanCallback != null) {
+			TLog.d("すでにScan中");
+			return "すでにScan中";
+		}
+
+		/* Bluetooth機能がONになってないのでreturn */
+		if( !mBluetoothAdapter.isEnabled()) {
+			TLog.d("Bluetooth機能がOFFってる。");
+			try { mListener.notifyError(UWS_NG_REASON_BT_OFF, "Bluetooth機能がOFFってる。");}
+			catch (RemoteException e) {e.printStackTrace();}
+			return "Bluetooth機能がOFFってる。";
+		}
+
+		TLog.d("Bluetooth ON.");
+
+		/* Bluetooth使用の権限がないのでreturn */
+		if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+			TLog.d( "Bluetooth使用の権限なし");
+			try { mListener.notifyError(UWS_NG_REASON_PERMISSION_DENIED, "Bluetooth使用の権限なし");}
+			catch (RemoteException e) {e.printStackTrace();}
+			return "Bluetooth使用の権限なし";
+		}
+		TLog.d( "Bluetooth使用権限OK.");
+
+		TLog.d("scan開始");
+		mScanCallback = new ScanCallback() {
+			@Override
+			public void onBatchScanResults(List<ScanResult> results) {
+				super.onBatchScanResults(results);
+				mScanResultList = results;
+				try { mListener.notifyScanResultlist();}
+				catch (RemoteException e) {e.printStackTrace();}
+//					mDeviceListAdapter.addDevice(results);
+				for(ScanResult result : results) {
+					TLog.d("---------------------------------- size=" + results.size());
+					TLog.d("aaaaa AdvertisingSid             =" + result.getAdvertisingSid());
+					TLog.d("aaaaa device                     =" + result.getDevice());
+					TLog.d("            Name                 =" + result.getDevice().getName());
+					TLog.d("            Address              =" + result.getDevice().getAddress());
+					TLog.d("            Class                =" + result.getDevice().getClass());
+					TLog.d("            BluetoothClass       =" + result.getDevice().getBluetoothClass());
+					TLog.d("            BondState            =" + result.getDevice().getBondState());
+					TLog.d("            Type                 =" + result.getDevice().getType());
+					TLog.d("            Uuids                =" + result.getDevice().getUuids());
+					TLog.d("aaaaa DataStatus                 =" + result.getDataStatus());
+					TLog.d("aaaaa PeriodicAdvertisingInterval=" + result.getPeriodicAdvertisingInterval());
+					TLog.d("aaaaa PrimaryPhy                 =" + result.getPrimaryPhy());
+					TLog.d("aaaaa Rssi                       =" + result.getRssi());
+					TLog.d("aaaaa ScanRecord                 =" + result.getScanRecord());
+					TLog.d("aaaaa TimestampNanos             =" + result.getTimestampNanos());
+					TLog.d("aaaaa TxPower                    =" + result.getTxPower());
+					TLog.d("aaaaa Class                      =" + result.getClass());
+					TLog.d("----------------------------------");
+				}
+			}
+
+			@Override
+			public void onScanResult(int callbackType, ScanResult result) {
+				super.onScanResult(callbackType, result);
+//					mDeviceListAdapter.addDevice(result);
+				if(result.getScanRecord() != null && result.getScanRecord().getServiceUuids() != null)
+					TLog.d("発見!! {0}({1}):Rssi({2}) Uuids({3})", result.getDevice().getAddress(), result.getDevice().getName(), result.getRssi(), result.getScanRecord().getServiceUuids().toString());
+				else
+					TLog.d("発見!! {0}({1}):Rssi({2})", result.getDevice().getAddress(), result.getDevice().getName(), result.getRssi());
+				try { mListener.notifyScanResult();}
+				catch (RemoteException e) {e.printStackTrace();}
+				if(result !=null && result.getDevice() != null) {
+					TLog.d("----------------------------------");
+					TLog.d("aaaaa AdvertisingSid             =" + result.getAdvertisingSid());				//aaaaa AdvertisingSid             =255
+					TLog.d("aaaaa device                     =" + result.getDevice());						//aaaaa device                     =65:57:FE:6F:E6:D9
+					TLog.d("            Name                 =" + result.getDevice().getName());				//            Name                 =null
+					TLog.d("            Address              =" + result.getDevice().getAddress());			//            Address              =65:57:FE:6F:E6:D9
+					TLog.d("            Class                =" + result.getDevice().getClass());				//            Class                =class android.bluetooth.BluetoothDevice
+					TLog.d("            BluetoothClass       =" + result.getDevice().getBluetoothClass());	//            BluetoothClass       =0
+					TLog.d("            BondState            =" + result.getDevice().getBondState());			//            BondState            =10
+					TLog.d("            Type                 =" + result.getDevice().getType());				//            Type                 =0
+					TLog.d("            Uuids                =" + result.getDevice().getUuids());				//            Uuids                =null
+					TLog.d("aaaaa DataStatus                 =" + result.getDataStatus());					//aaaaa DataStatus                 =0
+					TLog.d("aaaaa PeriodicAdvertisingInterval=" + result.getPeriodicAdvertisingInterval());	//aaaaa PeriodicAdvertisingInterval=0
+					TLog.d("aaaaa PrimaryPhy                 =" + result.getPrimaryPhy());					//aaaaa PrimaryPhy                 =1
+					TLog.d("aaaaa Rssi                       =" + result.getRssi());							//aaaaa Rssi                       =-79
+					TLog.d("aaaaa ScanRecord                 =" + result.getScanRecord());					//aaaaa ScanRecord                 =ScanRecord [mAdvertiseFlags=26, mServiceUuids=null, mServiceSolicitationUuids=[], mManufacturerSpecificData={76=[16, 5, 25, 28, 64, 39, -24]}, mServiceData={}, mTxPowerLevel=12, mDeviceName=null]
+					TLog.d("aaaaa TimestampNanos             =" + result.getTimestampNanos());				//aaaaa TimestampNanos             =13798346768432
+					TLog.d("aaaaa TxPower                    =" + result.getTxPower());						//aaaaa TxPower                    =127
+					TLog.d("aaaaa Class                      =" + result.getClass());							//aaaaa Class                      =class android.bluetooth.le.ScanResult
+					TLog.d("----------------------------------");
+				}
+			}
+
+			@Override
+			public void onScanFailed(int errorCode) {
+				super.onScanFailed(errorCode);
+				TLog.d("scan失敗!! errorCode=" + errorCode);
+			}
+		};
+
+
+		mBLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
+		mHandler.postDelayed(() -> {
+			mBLeScanner.stopScan(mScanCallback);
+			mScanCallback = null;
+			TLog.d("scan終了");
+		}, SCAN_PERIOD);
+
+		/* scanフィルタ */
+		List<ScanFilter> scanFilters = new ArrayList<>();
+		scanFilters.add(new ScanFilter.Builder().build());
+
+		/* scan設定 */
+		ScanSettings.Builder scansetting = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_POWER);
+
+		/* scan開始 */
+		mBLeScanner.startScan(scanFilters, scansetting.build(), mScanCallback);
+
+		return "scan開始";
+	}
+
+	private String stopBLEScan() {
+		return "scan停止";
+	}
+
+	private ScanCallback mScanCallback = null;
+
+	private Handler handler = new Handler(Looper.getMainLooper()) {
+		@Override
+		public void handleMessage(@NonNull Message msg) {
+			try {
+				mListener.onItemAdded(mAddStr);
+				mListener.onItemRemoved(mMoveStr);
+			}
+			catch (RemoteException e) {
+				e.printStackTrace();
+			}
+			sendEmptyMessageDelayed(0, 5000);
+		}
+	};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	/* サブクラス : BleService.LocalBinder */
 	public class LocalBinder extends Binder {
 		BleService getService() {
 			return BleService.this;
 		}
 	}
-	/* メッセージID */
-	public final static String UWS_SERVICE_WAKEUP_OK		= "com.tks.uws.SERVICE_WAKEUP_OK";
-	public final static String UWS_SERVICE_WAKEUP_NG		= "com.tks.uws.SERVICE_WAKEUP_NG";
-	public final static String UWS_SERVICE_WAKEUP_NG_REASON	= "com.tks.uws.SERVICE_WAKEUP_NG_REASON";
-	public final static int    UWS_NG_REASON_SUCCESS		= 0;
-	public final static int    UWS_NG_REASON_INITBLE		= -1;
-	public final static int    UWS_NG_REASON_CONNECTBLE		= -2;
-	public final static int    UWS_NG_REASON_DEVICENOTFOUND	= -3;
-	public final static String UWS_GATT_CONNECTED			= "com.tks.uws.GATT_CONNECTED";
-	public final static String UWS_GATT_DISCONNECTED		= "com.tks.uws.GATT_DISCONNECTED";
-	public final static String UWS_GATT_SERVICES_DISCOVERED	= "com.tks.uws.GATT_SERVICES_DISCOVERED";
-	public final static String UWS_DATA_AVAILABLE			= "com.tks.uws.DATA_AVAILABLE";
-	public final static String UWS_DATA						= "com.tks.uws.DATA";
 	/* Serviceのお約束 */
 	private final IBinder				mBinder = new LocalBinder();
 	private BluetoothGatt				mBleGatt;
@@ -124,34 +390,6 @@ public class BleService extends Service {
 	}
 
 	@Override
-	public IBinder onBind(Intent intent) {
-		TLog.d("onBind() s-e");
-		/* BLEアドレス取得 */
-		mBleDeviceAddr = intent.getStringExtra(EXTRAS_DEVICE_ADDRESS);
-		if(mBleDeviceAddr == null) {
-			TLog.d("デバイス名未設定!! devicename=null");
-			Intent resintent = new Intent(UWS_SERVICE_WAKEUP_NG);
-			resintent.putExtra(UWS_SERVICE_WAKEUP_NG_REASON, UWS_NG_REASON_DEVICENOTFOUND);
-			sendBroadcast(resintent);
-		}
-
-		/* BLE初期化 */
-		int ret = connectBleDevice(mBleDeviceAddr);
-		if( ret < 0) {
-			TLog.d("BLE初期化/接続失敗!!");
-			Intent resintent = new Intent(UWS_SERVICE_WAKEUP_NG);
-			resintent.putExtra(UWS_SERVICE_WAKEUP_NG_REASON, ret);
-			sendBroadcast(resintent);
-		}
-		else {
-			TLog.d("BLE初期化/接続成功.");
-			Intent resintent = new Intent(UWS_SERVICE_WAKEUP_OK);
-			sendBroadcast(resintent);
-		}
-		return mBinder;
-	}
-
-	@Override
 	public boolean onUnbind(Intent intent) {
 		disconnectBleDevice();
 		return super.onUnbind(intent);
@@ -165,10 +403,10 @@ public class BleService extends Service {
 		}
 
 		BluetoothManager btManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
-		if(btManager == null) return UWS_NG_REASON_INITBLE;
+		if(btManager == null) return UWS_NG_REASON_SERVICE_NOTFOUND;
 
 		BluetoothAdapter btAdapter = btManager.getAdapter();
-		if(btAdapter == null) return UWS_NG_REASON_INITBLE;
+		if(btAdapter == null) return UWS_NG_REASON_BTADAPTER_NOTFOUND;
 
 		/* 再接続処理 */
 		if (address.equals(mBleDeviceAddr) && mBleGatt != null) {
