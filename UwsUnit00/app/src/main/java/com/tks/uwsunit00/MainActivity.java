@@ -47,14 +47,15 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 		/* 位置情報管理オブジェクト */
 		FusedLocationProviderClient flpc = LocationServices.getFusedLocationProviderClient(this);
 		flpc.getLastLocation().addOnSuccessListener(this, location -> {
-			TLog.d("mLocation={0} mMap={1}",mLocation, mMap);
 			if(location == null) {
+				TLog.d("mLocation={0} googleMap={1}",location, mMap);
 				/* 位置が取れない時は、小城消防署で */
 				mLocation = new Location("");
 				mLocation.setLongitude(130.20307019743947);
 				mLocation.setLatitude(33.25923509336276);
 			}
 			else {
+				TLog.d("mLocation=(経度:{0} 緯度:{1}) mMap={1}", location.getLatitude(), location.getLongitude(), mMap);
 				mLocation = location;
 			}
 			initDraw(mLocation, mMap);
@@ -104,7 +105,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 		/* 権限リクエストの結果を取得する. */
 		if (requestCode == REQUEST_PERMISSIONS) {
 			if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-				ErrPopUp.create(MainActivity.this).setErrMsg("失敗しました。\nこのアプリでは、どうしようもないので終了します。").Show(MainActivity.this);
+				MsgPopUp.create(MainActivity.this).setErrMsg("失敗しました。\nこのアプリでは、どうしようもないので終了します。").Show(MainActivity.this);
 			}
 		}
 		else {
