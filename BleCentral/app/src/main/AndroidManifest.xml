@@ -23,11 +23,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".DeviceConnectActivity" />
-
-        <service android:name=".BleService"
-            android:enabled="true"
-            android:exported="false"/>
-
+        <service android:name=".BleService" android:exported="true" ></service>
     </application>
 
 </manifest>
