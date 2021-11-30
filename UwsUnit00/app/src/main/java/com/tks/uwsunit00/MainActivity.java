@@ -49,16 +49,23 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 		flpc.getLastLocation().addOnSuccessListener(this, location -> {
 			if(location == null) {
 				TLog.d("mLocation={0} googleMap={1}",location, mMap);
-				/* 位置が取れない時は、小城消防署で */
-				mLocation = new Location("");
-				mLocation.setLongitude(130.20307019743947);
-				mLocation.setLatitude(33.25923509336276);
+				LocationRequest locreq = LocationRequest.create().setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY).setInterval(500).setFastestInterval(300);
+				flpc.requestLocationUpdates(locreq, new LocationCallback() {
+					@Override
+					public void onLocationResult(@NonNull LocationResult locationResult) {
+						super.onLocationResult(locationResult);
+						TLog.d("locationResult={0}({1},{2})", locationResult, locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude());
+						mLocation = locationResult.getLastLocation();
+						flpc.removeLocationUpdates(this);
+						initDraw(mLocation, mMap);
+					}
+				}, null);
 			}
 			else {
 				TLog.d("mLocation=(経度:{0} 緯度:{1}) mMap={1}", location.getLatitude(), location.getLongitude(), mMap);
 				mLocation = location;
+				initDraw(mLocation, mMap);
 			}
-			initDraw(mLocation, mMap);
 		});
 	}
 
