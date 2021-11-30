@@ -1,4 +1,4 @@
-package com.test.blesample.central;
+package com.tsk.uws.blecentral;
 
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
@@ -16,15 +16,15 @@ import android.os.IBinder;
 
 import java.util.List;
 
-import static com.test.blesample.central.Constants.UWS_CHARACTERISTIC_SAMLE_UUID;
-import static com.test.blesample.central.DeviceConnectActivity.EXTRAS_DEVICE_ADDRESS;
+import static com.tsk.uws.blecentral.Constants.UWS_CHARACTERISTIC_SAMLE_UUID;
+import static com.tsk.uws.blecentral.DeviceConnectActivity.EXTRAS_DEVICE_ADDRESS;
 
 
-public class BleMngService extends Service {
-	/* サブクラス : BleMngService.LocalBinder */
+public class BleService extends Service {
+	/* サブクラス : BleService.LocalBinder */
 	public class LocalBinder extends Binder {
-		BleMngService getService() {
-			return BleMngService.this;
+		BleService getService() {
+			return BleService.this;
 		}
 	}
 	/* メッセージID */

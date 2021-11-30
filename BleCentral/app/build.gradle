@@ -3,7 +3,7 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 26
     defaultConfig {
-        applicationId "com.test.blesample.central"
+        applicationId "com.tsk.uws.blecentral"
         minSdkVersion 26
         //noinspection ExpiredTargetSdkVersion
         targetSdkVersion 26

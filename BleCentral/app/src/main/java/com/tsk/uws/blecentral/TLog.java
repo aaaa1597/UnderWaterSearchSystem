@@ -1,4 +1,4 @@
-package com.test.blesample.central;
+package com.tsk.uws.blecentral;
 
 import android.util.Log;
 
