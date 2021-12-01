@@ -59,8 +59,6 @@ public class DeviceConnectActivity extends AppCompatActivity {
 
 		/* 受信するブロードキャストintentを登録 */
 		final IntentFilter intentFilter = new IntentFilter();
-		intentFilter.addAction(BleService.UWS_SERVICE_WAKEUP_OK);
-		intentFilter.addAction(BleService.UWS_SERVICE_WAKEUP_NG);
 		intentFilter.addAction(BleService.UWS_GATT_CONNECTED);
 		intentFilter.addAction(BleService.UWS_GATT_DISCONNECTED);
 		intentFilter.addAction(BleService.UWS_GATT_SERVICES_DISCOVERED);
@@ -114,23 +112,15 @@ public class DeviceConnectActivity extends AppCompatActivity {
 				return;
 
 			switch (action) {
-				/* Ble管理サービス正常起動 */
-				case BleService.UWS_SERVICE_WAKEUP_OK:
-					TLog.d("Service wake up OK.");
-					break;
-
-				/* Ble管理サービス起動失敗 */
-				case BleService.UWS_SERVICE_WAKEUP_NG:
-					int errReason = intent.getIntExtra(BleService.UWS_KEY_WAKEUP_NG_REASON, BleService.UWS_NG_ADAPTER_NOTFOUND);
-					if(errReason == BleService.UWS_NG_SERVICE_NOTFOUND)
-						ErrPopUp.create(DeviceConnectActivity.this).setErrMsg("この端末はBluetoothに対応していません!!終了します。").Show(DeviceConnectActivity.this);
-					else if(errReason == BleService.UWS_NG_ADAPTER_NOTFOUND)
-						ErrPopUp.create(DeviceConnectActivity.this).setErrMsg("Service起動中のBT初期化に失敗!!終了します。").Show(DeviceConnectActivity.this);
-					else if(errReason == BleService.UWS_NG_REASON_DEVICENOTFOUND)
-						Snackbar.make(findViewById(R.id.root_view_device), "デバイスアドレスなし!!\n前画面で、別のデバイスを選択して下さい。", Snackbar.LENGTH_LONG).show();
-					else if(errReason == BleService.UWS_NG_REASON_CONNECTBLE)
-						Snackbar.make(findViewById(R.id.root_view_device), "デバイス接続失敗!!\n前画面で、別のデバイスを選択して下さい。", Snackbar.LENGTH_LONG).show();
-					break;
+//				int errReason = intent.getIntExtra(BleService.UWS_KEY_WAKEUP_NG_REASON, BleService.UWS_NG_ADAPTER_NOTFOUND);
+//				if(errReason == BleService.UWS_NG_SERVICE_NOTFOUND)
+//					ErrPopUp.create(DeviceConnectActivity.this).setErrMsg("この端末はBluetoothに対応していません!!終了します。").Show(DeviceConnectActivity.this);
+//				else if(errReason == BleService.UWS_NG_ADAPTER_NOTFOUND)
+//					ErrPopUp.create(DeviceConnectActivity.this).setErrMsg("Service起動中のBT初期化に失敗!!終了します。").Show(DeviceConnectActivity.this);
+//				else if(errReason == BleService.UWS_NG_REASON_DEVICENOTFOUND)
+//					Snackbar.make(findViewById(R.id.root_view_device), "デバイスアドレスなし!!\n前画面で、別のデバイスを選択して下さい。", Snackbar.LENGTH_LONG).show();
+//				else if(errReason == BleService.UWS_NG_REASON_CONNECTBLE)
+//					Snackbar.make(findViewById(R.id.root_view_device), "デバイス接続失敗!!\n前画面で、別のデバイスを選択して下さい。", Snackbar.LENGTH_LONG).show();
 
 				/* Gattサーバ接続完了 */
 				case BleService.UWS_GATT_CONNECTED:
@@ -199,6 +189,11 @@ public class DeviceConnectActivity extends AppCompatActivity {
 
 		@Override
 		public void notifyScanResult() throws RemoteException {
+
+		}
+
+		@Override
+		public void notifyMsg(int msgid, String msg) throws RemoteException {
 
 		}
 

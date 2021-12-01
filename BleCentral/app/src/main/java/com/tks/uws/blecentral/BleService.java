@@ -83,9 +83,6 @@ public class BleService extends Service {
 	private BluetoothLeScanner	mBLeScanner;
 	private final static long	SCAN_PERIOD = 30000;	/* m秒 */
 	/* メッセージID */
-	public final static String UWS_SERVICE_WAKEUP_OK		= "com.tks.uws.blecentral.SERVICE_WAKEUP_OK";
-	public final static String UWS_SERVICE_WAKEUP_NG		= "com.tks.uws.blecentral.SERVICE_WAKEUP_NG";
-	public final static String UWS_KEY_WAKEUP_NG_REASON		= "com.tks.uws.blecentral.SERVICE_WAKEUP_NG_REASON";
 	public final static int UWS_NG_SUCCESS			= 0;	/* OK */
 	public final static int UWS_NG_SERVICE_NOTFOUND	= -1;	/* サービスが見つからない(=Bluetooth未サポ－ト) */
 	public final static int UWS_NG_ADAPTER_NOTFOUND	= -2;	/* BluetoothAdapterがnull(=Bluetooth未サポ－ト) */
@@ -94,6 +91,7 @@ public class BleService extends Service {
 	public final static int UWS_NG_PERMISSION_DENIED= -5;	/* 権限なし */
 	public final static int    UWS_NG_REASON_CONNECTBLE			= -5;
 	public final static int    UWS_NG_REASON_DEVICENOTFOUND		= -6;
+	public final static int UWS_MSG_ENDSCAN			= 1;	/* scan終了 */
 	public final static String UWS_GATT_CONNECTED			= "com.tks.uws.blecentral.GATT_CONNECTED";
 	public final static String UWS_GATT_DISCONNECTED		= "com.tks.uws.blecentral.GATT_DISCONNECTED";
 	public final static String UWS_GATT_SERVICES_DISCOVERED	= "com.tks.uws.blecentral.GATT_SERVICES_DISCOVERED";
@@ -217,8 +215,7 @@ public class BleService extends Service {
 			mBLeScanner.stopScan(mScanCallback);
 			mScanCallback = null;
 			TLog.d("scan終了");
-			TLog.d("mListene={0}", mListener);
-			try { mListener.notifyError(UWS_NG_SUCCESS, "scan終了");}
+			try { mListener.notifyMsg(UWS_MSG_ENDSCAN, "scan終了");}
 			catch (RemoteException e) { e.printStackTrace(); }
 		}, SCAN_PERIOD);
 
