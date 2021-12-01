@@ -33,9 +33,7 @@ import static com.tks.uws.blecentral.Constants.UWS_CHARACTERISTIC_SAMLE_UUID;
 
 
 public class BleService extends Service {
-	/* TOOD ↓↓↓デバッグ用 */
-	private String mAddStr = "new item";
-	/* TOOD ↑↑↑デバッグ用 */
+	private Handler				mHandler;
 
 	/* Binder */
 	private IBleServiceCallback	mListener;	/* 常に後発のみ */
@@ -47,13 +45,8 @@ public class BleService extends Service {
 		}
 
 		@Override
-		public void setAddStr(String str) throws RemoteException {
-			mAddStr = str;
-		}
-
-		@Override
 		public int initBle() throws RemoteException {
-			return UWS_NG_SUCCESS;
+			return BsvInit();
 		}
 
 		@Override
@@ -81,55 +74,13 @@ public class BleService extends Service {
 	@Override
 	public IBinder onBind(Intent intent) {
 		TLog.d("onBind()");
-		dddhandler.sendEmptyMessageDelayed(UWS_MSGID_DEBUG, 1000);
-
 		mHandler = new Handler(Looper.getMainLooper());
-
-		/* Bluetooth初期化(サービス取得) */
-		final BluetoothManager bluetoothManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
-		if(bluetoothManager == null) {
-			Intent resintent = new Intent(UWS_SERVICE_WAKEUP_NG);
-			resintent.putExtra(UWS_KEY_WAKEUP_NG_REASON, UWS_NG_SERVICE_NOTFOUND);
-			sendBroadcast(resintent);
-			stopSelf();	/* サービス未起動失敗にする */
-			return null;
-		}
-
-		mBluetoothAdapter = bluetoothManager.getAdapter();
-		/* Bluetooth未サポート判定 未サポートならエラーpopupで終了 */
-		if (mBluetoothAdapter == null) {
-			Intent resintent = new Intent(UWS_SERVICE_WAKEUP_NG);
-			resintent.putExtra(UWS_KEY_WAKEUP_NG_REASON, UWS_NG_ADAPTER_NOTFOUND);
-			sendBroadcast(resintent);
-			stopSelf();	/* サービス未起動失敗にする */
-			return null;
-		}
-		/* Bluetooth ON/OFF判定 -> OFFならONにするようにリクエスト */
-		else if( !mBluetoothAdapter.isEnabled()) {
-			Intent resintent = new Intent(UWS_SERVICE_WAKEUP_NG);
-			resintent.putExtra(UWS_KEY_WAKEUP_NG_REASON, UWS_NG_BT_OFF);
-			sendBroadcast(resintent);
-			stopSelf();	/* サービス未起動失敗にする */
-			return null;
-		}
-
 		return binder;
 	}
-
-	private Handler dddhandler = new Handler(Looper.getMainLooper()) {
-		@Override
-		public void handleMessage(@NonNull Message msg) {
-			TLog.d("handleMessage() msg={0} mListeners={1}", msg, mListener);
-			try { mListener.onItemAdded(mAddStr); }
-			catch (RemoteException e) { e.printStackTrace(); return; }
-			sendEmptyMessageDelayed(UWS_MSGID_DEBUG, 3000);
-		}
-	};
 
 	/* BLuetooth定義 */
 	private BluetoothAdapter	mBluetoothAdapter;
 	private BluetoothLeScanner	mBLeScanner;
-	private Handler				mHandler;
 	private final static long	SCAN_PERIOD = 30000;	/* m秒 */
 	/* メッセージID */
 	public final static String UWS_SERVICE_WAKEUP_OK		= "com.tks.uws.blecentral.SERVICE_WAKEUP_OK";
@@ -149,36 +100,44 @@ public class BleService extends Service {
 	public final static String UWS_DATA_AVAILABLE			= "com.tks.uws.blecentral.DATA_AVAILABLE";
 	public final static String UWS_DATA						= "com.tks.uws.blecentral.DATA";
 
+	int BsvInit() {
+		/* Bluetooth権限なし */
+		if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+			return UWS_NG_PERMISSION_DENIED;
+		TLog.d( "Bluetooth権限OK.");
+
+		/* Bluetoothサービス取得 */
+		final BluetoothManager bluetoothManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
+		if(bluetoothManager == null)
+			return UWS_NG_SERVICE_NOTFOUND;
+
+		/* Bluetoothアダプタ取得 */
+		mBluetoothAdapter = bluetoothManager.getAdapter();
+		if (mBluetoothAdapter == null)
+			return UWS_NG_ADAPTER_NOTFOUND;
+
+		/* Bluetooth ON */
+		else if( !mBluetoothAdapter.isEnabled())
+			return UWS_NG_BT_OFF;
+		TLog.d( "Bluetooth ON.");
+
+		return UWS_NG_SUCCESS;
+	}
+
 	/* Ble scan開始 */
 	private ScanCallback		mScanCallback = null;
 	private List<ScanResult>	mScanResultList = new ArrayList<>();
 	private ScanResult			mScanResult;
 	private int BsvStartScan() {
-		if(mScanCallback != null) {
-			TLog.d("すでにscan中。");
-			try { mListener.notifyError(UWS_NG_ALREADY_SCANNED, "すでにscan中。");}
-			catch (RemoteException e) {e.printStackTrace();}
+		/* 既にscan中 */
+		if(mScanCallback != null)
 			return UWS_NG_ALREADY_SCANNED;
-		}
 
-		/* Bluetooth機能がONになってないのでreturn */
-		if( !mBluetoothAdapter.isEnabled()) {
-			TLog.d("Bluetooth機能がOFFってる。");
-			try { mListener.notifyError(UWS_NG_BT_OFF, "Bluetooth機能がOFFってる。");}
-			catch (RemoteException e) {e.printStackTrace();}
+		/* Bluetooth機能がOFF */
+		if( !mBluetoothAdapter.isEnabled())
 			return UWS_NG_BT_OFF;
-		}
 
 		TLog.d("Bluetooth ON.");
-
-		/* Bluetooth使用の権限がないのでreturn */
-		if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-			TLog.d( "Bluetooth使用の権限なし");
-			try { mListener.notifyError(UWS_NG_PERMISSION_DENIED, "Bluetooth使用の権限なし");}
-			catch (RemoteException e) {e.printStackTrace();}
-			return UWS_NG_PERMISSION_DENIED;
-		}
-		TLog.d( "Bluetooth使用権限OK.");
 
 		TLog.d("scan開始");
 		mScanCallback = new ScanCallback() {

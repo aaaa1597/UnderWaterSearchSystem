@@ -21,36 +21,20 @@ import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-	private int cnt = 0;
-	private DeviceListAdapter						mDeviceListAdapter;
-	private final static int  REQUEST_ENABLE_BT		= 0x1111;
-	private final static int  REQUEST_PERMISSIONS	= 0x2222;
+	private DeviceListAdapter	mDeviceListAdapter;
+	private final static int	REQUEST_ENABLE_BT	= 0x1111;
+	private final static int	REQUEST_PERMISSIONS	= 0x2222;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-
-		/* ↓↓↓動作確認用ボタン(削除予定) */
-		findViewById(R.id.btnSetStr).setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				try {
-					mBleServiceIf.setAddStr("00" + cnt);
-				}
-				catch (RemoteException e) {
-					e.printStackTrace();
-				}
-			}
-		});
-		/* ↑↑↑動作確認用ボタン(削除予定) */
 
 		/* 受信するブロードキャストintentを登録 */
 		final IntentFilter intentFilter = new IntentFilter();
@@ -85,6 +69,17 @@ public class MainActivity extends AppCompatActivity {
 			try { ret = mBleServiceIf.startScan();}
 			catch (RemoteException e) { e.printStackTrace();}
 			TLog.d("{0}", ret);
+
+//			int errReason = intent.getIntExtra(BleService.UWS_KEY_WAKEUP_NG_REASON, BleService.UWS_NG_ADAPTER_NOTFOUND);
+//			if(errReason == BleService.UWS_NG_SERVICE_NOTFOUND)
+//				ErrPopUp.create(MainActivity.this).setErrMsg("この端末はBluetoothに対応していません!!終了します。").Show(MainActivity.this);
+//			else if(errReason == BleService.UWS_NG_ADAPTER_NOTFOUND)
+//				ErrPopUp.create(MainActivity.this).setErrMsg("Service起動中のBT初期化に失敗!!終了します。").Show(MainActivity.this);
+//			else if(errReason == BleService.UWS_NG_REASON_DEVICENOTFOUND)
+//				Snackbar.make(findViewById(R.id.root_view_device), "デバイスアドレスなし!!\n前画面で、別のデバイスを選択して下さい。", Snackbar.LENGTH_LONG).show();
+//			else if(errReason == BleService.UWS_NG_REASON_CONNECTBLE)
+//				Snackbar.make(findViewById(R.id.root_view_device), "デバイス接続失敗!!\n前画面で、別のデバイスを選択して下さい。", Snackbar.LENGTH_LONG).show();
+
 			mDeviceListAdapter.clearDevice();
 			Button btn = (Button)view;
 			btn.setText("scan中");
@@ -93,7 +88,7 @@ public class MainActivity extends AppCompatActivity {
 
 		/* Bluetoothのサポート状況チェック 未サポート端末なら起動しない */
 		if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-			MsgPopUp.create(MainActivity.this).setErrMsg("Bluetoothが、未サポートの端末です。").Show(MainActivity.this);
+			ErrPopUp.create(MainActivity.this).setErrMsg("Bluetoothが、未サポートの端末です。").Show(MainActivity.this);
 		}
 
 		/* 権限が許可されていない場合はリクエスト. */
@@ -105,7 +100,7 @@ public class MainActivity extends AppCompatActivity {
 		BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
 		/* Bluetooth未サポート判定 未サポートならエラーpopupで終了 */
 		if (bluetoothAdapter == null) {
-			MsgPopUp.create(MainActivity.this).setErrMsg("Bluetoothが、未サポートの端末です。").Show(MainActivity.this);
+			ErrPopUp.create(MainActivity.this).setErrMsg("Bluetoothが、未サポートの端末です。").Show(MainActivity.this);
 		}
 		/* Bluetooth ON/OFF判定 -> OFFならONにするようにリクエスト */
 		else if( !bluetoothAdapter.isEnabled()) {
@@ -123,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
 		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 		if(requestCode == REQUEST_PERMISSIONS && grantResults.length > 0) {
 			if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-				MsgPopUp.create(MainActivity.this).setErrMsg("このアプリには必要な権限です。\n再起動後に許可してください。\n終了します。").Show(MainActivity.this);
+				ErrPopUp.create(MainActivity.this).setErrMsg("このアプリには必要な権限です。\n再起動後に許可してください。\n終了します。").Show(MainActivity.this);
 			}
 		}
 	}
@@ -138,7 +133,7 @@ public class MainActivity extends AppCompatActivity {
 //				catch (RemoteException e) { e.printStackTrace();}
 			}
 			else {
-				MsgPopUp.create(MainActivity.this).setErrMsg("このアプリでは、Bluetooth機能をONにする必要があります。\n終了します。").Show(MainActivity.this);
+				ErrPopUp.create(MainActivity.this).setErrMsg("このアプリでは、Bluetooth機能をONにする必要があります。\n終了します。").Show(MainActivity.this);
 			}
 		}
 	}
@@ -148,6 +143,7 @@ public class MainActivity extends AppCompatActivity {
 		super.onDestroy();
 		TLog.d("onDestroy()");
 		unbindService(mCon);
+		unregisterReceiver(mIntentListner);
 	}
 
 	private IBleService mBleServiceIf;
@@ -157,15 +153,37 @@ public class MainActivity extends AppCompatActivity {
 			TLog.d("onServiceConnected(): name={0}", name);
 			mBleServiceIf = IBleService.Stub.asInterface(service);
 			try {
+				/* コールバック設定 */
 				mBleServiceIf.setCallback(mCb);
+				TLog.d("コールバック設定完了");
+				/* BT初期化 */
 				int retini = mBleServiceIf.initBle();
 				TLog.d("Bletooth初期化 ret={0}", retini);
-				if(retini != BleService.UWS_NG_SUCCESS) {
-					MsgPopUp.create(MainActivity.this).setErrMsg("Bluetooth機能の初期化に失敗しました。\n終了します。").Show(MainActivity.this);
+				if(retini == BleService.UWS_NG_SERVICE_NOTFOUND)
+					ErrPopUp.create(MainActivity.this).setErrMsg("この端末はBluetoothに対応していません!!終了します。").Show(MainActivity.this);
+				else if(retini == BleService.UWS_NG_ADAPTER_NOTFOUND)
+					ErrPopUp.create(MainActivity.this).setErrMsg("この端末はBluetoothに対応していません!!終了します。").Show(MainActivity.this);
+				else if(retini == BleService.UWS_NG_BT_OFF) {
+					Snackbar.make(findViewById(R.id.root_view_device), "BluetoothがOFFです。\nONにして操作してください。", Snackbar.LENGTH_LONG).show();
 					return;
 				}
+				else if(retini != BleService.UWS_NG_SUCCESS)
+					ErrPopUp.create(MainActivity.this).setErrMsg("原因不明のエラーが発生しました!!終了します。").Show(MainActivity.this);
+				TLog.d("BT初期化完了");
+
+				/* BT初期化正常終了 -> scan開始 */
 				int retscan = mBleServiceIf.startScan();
 				TLog.d("startScan() ret={0}", retscan);
+				if(retscan == BleService.UWS_NG_ALREADY_SCANNED) {
+					Snackbar.make(findViewById(R.id.root_view_device), "すでにscan中です。継続します。", Snackbar.LENGTH_LONG).show();
+					return;
+				}
+				else if(retscan == BleService.UWS_NG_BT_OFF) {
+					Snackbar.make(findViewById(R.id.root_view_device), "BluetoothがOFFです。\nONにして操作してください。", Snackbar.LENGTH_LONG).show();
+					return;
+				}
+				TLog.d("scan開始");
+
 				mDeviceListAdapter.clearDevice();
 				runOnUiThread(() -> {
 					Button btn = findViewById(R.id.btnScan);
@@ -187,11 +205,6 @@ public class MainActivity extends AppCompatActivity {
 	};
 
 	private IBleServiceCallback mCb = new IBleServiceCallback.Stub() {
-		@Override
-		public void onItemAdded(String name) {
-			TLog.d("onItemAdded() arg={0}", name);
-		}
-
 		@Override
 		public void notifyScanResultlist() throws RemoteException {
 			List<ScanResult> result = mBleServiceIf.getScanResultlist();
@@ -243,9 +256,9 @@ public class MainActivity extends AppCompatActivity {
 				case BleService.UWS_SERVICE_WAKEUP_NG:
 					int errReason = intent.getIntExtra(BleService.UWS_KEY_WAKEUP_NG_REASON, BleService.UWS_NG_ADAPTER_NOTFOUND);
 					if(errReason == BleService.UWS_NG_SERVICE_NOTFOUND)
-						MsgPopUp.create(MainActivity.this).setErrMsg("この端末はBluetoothに対応していません!!終了します。").Show(MainActivity.this);
+						ErrPopUp.create(MainActivity.this).setErrMsg("この端末はBluetoothに対応していません!!終了します。").Show(MainActivity.this);
 					else if(errReason == BleService.UWS_NG_ADAPTER_NOTFOUND)
-						MsgPopUp.create(MainActivity.this).setErrMsg("Service起動中のBT初期化に失敗!!終了します。").Show(MainActivity.this);
+						ErrPopUp.create(MainActivity.this).setErrMsg("Service起動中のBT初期化に失敗!!終了します。").Show(MainActivity.this);
 					else if(errReason == BleService.UWS_NG_REASON_DEVICENOTFOUND)
 						Snackbar.make(findViewById(R.id.root_view_device), "デバイスアドレスなし!!\n前画面で、別のデバイスを選択して下さい。", Snackbar.LENGTH_LONG).show();
 					else if(errReason == BleService.UWS_NG_REASON_CONNECTBLE)

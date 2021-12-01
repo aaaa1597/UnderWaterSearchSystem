@@ -80,7 +80,7 @@ public class DeviceConnectActivity extends AppCompatActivity {
 		/* MainActivityからの引継ぎデータ取得 */
 		Intent intentfromMainActivity = getIntent();
 		if(intentfromMainActivity == null) {
-			MsgPopUp.create(DeviceConnectActivity.this).setErrMsg("画面切替え失敗。内部でエラーが発生しました。メーカに問い合わせて下さい。").Show(DeviceConnectActivity.this);
+			ErrPopUp.create(DeviceConnectActivity.this).setErrMsg("画面切替え失敗。内部でエラーが発生しました。メーカに問い合わせて下さい。").Show(DeviceConnectActivity.this);
 			finish();
 		}
 
@@ -123,9 +123,9 @@ public class DeviceConnectActivity extends AppCompatActivity {
 				case BleService.UWS_SERVICE_WAKEUP_NG:
 					int errReason = intent.getIntExtra(BleService.UWS_KEY_WAKEUP_NG_REASON, BleService.UWS_NG_ADAPTER_NOTFOUND);
 					if(errReason == BleService.UWS_NG_SERVICE_NOTFOUND)
-						MsgPopUp.create(DeviceConnectActivity.this).setErrMsg("この端末はBluetoothに対応していません!!終了します。").Show(DeviceConnectActivity.this);
+						ErrPopUp.create(DeviceConnectActivity.this).setErrMsg("この端末はBluetoothに対応していません!!終了します。").Show(DeviceConnectActivity.this);
 					else if(errReason == BleService.UWS_NG_ADAPTER_NOTFOUND)
-						MsgPopUp.create(DeviceConnectActivity.this).setErrMsg("Service起動中のBT初期化に失敗!!終了します。").Show(DeviceConnectActivity.this);
+						ErrPopUp.create(DeviceConnectActivity.this).setErrMsg("Service起動中のBT初期化に失敗!!終了します。").Show(DeviceConnectActivity.this);
 					else if(errReason == BleService.UWS_NG_REASON_DEVICENOTFOUND)
 						Snackbar.make(findViewById(R.id.root_view_device), "デバイスアドレスなし!!\n前画面で、別のデバイスを選択して下さい。", Snackbar.LENGTH_LONG).show();
 					else if(errReason == BleService.UWS_NG_REASON_CONNECTBLE)
@@ -192,11 +192,6 @@ public class DeviceConnectActivity extends AppCompatActivity {
 	}
 
 	private IBleServiceCallback mCb = new IBleServiceCallback.Stub() {
-		@Override
-		public void onItemAdded(String name) {
-			TLog.d("onItemAdded() arg=" + name);
-		}
-
 		@Override
 		public void notifyScanResultlist() throws RemoteException {
 
