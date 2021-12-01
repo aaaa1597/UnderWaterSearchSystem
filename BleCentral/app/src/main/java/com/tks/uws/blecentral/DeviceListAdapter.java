@@ -6,6 +6,8 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -22,12 +24,18 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	}
 
 	static class ViewHolder extends RecyclerView.ViewHolder {
-		TextView mTxtDeviceName;
-		TextView mTxtDeviceNameAddress;
+		TextView	mTxtDeviceName;
+		TextView	mTxtDeviceNameAddress;
+		ImageView	mImvRssi;
+		ImageView	mImvIsFirefighter;
+		TextView	mTxtHertBeat;
 		ViewHolder(View view) {
 			super(view);
 			mTxtDeviceName			= view.findViewById(R.id.device_name);
 			mTxtDeviceNameAddress	= view.findViewById(R.id.device_address);
+			mImvRssi				= view.findViewById(R.id.imvRssi);
+			mImvIsFirefighter		= view.findViewById(R.id.imvIsFireFiter);
+			mTxtHertBeat			= view.findViewById(R.id.txtHertBeat);
 		}
 	}
 

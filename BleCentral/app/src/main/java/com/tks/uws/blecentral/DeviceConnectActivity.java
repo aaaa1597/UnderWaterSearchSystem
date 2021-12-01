@@ -30,27 +30,7 @@ public class DeviceConnectActivity extends AppCompatActivity {
 	private final ArrayList<ArrayList<BluetoothGattCharacteristic>> mDeviceServices = new ArrayList<>();
 	private BluetoothGattCharacteristic	mCharacteristic;
 	private String						mDeviceAddress;
-	private IBleService mBleServerIf;
-
-	/* BLE管理のService */
-	private final ServiceConnection mCon = new ServiceConnection() {
-		@Override
-		public void onServiceConnected(ComponentName componentName, IBinder service) {
-			TLog.d("BLE管理サービス接続-確立");
-			mBleServerIf = IBleService.Stub.asInterface(service);
-			try {
-				mBleServerIf.setCallback(mCb);
-			}
-			catch (RemoteException e) {
-				TLog.d("Error!! addCallback()");
-				e.printStackTrace();
-			}
-		}
-		@Override
-		public void onServiceDisconnected(ComponentName componentName) {
-			mBleServerIf = null;
-		}
-	};
+	private IBleService					mBleServerIf;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -103,6 +83,26 @@ public class DeviceConnectActivity extends AppCompatActivity {
 		unregisterReceiver(mIntentListner);	/* 設定したブロードキャストintentを解除 */
 		unbindService(mCon);
 	}
+
+	/* Serviceコールバック */
+	private final ServiceConnection mCon = new ServiceConnection() {
+		@Override
+		public void onServiceConnected(ComponentName componentName, IBinder service) {
+			TLog.d("BLE管理サービス接続-確立");
+			mBleServerIf = IBleService.Stub.asInterface(service);
+			try {
+				mBleServerIf.setCallback(mCb);
+			}
+			catch (RemoteException e) {
+				TLog.d("Error!! addCallback()");
+				e.printStackTrace();
+			}
+		}
+		@Override
+		public void onServiceDisconnected(ComponentName componentName) {
+			mBleServerIf = null;
+		}
+	};
 
 	private final BroadcastReceiver mIntentListner = new BroadcastReceiver() {
 		@Override

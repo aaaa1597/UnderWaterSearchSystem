@@ -27,10 +27,19 @@ import android.os.RemoteException;
 import android.support.annotation.NonNull;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static com.tks.uws.blecentral.Constants.UWS_CHARACTERISTIC_SAMLE_UUID;
 
+//-30 dBm	素晴らしい	達成可能な最大信号強度。クライアントは、これを実現するには、APから僅か数フィートである必要があります。現実的には一般的ではなく、望ましいものでもありません	N/A
+//-67 dBm	良好	非常に信頼性の高く、データパケットのタイムリーな伝送を必要とするアプリケーションのための最小信号強度	VoIP/VoWiFi, ストリーミングビデオ
+//-70 dBm	Ok	信頼できるパケット伝送に必要な最小信号強度	Email, web
+//-80 dBm	よくない	基本的なコネクティビティに必要な最小信号強度。パケット伝送は信頼できない可能性があります	N/A
+//-90 dBm	使用不可	ノイズレベルに近いかそれ以下の信号強度。殆ど機能しない	N/A
 
 public class BleService extends Service {
 	private Handler				mHandler;
@@ -123,9 +132,10 @@ public class BleService extends Service {
 	}
 
 	/* Ble scan開始 */
-	private ScanCallback		mScanCallback = null;
-	private List<ScanResult>	mScanResultList = new ArrayList<>();
-	private ScanResult			mScanResult;
+	private ScanCallback					mScanCallback = null;
+	private List<ScanResult>				mScanResultList = new ArrayList<>();
+	private ScanResult						mScanResult;
+	private final Map<String, ScanResult>	mScanResultMap = new HashMap<>();
 	private int BsvStartScan() {
 		/* 既にscan中 */
 		if(mScanCallback != null)
@@ -138,11 +148,13 @@ public class BleService extends Service {
 		TLog.d("Bluetooth ON.");
 
 		TLog.d("scan開始");
+		mScanResultMap.clear();;
 		mScanCallback = new ScanCallback() {
 			@Override
 			public void onBatchScanResults(List<ScanResult> results) {
 				super.onBatchScanResults(results);
 				mScanResultList = results;
+				results.forEach(ret -> { mScanResultMap.put(ret.getDevice().getAddress(), ret ); });
 				try { mListener.notifyScanResultlist();}
 				catch (RemoteException e) {e.printStackTrace();}
 //					mDeviceListAdapter.addDevice(results);
@@ -173,6 +185,7 @@ public class BleService extends Service {
 			public void onScanResult(int callbackType, ScanResult result) {
 				super.onScanResult(callbackType, result);
 				mScanResult = result;
+				mScanResultMap.put(result.getDevice().getAddress(), result );
 				if(result.getScanRecord() != null && result.getScanRecord().getServiceUuids() != null)
 					TLog.d("発見!! {0}({1}):Rssi({2}) Uuids({3})", result.getDevice().getAddress(), result.getDevice().getName(), result.getRssi(), result.getScanRecord().getServiceUuids().toString());
 				else
