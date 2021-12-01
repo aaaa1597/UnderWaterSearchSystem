@@ -1,4 +1,4 @@
-package com.tsk.uws.blecentral;
+package com.tks.uws.blecentral;
 
 import android.util.Log;
 

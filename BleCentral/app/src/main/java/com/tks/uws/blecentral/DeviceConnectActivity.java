@@ -1,4 +1,4 @@
-package com.tsk.uws.blecentral;
+package com.tks.uws.blecentral;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static com.tsk.uws.blecentral.Constants.BLEMSG_1;
+import static com.tks.uws.blecentral.Constants.BLEMSG_1;
 
 public class DeviceConnectActivity extends AppCompatActivity {
 	public static final String EXTRAS_DEVICE_NAME	= "com.tks.uws.DEVICE_NAME";
@@ -39,7 +39,7 @@ public class DeviceConnectActivity extends AppCompatActivity {
 			TLog.d("BLE管理サービス接続-確立");
 			mBleServerIf = IBleService.Stub.asInterface(service);
 			try {
-				mBleServerIf.addCallback(mCb);
+				mBleServerIf.setCallback(mCb);
 			}
 			catch (RemoteException e) {
 				TLog.d("Error!! addCallback()");
@@ -121,10 +121,10 @@ public class DeviceConnectActivity extends AppCompatActivity {
 
 				/* Ble管理サービス起動失敗 */
 				case BleService.UWS_SERVICE_WAKEUP_NG:
-					int errReason = intent.getIntExtra(BleService.UWS_KEY_WAKEUP_NG_REASON, BleService.UWS_NG_REASON_BTADAPTER_NOTFOUND);
-					if(errReason == BleService.UWS_NG_REASON_SERVICE_NOTFOUND)
+					int errReason = intent.getIntExtra(BleService.UWS_KEY_WAKEUP_NG_REASON, BleService.UWS_NG_ADAPTER_NOTFOUND);
+					if(errReason == BleService.UWS_NG_SERVICE_NOTFOUND)
 						MsgPopUp.create(DeviceConnectActivity.this).setErrMsg("この端末はBluetoothに対応していません!!終了します。").Show(DeviceConnectActivity.this);
-					else if(errReason == BleService.UWS_NG_REASON_BTADAPTER_NOTFOUND)
+					else if(errReason == BleService.UWS_NG_ADAPTER_NOTFOUND)
 						MsgPopUp.create(DeviceConnectActivity.this).setErrMsg("Service起動中のBT初期化に失敗!!終了します。").Show(DeviceConnectActivity.this);
 					else if(errReason == BleService.UWS_NG_REASON_DEVICENOTFOUND)
 						Snackbar.make(findViewById(R.id.root_view_device), "デバイスアドレスなし!!\n前画面で、別のデバイスを選択して下さい。", Snackbar.LENGTH_LONG).show();
@@ -195,11 +195,6 @@ public class DeviceConnectActivity extends AppCompatActivity {
 		@Override
 		public void onItemAdded(String name) {
 			TLog.d("onItemAdded() arg=" + name);
-		}
-
-		@Override
-		public void onItemRemoved(String name) {
-			TLog.d("onItemRemoved() arg=" + name);
 		}
 
 		@Override

@@ -3,7 +3,9 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/OwnBiz/Uws/UnderWaterSearchSystem/BleCentral/app/src/main/res/drawable/popup_background.xml" value="0.1787037037037037" />
         <entry key="..\:/OwnBiz/Uws/UnderWaterSearchSystem/BleCentral/app/src/main/res/layout/activity_main.xml" value="0.19123606889564337" />
+        <entry key="..\:/OwnBiz/Uws/UnderWaterSearchSystem/BleCentral/app/src/main/res/layout/popup_layout.xml" value="0.21833839918946302" />
       </map>
     </option>
   </component>

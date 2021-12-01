@@ -1,4 +1,4 @@
-package com.tsk.uws.blecentral;
+package com.tks.uws.blecentral;
 
 import android.app.Activity;
 import android.support.v4.content.res.ResourcesCompat;
