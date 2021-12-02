@@ -57,15 +57,15 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		ScanResult scanResult = mDeviceList.get(position);
 		final String deviceName		= scanResult.getDevice().getName();
 		final String deviceAddress	= scanResult.getDevice().getAddress();
-
+		final int rssiresid	=	scanResult.getRssi() > -40 ? R.drawable.wifi_level_3 :
+								scanResult.getRssi() > -50 ? R.drawable.wifi_level_2 :
+								scanResult.getRssi() > -60 ? R.drawable.wifi_level_1 : R.drawable.wifi_level_0;
         holder.mTxtDeviceName.setText(TextUtils.isEmpty(deviceName) ? "" : deviceName);
         holder.mTxtDeviceNameAddress.setText(TextUtils.isEmpty(deviceAddress) ? "" : deviceAddress);
+		holder.mImvRssi.setImageResource(rssiresid);
 		holder.itemView.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
-                if (TextUtils.isEmpty(deviceName) || TextUtils.isEmpty(deviceAddress))
-                    return;
-
                 if (mListener != null)
                     mListener.onDeviceItemClick(deviceName, deviceAddress);
 			}

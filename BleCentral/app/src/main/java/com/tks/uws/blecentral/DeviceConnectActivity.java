@@ -45,10 +45,16 @@ public class DeviceConnectActivity extends AppCompatActivity {
 		intentFilter.addAction(BleService.UWS_DATA_AVAILABLE);
 		registerReceiver(mIntentListner, intentFilter);
 
+		/* BLEサービス接続 */
+		Intent intent = new Intent("com.tsk.uws.blecentral.BINDSERVICE");
+		intent.setPackage("com.tks.uws.blecentral");
+		intent.putExtra(EXTRAS_DEVICE_ADDRESS, mDeviceAddress);
+		bindService(intent, mCon, Context.BIND_AUTO_CREATE);
+
 		/* 読出し要求ボタン */
 		findViewById(R.id.btnReqReadCharacteristic).setOnClickListener(view -> {
-//			if (mBLeMngServ != null && mCharacteristic != null) {
-//				mBLeMngServ.readCharacteristic(mCharacteristic);
+//			if (mBleServerIf != null && mCharacteristic != null) {
+//				mBleServerIf.readCharacteristic(mCharacteristic);
 //			}
 //			else {
 //				Snackbar.make(findViewById(R.id.root_view_device), "Unknown error.", Snackbar.LENGTH_LONG).show();
@@ -69,12 +75,6 @@ public class DeviceConnectActivity extends AppCompatActivity {
 
 		/* デバイスaddress保持 */
 		mDeviceAddress = intentfromMainActivity.getStringExtra(EXTRAS_DEVICE_ADDRESS);
-
-		/* BLE管理サービス起動 */
-		TLog.d("BLE管理サービス起動");
-		Intent intent = new Intent(this, BleService.class);
-		intent.putExtra(EXTRAS_DEVICE_ADDRESS, mDeviceAddress);
-		bindService(intent, mCon, BIND_AUTO_CREATE);
 	}
 
 	@Override
@@ -141,10 +141,10 @@ public class DeviceConnectActivity extends AppCompatActivity {
 					break;
 
 				case BleService.UWS_GATT_SERVICES_DISCOVERED:
-//					mCharacteristic = findTerget(mBLeMngServ.getSupportedGattServices(), UWS_SERVICE_UUID, UWS_CHARACTERISTIC_SAMLE_UUID);
+//					mCharacteristic = findTerget(mBleServerIf.getSupportedGattServices(), UWS_SERVICE_UUID, UWS_CHARACTERISTIC_SAMLE_UUID);
 //					if (mCharacteristic != null) {
-//						mBLeMngServ.readCharacteristic(mCharacteristic);
-//						mBLeMngServ.setCharacteristicNotification(mCharacteristic, true);
+//						mBleServerIf.readCharacteristic(mCharacteristic);
+//						mBleServerIf.setCharacteristicNotification(mCharacteristic, true);
 //					}
 					break;
 

@@ -25,7 +25,7 @@
         <activity android:name=".DeviceConnectActivity" />
         <service android:name=".BleService" android:exported="true" android:process=":worker">
             <intent-filter>
-                <action android:name="com.tsk.uws.blecentral.BIND_BLESERVICE" />
+                <action android:name="com.tsk.uws.blecentral.BINDSERVICE" />
             </intent-filter>
         </service>
     </application>

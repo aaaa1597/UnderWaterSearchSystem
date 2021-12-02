@@ -24,6 +24,7 @@ import android.support.v7.widget.RecyclerView;
 import android.widget.Button;
 import android.widget.TextView;
 
+import java.text.MessageFormat;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -53,11 +54,36 @@ public class MainActivity extends AppCompatActivity {
 			public void onDeviceItemClick(String deviceName, String deviceAddress) {
 				try { mBleServiceIf.stopScan(); }
 				catch (RemoteException e) { e.printStackTrace(); }
-				/* 接続画面に遷移 */
-				Intent intent = new Intent(MainActivity.this, DeviceConnectActivity.class);
-				intent.putExtra(DeviceConnectActivity.EXTRAS_DEVICE_NAME	, deviceName);
-				intent.putExtra(DeviceConnectActivity.EXTRAS_DEVICE_ADDRESS	, deviceAddress);
-				startActivity(intent);
+
+				int ret = 0;
+				try { ret = mBleServiceIf.connectDevice(deviceAddress); }
+				catch (RemoteException e) { e.printStackTrace(); }
+				if(ret == BleService.UWS_NG_SUCCESS) {
+					String logstr = MessageFormat.format("デバイス接続成功. デバイス:({0} : {1})", deviceName, deviceAddress);
+					TLog.d(logstr);
+					runOnUiThread(() -> Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show());
+					/* メンバ識別画像差替え */
+
+				}
+				else if(ret == BleService.UWS_NG_DEVICE_NOTFOUND) {
+					String logstr = MessageFormat.format("デバイスが見つかりません。デバイス:({0} : {1})", deviceName, deviceAddress);
+					TLog.d(logstr);
+					runOnUiThread(() -> Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show());
+				}
+				else {
+					String logstr = MessageFormat.format("デバイス接続::不明なエラー. デバイス:({0} : {1})", deviceName, deviceAddress);
+					TLog.d(logstr);
+					runOnUiThread(() -> Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show());
+				}
+
+
+
+
+//				/* 接続画面に遷移 */
+//				Intent intent = new Intent(MainActivity.this, DeviceConnectActivity.class);
+//				intent.putExtra(DeviceConnectActivity.EXTRAS_DEVICE_NAME	, deviceName);
+//				intent.putExtra(DeviceConnectActivity.EXTRAS_DEVICE_ADDRESS	, deviceAddress);
+//				startActivity(intent);
 			}
 		});
 		deviceListRvw.setAdapter(mDeviceListAdapter);
@@ -177,10 +203,9 @@ public class MainActivity extends AppCompatActivity {
 		@Override
 		public void notifyMsg(int msgid, String msg) throws RemoteException {
 			TLog.d("Msg受信!! msgid={0} : {1}", msgid, msg);
-			runOnUiThread(new Runnable() {
-				@Override
-				public void run() {
-					Button btn = (Button)findViewById(R.id.btnScan);
+			runOnUiThread(() -> {
+				if(msgid == BleService.UWS_MSG_ENDSCAN) {
+					Button btn = findViewById(R.id.btnScan);
 					btn.setText("scan開始");
 					btn.setEnabled(true);
 				}

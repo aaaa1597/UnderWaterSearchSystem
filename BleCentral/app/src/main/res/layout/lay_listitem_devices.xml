@@ -34,7 +34,7 @@
         android:layout_height="wrap_content"
         android:adjustViewBounds="true"
         android:scaleType="fitStart"
-        android:src="@drawable/diver" />
+        android:src="@drawable/diver_enable" />
 
     <ImageView
         android:id="@+id/imvRssi"
