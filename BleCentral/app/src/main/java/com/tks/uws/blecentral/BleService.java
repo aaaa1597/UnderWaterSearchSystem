@@ -261,8 +261,13 @@ public class BleService extends Service {
 		if(gat != null) {
 			TLog.d("デバイス再接続({0})", deviceAddress);
 			boolean ret = gat.connect();
-			if(ret) return UWS_NG_RECONNECT_OK;
-			else	return UWS_NG_DEVICE_NOTFOUND;
+			if(ret)
+				return UWS_NG_RECONNECT_OK;
+			/* デバイスなしなので、削除 */
+			gat.disconnect();
+			gat.close();
+			mConnectedDevices.remove(deviceAddress);
+			return UWS_NG_DEVICE_NOTFOUND;
 		}
 
 		TLog.d("デバイス初回接続({0})", deviceAddress);
@@ -282,7 +287,6 @@ public class BleService extends Service {
 		}
 
 		/* Gatt接続中 */
-		mConnectedDevices.put(deviceAddress, blegatt);
 		TLog.d("Gattサーバ接続成功. address={0} gatt'sAddress={1}", deviceAddress, blegatt.getDevice().getAddress());
 
 		return UWS_NG_SUCCESS;
@@ -307,6 +311,9 @@ public class BleService extends Service {
 				try { mListener.notifyGattDisConnected(gatt.getDevice().getAddress()); }
 				catch (RemoteException e) { e.printStackTrace(); }
 				TLog.d("GATTサーバ断. address={0}", gatt.getDevice().getAddress());
+				mConnectedDevices.remove(gatt.getDevice().getAddress());
+				gatt.disconnect();
+				gatt.close();
 			}
 		}
 
@@ -329,17 +336,25 @@ public class BleService extends Service {
 						TLog.d("BLEデバイス通信 準備完了. address={0}", gatt.getDevice().getAddress());
 						try { mListener.notifyReady2DeviceCommunication(gatt.getDevice().getAddress(), true); }
 						catch (RemoteException e) { e.printStackTrace(); }
+						mConnectedDevices.put(gatt.getDevice().getAddress(), gatt);
+						return;
 					}
 					else {
 						TLog.d("BLEデバイス通信 準備失敗!! address={0}", gatt.getDevice().getAddress());
 						try { mListener.notifyReady2DeviceCommunication(gatt.getDevice().getAddress(), false); }
 						catch (RemoteException e) { e.printStackTrace(); }
+						mConnectedDevices.remove(gatt.getDevice().getAddress());
+						gatt.disconnect();
+						gatt.close();
 					}
 				}
 				else {
 					TLog.d("対象外デバイス!! address={0}", gatt.getDevice().getAddress());
 					try { mListener.notifyApplicable(gatt.getDevice().getAddress(), false); }
 					catch (RemoteException e) { e.printStackTrace(); }
+					mConnectedDevices.remove(gatt.getDevice().getAddress());
+					gatt.disconnect();
+					gatt.close();
 				}
 			}
 		}

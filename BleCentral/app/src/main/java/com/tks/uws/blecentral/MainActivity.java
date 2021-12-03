@@ -220,7 +220,7 @@ public class MainActivity extends AppCompatActivity {
 		public void notifyGattConnected(String Address) throws RemoteException {
 			/* Gatt接続完了 */
 			TLog.d("Gatt接続OK!! -> Services探検中. Address={0}", Address);
-			mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.EXPLORING);
+			runOnUiThread(() -> { mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.EXPLORING); });
 		}
 
 		@Override
@@ -228,18 +228,18 @@ public class MainActivity extends AppCompatActivity {
 			String logstr = MessageFormat.format("Gatt接続断!! Address={0}", Address);
 			TLog.d(logstr);
 			Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show();
-			mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE);
+			runOnUiThread(() -> { mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE); });
 		}
 
 		@Override
 		public void notifyServicesDiscovered(String Address, int status) throws RemoteException {
 			if(status == BleService.UWS_NG_GATT_SUCCESS) {
 				TLog.d("Services発見. -> 対象Serviceかチェック ret={0}", status);
-				mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.CHECKAPPLI );
+				runOnUiThread(() -> { mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.CHECKAPPLI); });
 			}
 			else {
 				TLog.d("Services探索失敗!! 処理終了 ret={0}", status);
-				mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE );
+				runOnUiThread(() -> { mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE); });
 			}
 		}
 
@@ -247,11 +247,11 @@ public class MainActivity extends AppCompatActivity {
 		public void notifyApplicable(String Address, boolean status) throws RemoteException {
 			if(status) {
 				TLog.d("対象Chk-OK. -> 通信準備中 Address={0}", Address);
-				mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.TOBEPREPARED );
+				runOnUiThread(() -> { mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.TOBEPREPARED); });
 			}
 			else {
 				TLog.d("対象外デバイス.　処理終了. Address={0}", Address);
-				mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE );
+				runOnUiThread(() -> { mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE); });
 			}
 		}
 
@@ -259,11 +259,11 @@ public class MainActivity extends AppCompatActivity {
 		public void notifyReady2DeviceCommunication(String Address, boolean status) throws RemoteException {
 			if(status) {
 				TLog.d("BLEデバイス通信 準備完了. Address={0}", Address);
-				mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.READY);
+				runOnUiThread(() -> { mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.READY); });
 			}
 			else {
 				TLog.d("BLEデバイス通信 準備失敗!! Address={0}", Address);
-				mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE);
+				runOnUiThread(() -> { mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE); });
 			}
 		}
 
@@ -309,7 +309,7 @@ public class MainActivity extends AppCompatActivity {
 			Snackbar.make(findViewById(R.id.root_view_device), "BluetoothがOFFです。\nONにして操作してください。", Snackbar.LENGTH_LONG).show();
 			return false;
 		}
-		mDeviceListAdapter.clearDevice();
+		runOnUiThread(() -> { mDeviceListAdapter.clearDevice(); });
 		Button btn = findViewById(R.id.btnScan);
 		btn.setText("scan中");
 		btn.setEnabled(false);
