@@ -287,7 +287,7 @@ public class BleService extends Service {
 		}
 
 		/* Gatt接続中 */
-		TLog.d("Gattサーバ接続成功. address={0} gatt'sAddress={1}", deviceAddress, blegatt.getDevice().getAddress());
+		TLog.d("Gattサーバ接続成功. address={0} gattAddress={1}", deviceAddress, blegatt.getDevice().getAddress());
 
 		return UWS_NG_SUCCESS;
 	}
@@ -337,7 +337,6 @@ public class BleService extends Service {
 						try { mListener.notifyReady2DeviceCommunication(gatt.getDevice().getAddress(), true); }
 						catch (RemoteException e) { e.printStackTrace(); }
 						mConnectedDevices.put(gatt.getDevice().getAddress(), gatt);
-						return;
 					}
 					else {
 						TLog.d("BLEデバイス通信 準備失敗!! address={0}", gatt.getDevice().getAddress());
