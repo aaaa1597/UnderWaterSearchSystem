@@ -21,8 +21,8 @@ import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.view.View;
 import android.widget.Button;
-import android.widget.TextView;
 
 import java.text.MessageFormat;
 import java.util.List;
@@ -39,8 +39,8 @@ public class MainActivity extends AppCompatActivity {
 
 		/* 受信するブロードキャストintentを登録 */
 		final IntentFilter intentFilter = new IntentFilter();
-		intentFilter.addAction(BleService.UWS_GATT_CONNECTED);
-		intentFilter.addAction(BleService.UWS_GATT_DISCONNECTED);
+//		intentFilter.addAction(BleService.UWS_GATT_CONNECTED);
+//		intentFilter.addAction(BleService.UWS_GATT_DISCONNECTED);
 		intentFilter.addAction(BleService.UWS_GATT_SERVICES_DISCOVERED);
 		intentFilter.addAction(BleService.UWS_DATA_AVAILABLE);
 		registerReceiver(mIntentListner, intentFilter);
@@ -51,39 +51,36 @@ public class MainActivity extends AppCompatActivity {
 		deviceListRvw.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
 		mDeviceListAdapter = new DeviceListAdapter(new DeviceListAdapter.DeviceListAdapterListener() {
 			@Override
-			public void onDeviceItemClick(String deviceName, String deviceAddress) {
+			public void onDeviceItemClick(View view, String deviceName, String deviceAddress) {
 				try { mBleServiceIf.stopScan(); }
 				catch (RemoteException e) { e.printStackTrace(); }
 
+				/* デバイス接続開始 */
 				int ret = 0;
 				try { ret = mBleServiceIf.connectDevice(deviceAddress); }
 				catch (RemoteException e) { e.printStackTrace(); }
-				if(ret == BleService.UWS_NG_SUCCESS) {
-					String logstr = MessageFormat.format("デバイス接続成功. デバイス:({0} : {1})", deviceName, deviceAddress);
-					TLog.d(logstr);
-					runOnUiThread(() -> Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show());
-					/* メンバ識別画像差替え */
-
+				switch(ret) {
+					case BleService.UWS_NG_SUCCESS:
+						TLog.d("デバイス接続中... {0}:{1}", deviceName, deviceAddress);
+						mDeviceListAdapter.setStatus(deviceAddress, DeviceListAdapter.ConnectStatus.CONNECTING);
+						break;
+					case BleService.UWS_NG_RECONNECT_OK:
+						TLog.d("デバイス再接続OK. {0}:{1}", deviceName, deviceAddress);
+						mDeviceListAdapter.setStatus(deviceAddress, DeviceListAdapter.ConnectStatus.READY);
+						break;
+					case BleService.UWS_NG_DEVICE_NOTFOUND: {
+							String logstr = MessageFormat.format("デバイスが見つかりません。デバイス:({0} : {1})", deviceName, deviceAddress);
+							TLog.d(logstr);
+							Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show();
+						}
+						break;
+					default: {
+							String logstr = MessageFormat.format("デバイス接続::不明なエラー. デバイス:({0} : {1})", deviceName, deviceAddress);
+							TLog.d(logstr);
+							Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show();
+						}
+						break;
 				}
-				else if(ret == BleService.UWS_NG_DEVICE_NOTFOUND) {
-					String logstr = MessageFormat.format("デバイスが見つかりません。デバイス:({0} : {1})", deviceName, deviceAddress);
-					TLog.d(logstr);
-					runOnUiThread(() -> Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show());
-				}
-				else {
-					String logstr = MessageFormat.format("デバイス接続::不明なエラー. デバイス:({0} : {1})", deviceName, deviceAddress);
-					TLog.d(logstr);
-					runOnUiThread(() -> Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show());
-				}
-
-
-
-
-//				/* 接続画面に遷移 */
-//				Intent intent = new Intent(MainActivity.this, DeviceConnectActivity.class);
-//				intent.putExtra(DeviceConnectActivity.EXTRAS_DEVICE_NAME	, deviceName);
-//				intent.putExtra(DeviceConnectActivity.EXTRAS_DEVICE_ADDRESS	, deviceAddress);
-//				startActivity(intent);
 			}
 		});
 		deviceListRvw.setAdapter(mDeviceListAdapter);
@@ -201,15 +198,64 @@ public class MainActivity extends AppCompatActivity {
 		}
 
 		@Override
-		public void notifyMsg(int msgid, String msg) throws RemoteException {
-			TLog.d("Msg受信!! msgid={0} : {1}", msgid, msg);
+		public void notifyScanEnd() throws RemoteException {
+			TLog.d("scan終了");
 			runOnUiThread(() -> {
-				if(msgid == BleService.UWS_MSG_ENDSCAN) {
-					Button btn = findViewById(R.id.btnScan);
-					btn.setText("scan開始");
-					btn.setEnabled(true);
-				}
+				Button btn = findViewById(R.id.btnScan);
+				btn.setText("scan開始");
+				btn.setEnabled(true);
 			});
+		}
+
+		@Override
+		public void notifyGattConnected(String Address) throws RemoteException {
+			/* Gatt接続完了 */
+			TLog.d("Gatt接続OK!! -> Services探検中. Address={0}", Address);
+			mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.EXPLORING);
+		}
+
+		@Override
+		public void notifyGattDisConnected(String Address) throws RemoteException {
+			String logstr = MessageFormat.format("Gatt接続断!! Address={0}", Address);
+			TLog.d(logstr);
+			Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show();
+			mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE);
+		}
+
+		@Override
+		public void notifyServicesDiscovered(String Address, int status) throws RemoteException {
+			if(status == BleService.UWS_NG_GATT_SUCCESS) {
+				TLog.d("Services発見. -> 対象Serviceかチェック ret={0}", status);
+				mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.CHECKAPPLI );
+			}
+			else {
+				TLog.d("Services探索失敗!! 処理終了 ret={0}", status);
+				mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE );
+			}
+		}
+
+		@Override
+		public void notifyApplicable(String Address, boolean status) throws RemoteException {
+			if(status) {
+				TLog.d("対象Chk-OK. -> 通信準備中 Address={0}", Address);
+				mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.TOBEPREPARED );
+			}
+			else {
+				TLog.d("対象外デバイス.　処理終了. Address={0}", Address);
+				mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE );
+			}
+		}
+
+		@Override
+		public void notifyReady2DeviceCommunication(String Address, boolean status) throws RemoteException {
+			if(status) {
+				TLog.d("BLEデバイス通信 準備完了. Address={0}", Address);
+				mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.READY);
+			}
+			else {
+				TLog.d("BLEデバイス通信 準備失敗!! Address={0}", Address);
+				mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE);
+			}
 		}
 
 		@Override
@@ -291,23 +337,23 @@ public class MainActivity extends AppCompatActivity {
 //				else if(errReason == BleService.UWS_NG_REASON_CONNECTBLE)
 //					Snackbar.make(findViewById(R.id.root_view_device), "デバイス接続失敗!!\n前画面で、別のデバイスを選択して下さい。", Snackbar.LENGTH_LONG).show();
 
-				/* Gattサーバ接続完了 */
-				case BleService.UWS_GATT_CONNECTED:
-					runOnUiThread(() -> {
-						/* 表示 : Connected */
-						((TextView)findViewById(R.id.txtConnectionStatus)).setText(R.string.connected);
-					});
-					findViewById(R.id.btnReqReadCharacteristic).setEnabled(true);
-					break;
+//				/* Gattサーバ接続完了 */
+//				case BleService.UWS_GATT_CONNECTED:
+//					runOnUiThread(() -> {
+//						/* 表示 : Connected */
+//						((TextView)findViewById(R.id.txtConnectionStatus)).setText(R.string.connected);
+//					});
+//					findViewById(R.id.btnReqReadCharacteristic).setEnabled(true);
+//					break;
 
-				/* Gattサーバ断 */
-				case BleService.UWS_GATT_DISCONNECTED:
-					runOnUiThread(() -> {
-						/* 表示 : Disconnected */
-						((TextView)findViewById(R.id.txtConnectionStatus)).setText(R.string.disconnected);
-					});
-					findViewById(R.id.btnReqReadCharacteristic).setEnabled(false);
-					break;
+//				/* Gattサーバ断 */
+//				case BleService.UWS_GATT_DISCONNECTED:
+//					runOnUiThread(() -> {
+//						/* 表示 : Disconnected */
+//						((TextView)findViewById(R.id.txtConnectionStatus)).setText(R.string.disconnected);
+//					});
+//					findViewById(R.id.btnReqReadCharacteristic).setEnabled(false);
+//					break;
 
 				case BleService.UWS_GATT_SERVICES_DISCOVERED:
 //					mCharacteristic = findTerget(mBLeMngServ.getSupportedGattServices(), UWS_SERVICE_UUID, UWS_CHARACTERISTIC_SAMLE_UUID);

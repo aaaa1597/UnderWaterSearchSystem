@@ -7,11 +7,12 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.Switch;
 import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.tks.uws.blecentral.DeviceListAdapter.ConnectStatus.NONE;
 
 /**
  * Created by itanbarpeled on 28/01/2018.
@@ -20,27 +21,37 @@ import java.util.List;
 public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.ViewHolder> {
 	/* インターフェース : DeviceListAdapterListener */
 	public interface DeviceListAdapterListener {
-		void onDeviceItemClick(String deviceName, String deviceAddress);
+		void onDeviceItemClick(View view, String deviceName, String deviceAddress);
+	}
+
+	public enum ConnectStatus { NONE, CONNECTING, EXPLORING, CHECKAPPLI, TOBEPREPARED, READY}
+	private class DevicveInfoModel {
+		public ScanResult		mScanResult;
+		public ConnectStatus	mStatus;
+		public DevicveInfoModel(ScanResult scanResult, ConnectStatus status) {
+			mScanResult	= scanResult;
+			mStatus		= status;
+		}
 	}
 
 	static class ViewHolder extends RecyclerView.ViewHolder {
 		TextView	mTxtDeviceName;
 		TextView	mTxtDeviceNameAddress;
 		ImageView	mImvRssi;
-		ImageView	mImvIsFirefighter;
+		ImageView mImvConnectStatus;
 		TextView	mTxtHertBeat;
 		ViewHolder(View view) {
 			super(view);
 			mTxtDeviceName			= view.findViewById(R.id.device_name);
 			mTxtDeviceNameAddress	= view.findViewById(R.id.device_address);
 			mImvRssi				= view.findViewById(R.id.imvRssi);
-			mImvIsFirefighter		= view.findViewById(R.id.imvIsFireFiter);
+			mImvConnectStatus		= view.findViewById(R.id.imvConnectStatus);
 			mTxtHertBeat			= view.findViewById(R.id.txtHertBeat);
 		}
 	}
 
 	/* メンバ変数 */
-	private ArrayList<ScanResult>		mDeviceList = new ArrayList<ScanResult>();
+	private ArrayList<DevicveInfoModel>	mDeviceList = new ArrayList<>();
 	private DeviceListAdapterListener	mListener;
 
 	public DeviceListAdapter(DeviceListAdapterListener listener) {
@@ -54,20 +65,28 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 
 	@Override
 	public void onBindViewHolder(ViewHolder holder, int position) {
-		ScanResult scanResult = mDeviceList.get(position);
-		final String deviceName		= scanResult.getDevice().getName();
-		final String deviceAddress	= scanResult.getDevice().getAddress();
-		final int rssiresid	=	scanResult.getRssi() > -40 ? R.drawable.wifi_level_3 :
-								scanResult.getRssi() > -50 ? R.drawable.wifi_level_2 :
-								scanResult.getRssi() > -60 ? R.drawable.wifi_level_1 : R.drawable.wifi_level_0;
+		DevicveInfoModel model = mDeviceList.get(position);
+		final String deviceName		= model.mScanResult.getDevice().getName();
+		final String deviceAddress	= model.mScanResult.getDevice().getAddress();
+		final int rssiresid	=	model.mScanResult.getRssi() > -40 ? R.drawable.wifi_level_3 :
+								model.mScanResult.getRssi() > -50 ? R.drawable.wifi_level_2 :
+								model.mScanResult.getRssi() > -60 ? R.drawable.wifi_level_1 : R.drawable.wifi_level_0;
+		final int constsresid = model.mStatus == ConnectStatus.NONE			? R.drawable.status0_none :
+								model.mStatus == ConnectStatus.CONNECTING	? R.drawable.status1_connectiong :
+								model.mStatus == ConnectStatus.EXPLORING	? R.drawable.status2_exploring :
+								model.mStatus == ConnectStatus.CHECKAPPLI	? R.drawable.status3_chkappli :
+								model.mStatus == ConnectStatus.TOBEPREPARED	? R.drawable.status4_tobeprepared :
+								model.mStatus == ConnectStatus.READY		? R.drawable.status5_ready : R.drawable.status0_none;
+
         holder.mTxtDeviceName.setText(TextUtils.isEmpty(deviceName) ? "" : deviceName);
         holder.mTxtDeviceNameAddress.setText(TextUtils.isEmpty(deviceAddress) ? "" : deviceAddress);
+		holder.mImvConnectStatus.setImageResource(constsresid);
 		holder.mImvRssi.setImageResource(rssiresid);
 		holder.itemView.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
                 if (mListener != null)
-                    mListener.onDeviceItemClick(deviceName, deviceAddress);
+                    mListener.onDeviceItemClick(view, deviceName, deviceAddress);
 			}
 		});
 	}
@@ -89,11 +108,11 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 
 		if (existingPosition >= 0) {
 			/* 追加済 更新する */
-			mDeviceList.set(existingPosition, scanResult);
+			mDeviceList.set(existingPosition, new DevicveInfoModel(scanResult, mDeviceList.get(existingPosition).mStatus));
 		}
 		else {
             /* 新規追加 */
-			mDeviceList.add(scanResult);
+			mDeviceList.add(new DevicveInfoModel(scanResult, NONE));
 		}
 
 		if (notify) {
@@ -111,10 +130,17 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		}
 	}
 
+//	public enum ConnectStatus { NONE, CONNECTING, CONNECTTED, DISCONNECTTED}
+	public void setStatus(String address, ConnectStatus status) {
+		int pos = getPosition(address);
+		mDeviceList.get(pos).mStatus = status;
+		notifyItemChanged(pos);
+	}
+
 	private int getPosition(String address) {
 		int position = -1;
 		for (int i = 0; i < mDeviceList.size(); i++) {
-			if (mDeviceList.get(i).getDevice().getAddress().equals(address)) {
+			if (mDeviceList.get(i).mScanResult.getDevice().getAddress().equals(address)) {
 				position = i;
 				break;
 			}

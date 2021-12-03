@@ -39,8 +39,8 @@ public class DeviceConnectActivity extends AppCompatActivity {
 
 		/* 受信するブロードキャストintentを登録 */
 		final IntentFilter intentFilter = new IntentFilter();
-		intentFilter.addAction(BleService.UWS_GATT_CONNECTED);
-		intentFilter.addAction(BleService.UWS_GATT_DISCONNECTED);
+//		intentFilter.addAction(BleService.UWS_GATT_CONNECTED);
+//		intentFilter.addAction(BleService.UWS_GATT_DISCONNECTED);
 		intentFilter.addAction(BleService.UWS_GATT_SERVICES_DISCOVERED);
 		intentFilter.addAction(BleService.UWS_DATA_AVAILABLE);
 		registerReceiver(mIntentListner, intentFilter);
@@ -122,25 +122,25 @@ public class DeviceConnectActivity extends AppCompatActivity {
 //				else if(errReason == BleService.UWS_NG_REASON_CONNECTBLE)
 //					Snackbar.make(findViewById(R.id.root_view_device), "デバイス接続失敗!!\n前画面で、別のデバイスを選択して下さい。", Snackbar.LENGTH_LONG).show();
 
-				/* Gattサーバ接続完了 */
-				case BleService.UWS_GATT_CONNECTED:
-					runOnUiThread(() -> {
-						/* 表示 : Connected */
-						((TextView)findViewById(R.id.txtConnectionStatus)).setText(R.string.connected);
-					});
-					findViewById(R.id.btnReqReadCharacteristic).setEnabled(true);
-					break;
+//				/* Gattサーバ接続完了 */
+//				case BleService.UWS_GATT_CONNECTED:
+//					runOnUiThread(() -> {
+//						/* 表示 : Connected */
+//						((TextView)findViewById(R.id.txtConnectionStatus)).setText(R.string.connected);
+//					});
+//					findViewById(R.id.btnReqReadCharacteristic).setEnabled(true);
+//					break;
 
-				/* Gattサーバ断 */
-				case BleService.UWS_GATT_DISCONNECTED:
-					runOnUiThread(() -> {
-						/* 表示 : Disconnected */
-						((TextView)findViewById(R.id.txtConnectionStatus)).setText(R.string.disconnected);
-					});
-					findViewById(R.id.btnReqReadCharacteristic).setEnabled(false);
-					break;
+//				/* Gattサーバ断 */
+//				case BleService.UWS_GATT_DISCONNECTED:
+//					runOnUiThread(() -> {
+//						/* 表示 : Disconnected */
+//						((TextView)findViewById(R.id.txtConnectionStatus)).setText(R.string.disconnected);
+//					});
+//					findViewById(R.id.btnReqReadCharacteristic).setEnabled(false);
+//					break;
 
-				case BleService.UWS_GATT_SERVICES_DISCOVERED:
+//				case BleService.UWS_GATT_SERVICES_DISCOVERED:
 //					mCharacteristic = findTerget(mBleServerIf.getSupportedGattServices(), UWS_SERVICE_UUID, UWS_CHARACTERISTIC_SAMLE_UUID);
 //					if (mCharacteristic != null) {
 //						mBleServerIf.readCharacteristic(mCharacteristic);
@@ -161,8 +161,8 @@ public class DeviceConnectActivity extends AppCompatActivity {
 		BluetoothGattCharacteristic ret = null;
 		for (BluetoothGattService service : supportedGattServices) {
 			/*-*-----------------------------------*/
-			for(BluetoothGattCharacteristic GattChara : service.getCharacteristics())
-				TLog.d("{0} : service-UUID={1} Chara-UUID={2}", mDeviceAddress, service.getUuid(), GattChara.getUuid());
+			for(BluetoothGattCharacteristic gattChara : service.getCharacteristics())
+				TLog.d("{0} : service-UUID={1} Chara-UUID={2}", mDeviceAddress, service.getUuid(), gattChara.getUuid());
 			/*-*-----------------------------------*/
 			if( !service.getUuid().equals(ServiceUuid))
 				continue;
@@ -182,24 +182,14 @@ public class DeviceConnectActivity extends AppCompatActivity {
 	}
 
 	private IBleServiceCallback mCb = new IBleServiceCallback.Stub() {
-		@Override
-		public void notifyScanResultlist() throws RemoteException {
-
-		}
-
-		@Override
-		public void notifyScanResult() throws RemoteException {
-
-		}
-
-		@Override
-		public void notifyMsg(int msgid, String msg) throws RemoteException {
-
-		}
-
-		@Override
-		public void notifyError(int errcode, String errmsg) throws RemoteException {
-
-		}
+		@Override public void notifyScanResultlist() throws RemoteException {}
+		@Override public void notifyScanResult() throws RemoteException {}
+		@Override public void notifyScanEnd() throws RemoteException { }
+		@Override public void notifyGattConnected(String Address) throws RemoteException {}
+		@Override public void notifyGattDisConnected(String Address) throws RemoteException {}
+		@Override public void notifyServicesDiscovered(String Address, int status) throws RemoteException {}
+		@Override public void notifyApplicable(String Address, boolean status) throws RemoteException {}
+		@Override public void notifyReady2DeviceCommunication(String Address, boolean status) throws RemoteException {}
+		@Override public void notifyError(int errcode, String errmsg) throws RemoteException {}
 	};
 }
