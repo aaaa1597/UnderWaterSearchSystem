@@ -190,6 +190,8 @@ public class DeviceConnectActivity extends AppCompatActivity {
 		@Override public void notifyServicesDiscovered(String Address, int status) throws RemoteException {}
 		@Override public void notifyApplicable(String Address, boolean status) throws RemoteException {}
 		@Override public void notifyReady2DeviceCommunication(String Address, boolean status) throws RemoteException {}
+		@Override public void notifyResRead(String Address, int rcvval, int status) throws RemoteException {}
+		@Override public void notifyFromPeripheral(String Address, int retval) throws RemoteException {}
 		@Override public void notifyError(int errcode, String errmsg) throws RemoteException {}
 	};
 }

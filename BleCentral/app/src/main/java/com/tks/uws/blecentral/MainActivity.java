@@ -268,6 +268,26 @@ public class MainActivity extends AppCompatActivity {
 		}
 
 		@Override
+		public void notifyResRead(String Address, int rcvval, int status) throws RemoteException {
+			TLog.d("デバイス値読込 Address={0} val={1} status={2}", Address, rcvval, status);
+		}
+
+		@Override
+		public void notifyFromPeripheral(String Address, int rcvval) throws RemoteException {
+			TLog.d("デバイス値通知 Address={0} val={1}", Address, rcvval);
+			runOnUiThread(() -> {
+				/* TODO */
+				/* TODO */
+				/* TODO */
+				/* TODO */
+				/* TODO */
+				/* TODO */
+				/* TODO */
+				/* TODO */
+			});
+		}
+
+		@Override
 		public void notifyError(int errcode, String errmsg) throws RemoteException {
 			TLog.d("ERROR!! errcode={0} : {1}", errcode, errmsg);
 		}

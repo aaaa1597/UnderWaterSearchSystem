@@ -19,9 +19,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Binder;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
 import android.os.RemoteException;
 
 import java.util.ArrayList;
@@ -83,8 +81,20 @@ public class BleService extends Service {
 
 	@Override
 	public IBinder onBind(Intent intent) {
-		TLog.d("onBind()");
+		TLog.d("");
 		return binder;
+	}
+
+	@Override
+	public boolean onUnbind(Intent intent) {
+		TLog.d("");
+		/* 保有する全デバイスの接続開放 */
+		mConnectedDevices.forEach((s, gatt) -> {
+			gatt.disconnect();
+			gatt.close();
+		});
+		mConnectedDevices.clear();
+		return super.onUnbind(intent);
 	}
 
 	/* BLuetooth定義 */
@@ -361,20 +371,26 @@ public class BleService extends Service {
 		/* 読込み要求の応答 */
 		@Override
 		public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-			TLog.d("読込み要求の応答 status=", status);
 			if (status == BluetoothGatt.GATT_SUCCESS) {
-				parseRcvData(UWS_DATA_AVAILABLE, characteristic);
+				int rcvval = parseIntRcvData(characteristic);
+				try { mListener.notifyResRead(gatt.getDevice().getAddress(), rcvval, status); }
+				catch (RemoteException e) { e.printStackTrace(); }
+				TLog.d("読込み要求の応答 rcvval={0} status={1} BluetoothGatt.GATT_SUCCESS({2}) BluetoothGatt.GATT_FAILURE({3})", rcvval, status, BluetoothGatt.GATT_SUCCESS, BluetoothGatt.GATT_FAILURE);
 			}
 			else {
-				TLog.d("onCharacteristicRead GATT_FAILURE");
+				TLog.d("GATT_FAILURE");
+				try { mListener.notifyResRead(gatt.getDevice().getAddress(), -1, status); }
+				catch (RemoteException e) { e.printStackTrace(); }
+				TLog.d("読込み要求の応答 status={1} BluetoothGatt.GATT_SUCCESS({2}) BluetoothGatt.GATT_FAILURE({3})", status, BluetoothGatt.GATT_SUCCESS, BluetoothGatt.GATT_FAILURE);
 			}
-			TLog.d("BluetoothGattCallback::onCharacteristicRead() e");
 		}
 
 		@Override
 		public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-			TLog.d("ペリフェラルからの受信");
-			parseRcvData(UWS_DATA_AVAILABLE, characteristic);
+			int rcvval = parseIntRcvData(characteristic);
+			TLog.d("ペリフェラルからの受信 rcvval={0}", rcvval);
+			try { mListener.notifyFromPeripheral(gatt.getDevice().getAddress(), rcvval); }
+			catch (RemoteException e) { e.printStackTrace(); }
 		}
 	};
 
@@ -397,28 +413,15 @@ public class BleService extends Service {
 		return ret;
 	}
 
-
-
-
-
-
-
-
-
-
-
-
-	/* データ受信(peripheral -> Service -> Activity) */
-	private void parseRcvData(final String action, final BluetoothGattCharacteristic characteristic) {
-		Intent intent = new Intent(action);
+	/* データParse */
+	private int parseIntRcvData(final BluetoothGattCharacteristic characteristic) {
 		if (UWS_CHARACTERISTIC_HRATBEAT_UUID.equals(characteristic.getUuid())) {
 			/* 受信データ取出し */
 			int flag = characteristic.getProperties();
 			int format = ((flag & 0x01) != 0) ? BluetoothGattCharacteristic.FORMAT_UINT16 : BluetoothGattCharacteristic.FORMAT_UINT8;
-			int msg = characteristic.getIntValue(format, 0);
-			TLog.d("message: {0}", msg);
-			/* 受信データ取出し */
-			intent.putExtra(UWS_DATA, msg);
+			int intval = characteristic.getIntValue(format, 0);
+			TLog.d("message={0}", intval);
+			return intval;
 		}
 		/* ↓↓↓この処理はサンプルコード。実際には動かない。 */
 		else {
@@ -427,18 +430,9 @@ public class BleService extends Service {
 				final StringBuilder stringBuilder = new StringBuilder(data.length);
 				for (byte byteChar : data)
 					stringBuilder.append(String.format("%02X ", byteChar));
-				intent.putExtra(UWS_DATA, -1);
 			}
 		}
-		/* ↑↑↑この処理はサンプルコード。実際には動かない。 */
-		/* 受信データ中継 */
-		sendBroadcast(intent);
-	}
-
-	@Override
-	public boolean onUnbind(Intent intent) {
-//		disconnectBleDevice();
-		return super.onUnbind(intent);
+		return -9999;
 	}
 
 //	/* Bluetooth接続 */
