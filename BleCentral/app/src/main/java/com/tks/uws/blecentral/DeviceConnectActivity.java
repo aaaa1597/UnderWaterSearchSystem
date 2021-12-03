@@ -41,7 +41,7 @@ public class DeviceConnectActivity extends AppCompatActivity {
 		final IntentFilter intentFilter = new IntentFilter();
 //		intentFilter.addAction(BleService.UWS_GATT_CONNECTED);
 //		intentFilter.addAction(BleService.UWS_GATT_DISCONNECTED);
-		intentFilter.addAction(BleService.UWS_GATT_SERVICES_DISCOVERED);
+//		intentFilter.addAction(BleService.UWS_GATT_SERVICES_DISCOVERED);
 		intentFilter.addAction(BleService.UWS_DATA_AVAILABLE);
 		registerReceiver(mIntentListner, intentFilter);
 
@@ -146,7 +146,7 @@ public class DeviceConnectActivity extends AppCompatActivity {
 //						mBleServerIf.readCharacteristic(mCharacteristic);
 //						mBleServerIf.setCharacteristicNotification(mCharacteristic, true);
 //					}
-					break;
+//					break;
 
 				case BleService.UWS_DATA_AVAILABLE:
 					int msg = intent.getIntExtra(BleService.UWS_DATA, -1);

@@ -24,7 +24,6 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
 
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -42,8 +41,6 @@ import static com.tks.uws.blecentral.Constants.UWS_SERVICE_UUID;
 //-90 dBm	使用不可	ノイズレベルに近いかそれ以下の信号強度。殆ど機能しない	N/A
 
 public class BleService extends Service {
-	private Handler				mHandler;
-
 	/* Binder */
 	private IBleServiceCallback	mListener;	/* 常に後発のみ */
 	private Binder binder = new IBleService.Stub() {
@@ -70,12 +67,12 @@ public class BleService extends Service {
 
 		@Override
 		public List<ScanResult> getScanResultlist() throws RemoteException {
-			return mScanResultList;
+			return mTmpScanResultList;
 		}
 
 		@Override
 		public ScanResult getScanResult() throws RemoteException {
-			return mScanResult;
+			return mTmpScanResult;
 		}
 
 		@Override
@@ -87,14 +84,12 @@ public class BleService extends Service {
 	@Override
 	public IBinder onBind(Intent intent) {
 		TLog.d("onBind()");
-		mHandler = new Handler(Looper.getMainLooper());
 		return binder;
 	}
 
 	/* BLuetooth定義 */
 	private BluetoothAdapter	mBluetoothAdapter;
 	private BluetoothLeScanner	mBLeScanner;
-	private final static long	SCAN_PERIOD = 30000;	/* m秒 */
 	/* メッセージID */
 	public final static int UWS_NG_SUCCESS				= 0;	/* OK */
 	public final static int UWS_NG_RECONNECT_OK			= -1;	/* 再接続OK */
@@ -110,7 +105,7 @@ public class BleService extends Service {
 
 //	public final static String UWS_GATT_CONNECTED			= "com.tks.uws.blecentral.GATT_CONNECTED";
 //	public final static String UWS_GATT_DISCONNECTED		= "com.tks.uws.blecentral.GATT_DISCONNECTED";
-	public final static String UWS_GATT_SERVICES_DISCOVERED	= "com.tks.uws.blecentral.GATT_SERVICES_DISCOVERED";
+//	public final static String UWS_GATT_SERVICES_DISCOVERED	= "com.tks.uws.blecentral.GATT_SERVICES_DISCOVERED";
 	public final static String UWS_DATA_AVAILABLE			= "com.tks.uws.blecentral.DATA_AVAILABLE";
 	public final static String UWS_DATA						= "com.tks.uws.blecentral.DATA";
 
@@ -139,10 +134,9 @@ public class BleService extends Service {
 	}
 
 	/* Bluetoothサービス-scan開始 */
-	private ScanCallback					mScanCallback = null;
-	private List<ScanResult>				mScanResultList = new ArrayList<>();
-	private ScanResult						mScanResult;
-	private final Map<String, ScanResult>	mScanResultMap = new HashMap<>();
+	private ScanResult			mTmpScanResult;
+	private List<ScanResult>	mTmpScanResultList = new ArrayList<>();
+	private ScanCallback		mScanCallback = null;
 	private int BsvStartScan() {
 		/* 既にscan中 */
 		if(mScanCallback != null)
@@ -155,13 +149,11 @@ public class BleService extends Service {
 		TLog.d("Bluetooth ON.");
 
 		TLog.d("scan開始");
-		mScanResultMap.clear();;
 		mScanCallback = new ScanCallback() {
 			@Override
 			public void onBatchScanResults(List<ScanResult> results) {
 				super.onBatchScanResults(results);
-				mScanResultList = results;
-				results.forEach(ret -> { mScanResultMap.put(ret.getDevice().getAddress(), ret ); });
+				mTmpScanResultList = results;
 				try { mListener.notifyScanResultlist();}
 				catch (RemoteException e) {e.printStackTrace();}
 //					mDeviceListAdapter.addDevice(results);
@@ -191,8 +183,7 @@ public class BleService extends Service {
 			@Override
 			public void onScanResult(int callbackType, ScanResult result) {
 				super.onScanResult(callbackType, result);
-				mScanResult = result;
-				mScanResultMap.put(result.getDevice().getAddress(), result );
+				mTmpScanResult = result;
 				if(result.getScanRecord() != null && result.getScanRecord().getServiceUuids() != null)
 					TLog.d("発見!! {0}({1}):Rssi({2}) Uuids({3})", result.getDevice().getAddress(), result.getDevice().getName(), result.getRssi(), result.getScanRecord().getServiceUuids().toString());
 				else
@@ -229,11 +220,6 @@ public class BleService extends Service {
 			}
 		};
 
-		mBLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
-		mHandler.postDelayed(() -> {
-			BsvStopScan();
-		}, SCAN_PERIOD);
-
 		/* scanフィルタ */
 		List<ScanFilter> scanFilters = new ArrayList<>();
 		scanFilters.add(new ScanFilter.Builder().build());
@@ -242,6 +228,7 @@ public class BleService extends Service {
 		ScanSettings.Builder scansetting = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_POWER);
 
 		/* scan開始 */
+		mBLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
 		mBLeScanner.startScan(scanFilters, scansetting.build(), mScanCallback);
 
 		return UWS_NG_SUCCESS;
@@ -249,7 +236,7 @@ public class BleService extends Service {
 
 	/* Bluetoothサービス-scan停止 */
 	private int BsvStopScan() {
-		if(mScanCallback != null)
+		if(mScanCallback == null)
 			return UWS_NG_ALREADY_SCANSTOPEDNED;
 
 		mBLeScanner.stopScan(mScanCallback);

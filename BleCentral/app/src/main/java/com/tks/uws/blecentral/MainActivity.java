@@ -13,7 +13,9 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.RemoteException;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -31,6 +33,8 @@ public class MainActivity extends AppCompatActivity {
 	private DeviceListAdapter	mDeviceListAdapter;
 	private final static int	REQUEST_ENABLE_BT	= 0x1111;
 	private final static int	REQUEST_PERMISSIONS	= 0x2222;
+	private Handler				mHandler = new Handler(Looper.getMainLooper());
+	private final static long	SCAN_PERIOD = 30000;	/* m秒 */
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -41,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
 		final IntentFilter intentFilter = new IntentFilter();
 //		intentFilter.addAction(BleService.UWS_GATT_CONNECTED);
 //		intentFilter.addAction(BleService.UWS_GATT_DISCONNECTED);
-		intentFilter.addAction(BleService.UWS_GATT_SERVICES_DISCOVERED);
+//		intentFilter.addAction(BleService.UWS_GATT_SERVICES_DISCOVERED);
 		intentFilter.addAction(BleService.UWS_DATA_AVAILABLE);
 		registerReceiver(mIntentListner, intentFilter);
 
@@ -170,6 +174,11 @@ public class MainActivity extends AppCompatActivity {
 			boolean retscan = startScan();
 			if(!retscan) return;
 			TLog.d("scan開始");
+
+			/* 30秒後にscan停止 */
+			mHandler.postDelayed(() -> {
+				stopScan();
+			}, SCAN_PERIOD);
 		}
 
 		@Override
@@ -301,13 +310,23 @@ public class MainActivity extends AppCompatActivity {
 			return false;
 		}
 		mDeviceListAdapter.clearDevice();
-		Button btn = (Button)findViewById(R.id.btnScan);
+		Button btn = findViewById(R.id.btnScan);
 		btn.setText("scan中");
 		btn.setEnabled(false);
 
 		return true;
 	}
 
+	private boolean stopScan() {
+		int ret = 0;
+		try { ret = mBleServiceIf.stopScan();}
+		catch (RemoteException e) { e.printStackTrace(); return false;}
+		TLog.d("scan停止 ret={0}", ret);
+		Button btn = findViewById(R.id.btnScan);
+		btn.setText("scan開始");
+		btn.setEnabled(true);
+		return true;
+	}
 
 
 
@@ -355,13 +374,13 @@ public class MainActivity extends AppCompatActivity {
 //					findViewById(R.id.btnReqReadCharacteristic).setEnabled(false);
 //					break;
 
-				case BleService.UWS_GATT_SERVICES_DISCOVERED:
+//				case BleService.UWS_GATT_SERVICES_DISCOVERED:
 //					mCharacteristic = findTerget(mBLeMngServ.getSupportedGattServices(), UWS_SERVICE_UUID, UWS_CHARACTERISTIC_SAMLE_UUID);
 //					if (mCharacteristic != null) {
 //						mBLeMngServ.readCharacteristic(mCharacteristic);
 //						mBLeMngServ.setCharacteristicNotification(mCharacteristic, true);
 //					}
-					break;
+//					break;
 
 				case BleService.UWS_DATA_AVAILABLE:
 					int msg = intent.getIntExtra(BleService.UWS_DATA, -1);
