@@ -25,6 +25,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 
 import java.text.MessageFormat;
 import java.util.List;
@@ -46,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
 //		intentFilter.addAction(BleService.UWS_GATT_CONNECTED);
 //		intentFilter.addAction(BleService.UWS_GATT_DISCONNECTED);
 //		intentFilter.addAction(BleService.UWS_GATT_SERVICES_DISCOVERED);
-		intentFilter.addAction(BleService.UWS_DATA_AVAILABLE);
+//		intentFilter.addAction(BleService.UWS_DATA_AVAILABLE);
 		registerReceiver(mIntentListner, intentFilter);
 
 		/* BLEデバイスリストの初期化 */
@@ -238,8 +239,10 @@ public class MainActivity extends AppCompatActivity {
 				runOnUiThread(() -> { mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.CHECKAPPLI); });
 			}
 			else {
-				TLog.d("Services探索失敗!! 処理終了 ret={0}", status);
+				String logstr = MessageFormat.format("Services探索失敗!! 処理終了 ret={0}", status);
+				TLog.d(logstr);
 				runOnUiThread(() -> { mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE); });
+				Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show();
 			}
 		}
 
@@ -250,46 +253,50 @@ public class MainActivity extends AppCompatActivity {
 				runOnUiThread(() -> { mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.TOBEPREPARED); });
 			}
 			else {
-				TLog.d("対象外デバイス.　処理終了. Address={0}", Address);
+				String logstr = MessageFormat.format("対象外デバイス.　処理終了. Address={0}", Address);
+				TLog.d(logstr);
 				runOnUiThread(() -> { mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE); });
+				Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show();
 			}
 		}
 
 		@Override
 		public void notifyReady2DeviceCommunication(String Address, boolean status) throws RemoteException {
 			if(status) {
-				TLog.d("BLEデバイス通信 準備完了. Address={0}", Address);
+				String logstr = MessageFormat.format("BLEデバイス通信 準備完了. Address={0}", Address);
+				TLog.d(logstr);
 				runOnUiThread(() -> { mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.READY); });
+				Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show();
 			}
 			else {
-				TLog.d("BLEデバイス通信 準備失敗!! Address={0}", Address);
+				String logstr = MessageFormat.format("BLEデバイス通信 準備失敗!! Address={0}", Address);
+				TLog.d(logstr);
 				runOnUiThread(() -> { mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE); });
+				Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show();
 			}
 		}
 
 		@Override
 		public void notifyResRead(String Address, int rcvval, int status) throws RemoteException {
-			TLog.d("デバイス値読込 Address={0} val={1} status={2}", Address, rcvval, status);
+			String logstr = MessageFormat.format("デバイス読込成功. Address={0} val={1} status={2}", Address, rcvval, status);
+			TLog.d(logstr);
+			runOnUiThread(() -> { mDeviceListAdapter.setHertBeat(Address, rcvval); });
+			Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show();
 		}
 
 		@Override
 		public void notifyFromPeripheral(String Address, int rcvval) throws RemoteException {
-			TLog.d("デバイス値通知 Address={0} val={1}", Address, rcvval);
-			runOnUiThread(() -> {
-				/* TODO */
-				/* TODO */
-				/* TODO */
-				/* TODO */
-				/* TODO */
-				/* TODO */
-				/* TODO */
-				/* TODO */
-			});
+			String logstr = MessageFormat.format("デバイス通知({0}). Address={1}", rcvval, Address);
+			TLog.d(logstr);
+			runOnUiThread(() -> { mDeviceListAdapter.setHertBeat(Address, rcvval); });
+			Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show();
 		}
 
 		@Override
 		public void notifyError(int errcode, String errmsg) throws RemoteException {
-			TLog.d("ERROR!! errcode={0} : {1}", errcode, errmsg);
+			String logstr = MessageFormat.format("ERROR!! errcode={0} : {1}", errcode, errmsg);
+			TLog.d(logstr);
+			Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show();
 		}
 	};
 
@@ -330,6 +337,8 @@ public class MainActivity extends AppCompatActivity {
 			return false;
 		}
 		runOnUiThread(() -> { mDeviceListAdapter.clearDevice(); });
+		try { mBleServiceIf.clearDevice();}
+		catch (RemoteException e) { e.printStackTrace(); return false;}
 		Button btn = findViewById(R.id.btnScan);
 		btn.setText("scan中");
 		btn.setEnabled(false);
@@ -402,10 +411,10 @@ public class MainActivity extends AppCompatActivity {
 //					}
 //					break;
 
-				case BleService.UWS_DATA_AVAILABLE:
-					int msg = intent.getIntExtra(BleService.UWS_DATA, -1);
-					TLog.d("RcvData =" + msg);
-					break;
+//				case BleService.UWS_DATA_AVAILABLE:
+//					int msg = intent.getIntExtra(BleService.UWS_DATA, -1);
+//					TLog.d("RcvData =" + msg);
+//					break;
 			}
 		}
 	};

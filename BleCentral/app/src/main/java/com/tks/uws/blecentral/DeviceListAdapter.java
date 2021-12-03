@@ -28,9 +28,11 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	private class DevicveInfoModel {
 		public ScanResult		mScanResult;
 		public ConnectStatus	mStatus;
+		public int				mHertBeat;
 		public DevicveInfoModel(ScanResult scanResult, ConnectStatus status) {
 			mScanResult	= scanResult;
 			mStatus		= status;
+			mHertBeat	= 0;
 		}
 	}
 
@@ -38,7 +40,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		TextView	mTxtDeviceName;
 		TextView	mTxtDeviceNameAddress;
 		ImageView	mImvRssi;
-		ImageView mImvConnectStatus;
+		ImageView	mImvConnectStatus;
 		TextView	mTxtHertBeat;
 		ViewHolder(View view) {
 			super(view);
@@ -82,6 +84,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
         holder.mTxtDeviceNameAddress.setText(TextUtils.isEmpty(deviceAddress) ? "" : deviceAddress);
 		holder.mImvConnectStatus.setImageResource(constsresid);
 		holder.mImvRssi.setImageResource(rssiresid);
+		holder.mTxtHertBeat.setText(model.mHertBeat == 0 ? "-" : ""+model.mHertBeat);
 		holder.itemView.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
@@ -130,10 +133,15 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		}
 	}
 
-//	public enum ConnectStatus { NONE, CONNECTING, CONNECTTED, DISCONNECTTED}
 	public void setStatus(String address, ConnectStatus status) {
 		int pos = getPosition(address);
 		mDeviceList.get(pos).mStatus = status;
+		notifyItemChanged(pos);
+	}
+
+	public void setHertBeat(String address, int rcvval) {
+		int pos = getPosition(address);
+		mDeviceList.get(pos).mHertBeat = rcvval;
 		notifyItemChanged(pos);
 	}
 

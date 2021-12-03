@@ -10,4 +10,5 @@ interface IBleService {
     List<ScanResult> getScanResultlist();
     ScanResult getScanResult();
     int connectDevice(String deviceAddress);
+    void clearDevice();
 }

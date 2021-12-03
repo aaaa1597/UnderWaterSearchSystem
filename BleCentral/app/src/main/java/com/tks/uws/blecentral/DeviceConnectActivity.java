@@ -42,7 +42,7 @@ public class DeviceConnectActivity extends AppCompatActivity {
 //		intentFilter.addAction(BleService.UWS_GATT_CONNECTED);
 //		intentFilter.addAction(BleService.UWS_GATT_DISCONNECTED);
 //		intentFilter.addAction(BleService.UWS_GATT_SERVICES_DISCOVERED);
-		intentFilter.addAction(BleService.UWS_DATA_AVAILABLE);
+//		intentFilter.addAction(BleService.UWS_DATA_AVAILABLE);
 		registerReceiver(mIntentListner, intentFilter);
 
 		/* BLEサービス接続 */
@@ -148,11 +148,11 @@ public class DeviceConnectActivity extends AppCompatActivity {
 //					}
 //					break;
 
-				case BleService.UWS_DATA_AVAILABLE:
-					int msg = intent.getIntExtra(BleService.UWS_DATA, -1);
-					TLog.d("RcvData =" + msg);
-					rcvData(msg);
-					break;
+//				case BleService.UWS_DATA_AVAILABLE:
+//					int msg = intent.getIntExtra(BleService.UWS_DATA, -1);
+//					TLog.d("RcvData =" + msg);
+//					rcvData(msg);
+//					break;
 			}
 		}
 	};

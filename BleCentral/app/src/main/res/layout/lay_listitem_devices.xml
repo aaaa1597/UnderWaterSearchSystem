@@ -30,6 +30,7 @@
 
     <ImageView
         android:id="@+id/imvConnectStatus"
+        android:layout_margin="10dp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:adjustViewBounds="true"
@@ -53,8 +54,8 @@
         android:layout_height="wrap_content"
         android:background="@drawable/heartbeat"
         android:gravity="center"
-        android:textSize="26sp"
-        android:text="ccccc"
+        android:textSize="36sp"
+        android:text="-"
         app:layout_constraintLeft_toRightOf="@+id/imvConnectStatus"
         app:layout_constraintTop_toTopOf="parent" />
 

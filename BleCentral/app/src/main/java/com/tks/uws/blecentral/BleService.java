@@ -77,6 +77,15 @@ public class BleService extends Service {
 		public int connectDevice(String deviceAddress) throws RemoteException {
 			return BsvConnectDevice(deviceAddress);
 		}
+
+		@Override
+		public void clearDevice() throws RemoteException {
+			mConnectedDevices.forEach((addr, gat) -> {
+				gat.disconnect();
+				gat.close();
+			});
+			mConnectedDevices.clear();
+		}
 	};
 
 	@Override
@@ -98,8 +107,9 @@ public class BleService extends Service {
 	}
 
 	/* BLuetooth定義 */
-	private BluetoothAdapter	mBluetoothAdapter;
-	private BluetoothLeScanner	mBLeScanner;
+	private final Map<String, BluetoothGatt>	mConnectedDevices = new HashMap<>();
+	private BluetoothAdapter					mBluetoothAdapter;
+	private BluetoothLeScanner					mBLeScanner;
 	/* メッセージID */
 	public final static int UWS_NG_SUCCESS				= 0;	/* OK */
 	public final static int UWS_NG_RECONNECT_OK			= -1;	/* 再接続OK */
@@ -116,8 +126,8 @@ public class BleService extends Service {
 //	public final static String UWS_GATT_CONNECTED			= "com.tks.uws.blecentral.GATT_CONNECTED";
 //	public final static String UWS_GATT_DISCONNECTED		= "com.tks.uws.blecentral.GATT_DISCONNECTED";
 //	public final static String UWS_GATT_SERVICES_DISCOVERED	= "com.tks.uws.blecentral.GATT_SERVICES_DISCOVERED";
-	public final static String UWS_DATA_AVAILABLE			= "com.tks.uws.blecentral.DATA_AVAILABLE";
-	public final static String UWS_DATA						= "com.tks.uws.blecentral.DATA";
+//	public final static String UWS_DATA_AVAILABLE			= "com.tks.uws.blecentral.DATA_AVAILABLE";
+//	public final static String UWS_DATA						= "com.tks.uws.blecentral.DATA";
 
 	int BsvInit() {
 		/* Bluetooth権限なし */
@@ -259,7 +269,6 @@ public class BleService extends Service {
 	}
 
 	/* Bluetoothサービス-デバイス接続 */
-	private final Map<String, BluetoothGatt>	mConnectedDevices = new HashMap<>();
 	private int BsvConnectDevice(String deviceAddress) {
 		if(deviceAddress == null || deviceAddress.equals(""))
 			return UWS_NG_ILLEGALARGUMENT;
