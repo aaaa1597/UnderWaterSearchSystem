@@ -32,11 +32,13 @@ import java.util.stream.Collectors;
 import static com.tks.uws.blecentral.Constants.UWS_CHARACTERISTIC_HRATBEAT_UUID;
 import static com.tks.uws.blecentral.Constants.UWS_SERVICE_UUID;
 
-//-30 dBm	素晴らしい	達成可能な最大信号強度。クライアントは、これを実現するには、APから僅か数フィートである必要があります。現実的には一般的ではなく、望ましいものでもありません	N/A
-//-60 dBm	良好	非常に信頼性の高く、データパケットのタイムリーな伝送を必要とするアプリケーションのための最小信号強度	VoIP/VoWiFi, ストリーミングビデオ
-//-70 dBm	Ok	信頼できるパケット伝送に必要な最小信号強度	Email, web
-//-80 dBm	よくない	基本的なコネクティビティに必要な最小信号強度。パケット伝送は信頼できない可能性があります	N/A
-//-90 dBm	使用不可	ノイズレベルに近いかそれ以下の信号強度。殆ど機能しない	N/A
+/**
+ * -30 dBm	素晴らしい	達成可能な最大信号強度。クライアントは、これを実現するには、APから僅か数フィートである必要があります。現実的には一般的ではなく、望ましいものでもありません	N/A
+ * -60 dBm	良好	非常に信頼性の高く、データパケットのタイムリーな伝送を必要とするアプリケーションのための最小信号強度	VoIP/VoWiFi, ストリーミングビデオ
+ * -70 dBm	Ok	信頼できるパケット伝送に必要な最小信号強度	Email, web
+ * -80 dBm	よくない	基本的なコネクティビティに必要な最小信号強度。パケット伝送は信頼できない可能性があります	N/A
+ * -90 dBm	使用不可	ノイズレベルに近いかそれ以下の信号強度。殆ど機能しない	N/A
+ * */
 
 public class BleService extends Service {
 	/* Binder */
@@ -123,12 +125,6 @@ public class BleService extends Service {
 	public final static int UWS_NG_DEVICE_NOTFOUND		= -9;	/* デバイスが見つからない。 */
 	public final static int UWS_NG_GATT_SUCCESS			= BluetoothGatt.GATT_SUCCESS;
 
-//	public final static String UWS_GATT_CONNECTED			= "com.tks.uws.blecentral.GATT_CONNECTED";
-//	public final static String UWS_GATT_DISCONNECTED		= "com.tks.uws.blecentral.GATT_DISCONNECTED";
-//	public final static String UWS_GATT_SERVICES_DISCOVERED	= "com.tks.uws.blecentral.GATT_SERVICES_DISCOVERED";
-//	public final static String UWS_DATA_AVAILABLE			= "com.tks.uws.blecentral.DATA_AVAILABLE";
-//	public final static String UWS_DATA						= "com.tks.uws.blecentral.DATA";
-
 	int BsvInit() {
 		/* Bluetooth権限なし */
 		if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
@@ -176,7 +172,6 @@ public class BleService extends Service {
 				mTmpScanResultList = results;
 				try { mListener.notifyScanResultlist();}
 				catch (RemoteException e) {e.printStackTrace();}
-//					mDeviceListAdapter.addDevice(results);
 //				for(ScanResult result : results) {
 //					TLog.d("---------------------------------- size=" + results.size());
 //					TLog.d("aaaaa AdvertisingSid             =" + result.getAdvertisingSid());
@@ -443,84 +438,4 @@ public class BleService extends Service {
 		}
 		return -9999;
 	}
-
-//	/* Bluetooth接続 */
-//	private int connectBleDevice(final String address) {
-//		if (address == null) {
-//			TLog.d("デバイスアドレスなし");
-//			return UWS_NG_DEVICE_NOTFOUND;
-//		}
-//
-//		BluetoothManager btManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
-//		if(btManager == null) return UWS_NG_SERVICE_NOTFOUND;
-//
-//		BluetoothAdapter btAdapter = btManager.getAdapter();
-//		if(btAdapter == null) return UWS_NG_ADAPTER_NOTFOUND;
-//
-//		/* 再接続処理 */
-//		if (address.equals(mBleDeviceAddr) && mBleGatt != null) {
-//			TLog.d("");
-//			if (mBleGatt.connect()) {
-////				mConnectionState = STATE_CONNECTING;
-//				TLog.d("接続済のデバイスに再接続。成功しました。");
-//				return UWS_NG_SUCCESS;
-//			}
-//			else {
-//				TLog.d("接続済のデバイスに再接続。失敗しました。");
-//				return UWS_NG_DEVICE_NOTFOUND;
-//			}
-//		}
-//
-//		/* 初回接続 */
-//		BluetoothDevice device = btAdapter.getRemoteDevice(address);
-//		if (device == null) {
-//			TLog.d("デバイス({0})が見つかりません。接続できませんでした。", address);
-//			return UWS_NG_DEVICE_NOTFOUND;
-//		}
-//
-//		/* デバイスに直接接続したい時に、autoConnectをfalseにする。 */
-//		/* デバイスが使用可能になったら自動的にすぐに接続する様にする時に、autoConnectをtrueにする。 */
-//		mBleGatt = device.connectGatt(getApplicationContext(), false, mGattCallback);
-//		mBleDeviceAddr = address;
-////		mConnectionState = STATE_CONNECTING;
-//		TLog.d("GATTサーバ接続開始.address={0}", address);
-//
-//		return UWS_NG_SUCCESS;
-//	}
-
-//	public void disconnectBleDevice() {
-//		if (mBleGatt != null) {
-//			mBleGatt.disconnect();
-//			mBleGatt.close();
-//			mBleGatt = null;
-//		}
-//	}
-
-//	public void readCharacteristic(BluetoothGattCharacteristic characteristic) {
-//		if (mBleGatt == null) {
-//			TLog.d("Bluetooth not initialized");
-//			throw new IllegalStateException("Error!! Bluetooth not initialized!!");
-//		}
-//
-//		mBleGatt.readCharacteristic(characteristic);
-//	}
-
-//	/* 指定CharacteristicのCallback登録 */
-//	public void setCharacteristicNotification(BluetoothGattCharacteristic characteristic, boolean enabled) {
-//		TLog.d("setCharacteristicNotification() s");
-//		if (mBleGatt == null) {
-//			TLog.d("Bluetooth not initialized");
-//			throw new IllegalStateException("Error!! Bluetooth not initialized!!");
-//		}
-//
-//		mBleGatt.setCharacteristicNotification(characteristic, enabled);
-//		TLog.d("setCharacteristicNotification() e");
-//	}
-
-//	/* 対象デバイスの保有するサービスを取得 */
-//	public List<BluetoothGattService> getSupportedGattServices() {
-//		if (mBleGatt == null)
-//			return null;
-//		return mBleGatt.getServices();
-//	}
 }

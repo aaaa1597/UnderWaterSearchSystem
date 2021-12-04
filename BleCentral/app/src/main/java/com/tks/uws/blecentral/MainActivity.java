@@ -9,7 +9,6 @@ import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
@@ -25,8 +24,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.Button;
-import android.widget.TextView;
-
 import java.text.MessageFormat;
 import java.util.List;
 
@@ -41,14 +38,6 @@ public class MainActivity extends AppCompatActivity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-
-		/* 受信するブロードキャストintentを登録 */
-		final IntentFilter intentFilter = new IntentFilter();
-//		intentFilter.addAction(BleService.UWS_GATT_CONNECTED);
-//		intentFilter.addAction(BleService.UWS_GATT_DISCONNECTED);
-//		intentFilter.addAction(BleService.UWS_GATT_SERVICES_DISCOVERED);
-//		intentFilter.addAction(BleService.UWS_DATA_AVAILABLE);
-		registerReceiver(mIntentListner, intentFilter);
 
 		/* BLEデバイスリストの初期化 */
 		RecyclerView deviceListRvw = findViewById(R.id.rvw_devices);
@@ -152,7 +141,6 @@ public class MainActivity extends AppCompatActivity {
 		super.onDestroy();
 		TLog.d("onDestroy()");
 		unbindService(mCon);
-		unregisterReceiver(mIntentListner);
 	}
 
 	/* Serviceコールバック */
@@ -313,7 +301,7 @@ public class MainActivity extends AppCompatActivity {
 		else if(retini == BleService.UWS_NG_ADAPTER_NOTFOUND)
 			ErrPopUp.create(MainActivity.this).setErrMsg("この端末はBluetoothに対応していません!!終了します。").Show(MainActivity.this);
 		else if(retini == BleService.UWS_NG_BT_OFF) {
-			Snackbar.make(findViewById(R.id.root_view_device), "BluetoothがOFFです。\nONにして操作してください。", Snackbar.LENGTH_LONG).show();
+			Snackbar.make(findViewById(R.id.root_view), "BluetoothがOFFです。\nONにして操作してください。", Snackbar.LENGTH_LONG).show();
 			return false;
 		}
 		else if(retini != BleService.UWS_NG_SUCCESS)
@@ -329,11 +317,11 @@ public class MainActivity extends AppCompatActivity {
 		catch (RemoteException e) { e.printStackTrace();}
 		TLog.d("ret={0}", ret);
 		if(ret == BleService.UWS_NG_ALREADY_SCANNED) {
-			Snackbar.make(findViewById(R.id.root_view_device), "すでにscan中です。継続します。", Snackbar.LENGTH_LONG).show();
+			Snackbar.make(findViewById(R.id.root_view), "すでにscan中です。継続します。", Snackbar.LENGTH_LONG).show();
 			return false;
 		}
 		else if(ret == BleService.UWS_NG_BT_OFF) {
-			Snackbar.make(findViewById(R.id.root_view_device), "BluetoothがOFFです。\nONにして操作してください。", Snackbar.LENGTH_LONG).show();
+			Snackbar.make(findViewById(R.id.root_view), "BluetoothがOFFです。\nONにして操作してください。", Snackbar.LENGTH_LONG).show();
 			return false;
 		}
 		runOnUiThread(() -> { mDeviceListAdapter.clearDevice(); });
@@ -356,66 +344,4 @@ public class MainActivity extends AppCompatActivity {
 		btn.setEnabled(true);
 		return true;
 	}
-
-
-
-
-
-
-
-
-
-
-
-	private final BroadcastReceiver mIntentListner = new BroadcastReceiver() {
-		@Override
-		public void onReceive(Context context, Intent intent) {
-			String action = intent.getAction();
-			if (action == null)
-				return;
-
-			switch (action) {
-//				int errReason = intent.getIntExtra(BleService.UWS_KEY_WAKEUP_NG_REASON, BleService.UWS_NG_ADAPTER_NOTFOUND);
-//				if(errReason == BleService.UWS_NG_SERVICE_NOTFOUND)
-//					ErrPopUp.create(MainActivity.this).setErrMsg("この端末はBluetoothに対応していません!!終了します。").Show(MainActivity.this);
-//				else if(errReason == BleService.UWS_NG_ADAPTER_NOTFOUND)
-//					ErrPopUp.create(MainActivity.this).setErrMsg("Service起動中のBT初期化に失敗!!終了します。").Show(MainActivity.this);
-//				else if(errReason == BleService.UWS_NG_REASON_DEVICENOTFOUND)
-//					Snackbar.make(findViewById(R.id.root_view_device), "デバイスアドレスなし!!\n前画面で、別のデバイスを選択して下さい。", Snackbar.LENGTH_LONG).show();
-//				else if(errReason == BleService.UWS_NG_REASON_CONNECTBLE)
-//					Snackbar.make(findViewById(R.id.root_view_device), "デバイス接続失敗!!\n前画面で、別のデバイスを選択して下さい。", Snackbar.LENGTH_LONG).show();
-
-//				/* Gattサーバ接続完了 */
-//				case BleService.UWS_GATT_CONNECTED:
-//					runOnUiThread(() -> {
-//						/* 表示 : Connected */
-//						((TextView)findViewById(R.id.txtConnectionStatus)).setText(R.string.connected);
-//					});
-//					findViewById(R.id.btnReqReadCharacteristic).setEnabled(true);
-//					break;
-
-//				/* Gattサーバ断 */
-//				case BleService.UWS_GATT_DISCONNECTED:
-//					runOnUiThread(() -> {
-//						/* 表示 : Disconnected */
-//						((TextView)findViewById(R.id.txtConnectionStatus)).setText(R.string.disconnected);
-//					});
-//					findViewById(R.id.btnReqReadCharacteristic).setEnabled(false);
-//					break;
-
-//				case BleService.UWS_GATT_SERVICES_DISCOVERED:
-//					mCharacteristic = findTerget(mBLeMngServ.getSupportedGattServices(), UWS_SERVICE_UUID, UWS_CHARACTERISTIC_SAMLE_UUID);
-//					if (mCharacteristic != null) {
-//						mBLeMngServ.readCharacteristic(mCharacteristic);
-//						mBLeMngServ.setCharacteristicNotification(mCharacteristic, true);
-//					}
-//					break;
-
-//				case BleService.UWS_DATA_AVAILABLE:
-//					int msg = intent.getIntExtra(BleService.UWS_DATA, -1);
-//					TLog.d("RcvData =" + msg);
-//					break;
-			}
-		}
-	};
 }
