@@ -3,6 +3,7 @@ package com.sample.testdrawer;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.lifecycle.MutableLiveData;
 
 import android.os.Bundle;
 import android.view.Gravity;
@@ -11,6 +12,7 @@ import android.widget.ListView;
 
 import com.google.android.material.navigation.NavigationView;
 
+import java.util.ArrayList;
 import java.util.jar.Attributes;
 
 public class MainActivity extends AppCompatActivity {
@@ -19,6 +21,9 @@ public class MainActivity extends AppCompatActivity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+
+		MutableLiveData<ArrayList<String>> aaa = new MutableLiveData<>(new ArrayList<String>());
+		ArrayList<String> vvv = aaa.getValue();
 
 		ListView listView = findViewById(R.id.task_list_view_inside_nav);
 		DrawerListAdapter drawerlistAdapter = new DrawerListAdapter(getApplicationContext());

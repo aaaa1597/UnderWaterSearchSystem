@@ -66,13 +66,13 @@ public class BleService extends Service {
 		}
 
 		@Override
-		public List<ScanResult> getScanResultlist() throws RemoteException {
-			return mTmpScanResultList;
+		public List<DeviceInfo> getDeviceInfolist() throws RemoteException {
+			return mTmpDeviceInfoList;
 		}
 
 		@Override
-		public ScanResult getScanResult() throws RemoteException {
-			return mTmpScanResult;
+		public DeviceInfo getDeviceInfo() throws RemoteException {
+			return mTmpDeviceInfo;
 		}
 
 		@Override
@@ -112,55 +112,44 @@ public class BleService extends Service {
 	private final Map<String, BluetoothGatt>	mConnectedDevices = new HashMap<>();
 	private BluetoothAdapter					mBluetoothAdapter;
 	private BluetoothLeScanner					mBLeScanner;
-	/* メッセージID */
-	public final static int UWS_NG_SUCCESS				= 0;	/* OK */
-	public final static int UWS_NG_RECONNECT_OK			= -1;	/* 再接続OK */
-	public final static int UWS_NG_SERVICE_NOTFOUND		= -2;	/* サービスが見つからない(=Bluetooth未サポ－ト) */
-	public final static int UWS_NG_ADAPTER_NOTFOUND		= -3;	/* BluetoothAdapterがnull(=Bluetooth未サポ－ト) */
-	public final static int UWS_NG_BT_OFF				= -4;	/* Bluetooth機能がOFF */
-	public final static int UWS_NG_ALREADY_SCANNED		= -5;	/* 既にscan中 */
-	public final static int UWS_NG_PERMISSION_DENIED	= -6;	/* 権限なし */
-	public final static int UWS_NG_ALREADY_SCANSTOPEDNED= -7;	/* 既にscan停止中 */
-	public final static int UWS_NG_ILLEGALARGUMENT		= -8;	/* 引数不正 */
-	public final static int UWS_NG_DEVICE_NOTFOUND		= -9;	/* デバイスが見つからない。 */
-	public final static int UWS_NG_GATT_SUCCESS			= BluetoothGatt.GATT_SUCCESS;
 
 	int BsvInit() {
 		/* Bluetooth権限なし */
 		if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
-			return UWS_NG_PERMISSION_DENIED;
+			return Constants.UWS_NG_PERMISSION_DENIED;
 		TLog.d( "Bluetooth権限OK.");
 
 		/* Bluetoothサービス取得 */
 		final BluetoothManager bluetoothManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
 		if(bluetoothManager == null)
-			return UWS_NG_SERVICE_NOTFOUND;
+			return Constants.UWS_NG_SERVICE_NOTFOUND;
+		TLog.d( "Bluetoothサービス取得OK.");
 
 		/* Bluetoothアダプタ取得 */
 		mBluetoothAdapter = bluetoothManager.getAdapter();
 		if (mBluetoothAdapter == null)
-			return UWS_NG_ADAPTER_NOTFOUND;
+			return Constants.UWS_NG_ADAPTER_NOTFOUND;
 
 		/* Bluetooth ON */
-		else if( !mBluetoothAdapter.isEnabled())
-			return UWS_NG_BT_OFF;
+		if( !mBluetoothAdapter.isEnabled())
+			return Constants.UWS_NG_BT_OFF;
 		TLog.d( "Bluetooth ON.");
 
-		return UWS_NG_SUCCESS;
+		return Constants.UWS_NG_SUCCESS;
 	}
 
 	/* Bluetoothサービス-scan開始 */
-	private ScanResult			mTmpScanResult;
-	private List<ScanResult>	mTmpScanResultList = new ArrayList<>();
+	private DeviceInfo			mTmpDeviceInfo;
+	private List<DeviceInfo>	mTmpDeviceInfoList = new ArrayList<>();
 	private ScanCallback		mScanCallback = null;
 	private int BsvStartScan() {
 		/* 既にscan中 */
 		if(mScanCallback != null)
-			return UWS_NG_ALREADY_SCANNED;
+			return Constants.UWS_NG_ALREADY_SCANNED;
 
 		/* Bluetooth機能がOFF */
 		if( !mBluetoothAdapter.isEnabled())
-			return UWS_NG_BT_OFF;
+			return Constants.UWS_NG_BT_OFF;
 
 		TLog.d("Bluetooth ON.");
 
@@ -169,8 +158,10 @@ public class BleService extends Service {
 			@Override
 			public void onBatchScanResults(List<ScanResult> results) {
 				super.onBatchScanResults(results);
-				mTmpScanResultList = results;
-				try { mListener.notifyScanResultlist();}
+				mTmpDeviceInfoList = results.stream().map(i -> {
+					return new DeviceInfo(i.getDevice().getName(), i.getDevice().getAddress(), i.getRssi());
+				}).collect(Collectors.toList());
+				try { mListener.notifyDeviceInfolist();}
 				catch (RemoteException e) {e.printStackTrace();}
 //				for(ScanResult result : results) {
 //					TLog.d("---------------------------------- size=" + results.size());
@@ -198,12 +189,12 @@ public class BleService extends Service {
 			@Override
 			public void onScanResult(int callbackType, ScanResult result) {
 				super.onScanResult(callbackType, result);
-				mTmpScanResult = result;
+				mTmpDeviceInfo = new DeviceInfo(result.getDevice().getName(), result.getDevice().getAddress(), result.getRssi());
 				if(result.getScanRecord() != null && result.getScanRecord().getServiceUuids() != null)
 					TLog.d("発見!! {0}({1}):Rssi({2}) Uuids({3})", result.getDevice().getAddress(), result.getDevice().getName(), result.getRssi(), result.getScanRecord().getServiceUuids().toString());
 				else
 					TLog.d("発見!! {0}({1}):Rssi({2})", result.getDevice().getAddress(), result.getDevice().getName(), result.getRssi());
-				try { mListener.notifyScanResult();}
+				try { mListener.notifyDeviceInfo();}
 				catch (RemoteException e) {e.printStackTrace();}
 //				if(result !=null && result.getDevice() != null) {
 //					TLog.d("----------------------------------");
@@ -246,13 +237,13 @@ public class BleService extends Service {
 		mBLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
 		mBLeScanner.startScan(scanFilters, scansetting.build(), mScanCallback);
 
-		return UWS_NG_SUCCESS;
+		return Constants.UWS_NG_SUCCESS;
 	}
 
 	/* Bluetoothサービス-scan停止 */
 	private int BsvStopScan() {
 		if(mScanCallback == null)
-			return UWS_NG_ALREADY_SCANSTOPEDNED;
+			return Constants.UWS_NG_ALREADY_SCANSTOPEDNED;
 
 		mBLeScanner.stopScan(mScanCallback);
 		mScanCallback = null;
@@ -260,13 +251,13 @@ public class BleService extends Service {
 		try { mListener.notifyScanEnd();}
 		catch (RemoteException e) { e.printStackTrace(); }
 
-		return UWS_NG_SUCCESS;
+		return Constants.UWS_NG_SUCCESS;
 	}
 
 	/* Bluetoothサービス-デバイス接続 */
 	private int BsvConnectDevice(String deviceAddress) {
 		if(deviceAddress == null || deviceAddress.equals(""))
-			return UWS_NG_ILLEGALARGUMENT;
+			return Constants.UWS_NG_ILLEGALARGUMENT;
 
 		/* デバイスリスト検索 */
 		BluetoothGatt gat = mConnectedDevices.get(deviceAddress);
@@ -276,12 +267,12 @@ public class BleService extends Service {
 			TLog.d("デバイス再接続({0})", deviceAddress);
 			boolean ret = gat.connect();
 			if(ret)
-				return UWS_NG_RECONNECT_OK;
+				return Constants.UWS_NG_RECONNECT_OK;
 			/* デバイスなしなので、削除 */
 			gat.disconnect();
 			gat.close();
 			mConnectedDevices.remove(deviceAddress);
-			return UWS_NG_DEVICE_NOTFOUND;
+			return Constants.UWS_NG_DEVICE_NOTFOUND;
 		}
 
 		TLog.d("デバイス初回接続({0})", deviceAddress);
@@ -289,7 +280,7 @@ public class BleService extends Service {
 		BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(deviceAddress);
 		if (device == null) {
 			TLog.d("デバイス({0})が見つかりません。接続できませんでした。", deviceAddress);
-			return UWS_NG_DEVICE_NOTFOUND;
+			return Constants.UWS_NG_DEVICE_NOTFOUND;
 		}
 
 		/* デバイスに直接接続したい時に、autoConnectをfalseにする。 */
@@ -297,13 +288,13 @@ public class BleService extends Service {
 		BluetoothGatt blegatt = device.connectGatt(getApplicationContext(), false, mGattCallback);
 		if (blegatt == null) {
 			TLog.d("Gattサーバ接続失敗!! address={0}", deviceAddress);
-			return UWS_NG_DEVICE_NOTFOUND;
+			return Constants.UWS_NG_DEVICE_NOTFOUND;
 		}
 
 		/* Gatt接続中 */
 		TLog.d("Gattサーバ接続成功. address={0} gattAddress={1}", deviceAddress, blegatt.getDevice().getAddress());
 
-		return UWS_NG_SUCCESS;
+		return Constants.UWS_NG_SUCCESS;
 	}
 
 	BluetoothGattCharacteristic mCharacteristic = null;

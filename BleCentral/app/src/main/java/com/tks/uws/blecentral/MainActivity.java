@@ -2,10 +2,10 @@ package com.tks.uws.blecentral;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.PictureInPictureParams;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.ScanResult;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -22,6 +22,7 @@ import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Rational;
 import android.view.View;
 import android.widget.Button;
 import java.text.MessageFormat;
@@ -54,15 +55,15 @@ public class MainActivity extends AppCompatActivity {
 				try { ret = mBleServiceIf.connectDevice(deviceAddress); }
 				catch (RemoteException e) { e.printStackTrace(); }
 				switch(ret) {
-					case BleService.UWS_NG_SUCCESS:
+					case Constants.UWS_NG_SUCCESS:
 						TLog.d("デバイス接続中... {0}:{1}", deviceName, deviceAddress);
 						mDeviceListAdapter.setStatus(deviceAddress, DeviceListAdapter.ConnectStatus.CONNECTING);
 						break;
-					case BleService.UWS_NG_RECONNECT_OK:
+					case Constants.UWS_NG_RECONNECT_OK:
 						TLog.d("デバイス再接続OK. {0}:{1}", deviceName, deviceAddress);
 						mDeviceListAdapter.setStatus(deviceAddress, DeviceListAdapter.ConnectStatus.READY);
 						break;
-					case BleService.UWS_NG_DEVICE_NOTFOUND: {
+					case Constants.UWS_NG_DEVICE_NOTFOUND: {
 							String logstr = MessageFormat.format("デバイスが見つかりません。デバイス:({0} : {1})", deviceName, deviceAddress);
 							TLog.d(logstr);
 							Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show();
@@ -106,19 +107,17 @@ public class MainActivity extends AppCompatActivity {
 			startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
 		}
 
-		/* Bluetoothサービス起動 */
-		Intent intent = new Intent(MainActivity.this, BleService.class);
-		bindService(intent, mCon, Context.BIND_AUTO_CREATE);
-		TLog.d("Bluetoothサービス起動");
+		bindBleService();
 	}
 
 	@Override
 	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
 		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 		if(requestCode == REQUEST_PERMISSIONS && grantResults.length > 0) {
-			if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+			if (grantResults[0] != PackageManager.PERMISSION_GRANTED)
 				ErrPopUp.create(MainActivity.this).setErrMsg("このアプリには必要な権限です。\n再起動後に許可してください。\n終了します。").Show(MainActivity.this);
-			}
+			else
+				bindBleService();
 		}
 	}
 
@@ -127,12 +126,10 @@ public class MainActivity extends AppCompatActivity {
 		super.onActivityResult(requestCode, resultCode, data);
 		if(requestCode == REQUEST_ENABLE_BT) {
 			/* Bluetooth機能ONになった。 */
-			if(resultCode == Activity.RESULT_OK){
-				startScan();
-			}
-			else {
+			if(resultCode == Activity.RESULT_OK)
+				bindBleService();
+			else
 				ErrPopUp.create(MainActivity.this).setErrMsg("このアプリでは、Bluetooth機能をONにする必要があります。\n終了します。").Show(MainActivity.this);
-			}
 		}
 	}
 
@@ -143,6 +140,51 @@ public class MainActivity extends AppCompatActivity {
 		unbindService(mCon);
 	}
 
+	private void bindBleService() {
+		/* Bluetooth未サポート */
+		if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+			TLog.d("Bluetooth未サポートの端末.何もしない.");
+			return;
+		}
+
+		/* 権限が許可されていない */
+		if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+			TLog.d("Bluetooth権限なし.何もしない.");
+			return;
+		}
+
+		/* Bluetooth未サポート */
+		final BluetoothManager bluetoothManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
+		if(bluetoothManager == null) {
+			TLog.d("Bluetooth未サポートの端末.何もしない.");
+			return;
+		}
+
+		/* Bluetooth未サポート */
+		BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
+		if (bluetoothAdapter == null) {
+			TLog.d("Bluetooth未サポートの端末.何もしない.");
+			return;
+		}
+
+		/* Bluetooth ON/OFF判定 */
+		if( !bluetoothAdapter.isEnabled()) {
+			TLog.d("Bluetooth OFF.何もしない.");
+			return;
+		}
+
+		/* Bluetoothサービス起動 */
+		Intent intent = new Intent(MainActivity.this, BleService.class);
+		bindService(intent, mCon, Context.BIND_AUTO_CREATE);
+		TLog.d("Bluetooth使用クリア Bluetoothサービス起動");
+
+		/* PinPで起動 */
+		PictureInPictureParams.Builder pinpbuilder = new PictureInPictureParams.Builder();
+		pinpbuilder.setAspectRatio(new Rational(16,9));
+		enterPictureInPictureMode(pinpbuilder.build());
+		TLog.d("PinP状態に遷移.");
+	}
+
 	/* Serviceコールバック */
 	private IBleService mBleServiceIf;
 	private final ServiceConnection mCon = new ServiceConnection() {
@@ -150,24 +192,29 @@ public class MainActivity extends AppCompatActivity {
 		public void onServiceConnected(ComponentName name, IBinder service) {
 			mBleServiceIf = IBleService.Stub.asInterface(service);
 
-			/* コールバック設定 */
-			try { mBleServiceIf.setCallback(mCb); }
-			catch (RemoteException e) { e.printStackTrace(); throw new RuntimeException("AIDL-callback設定で失敗!!"); /* ここで例外が起きたら終了する */}
+//			/* コールバック設定 */
+//			try { mBleServiceIf.setCallback(mCb); }
+//			catch (RemoteException e) { e.printStackTrace(); throw new RuntimeException("AIDL-callback設定で失敗!!"); /* ここで例外が起きたら終了する */}
 
 			/* BT初期化 */
-			boolean retinit = initBt();
-			if(!retinit) return;
-			TLog.d("BT初期化完了");
+			int ret = initBt();
+			TLog.d("BT初期化完了 ret={0}", ret);
 
-			/* scan開始 */
-			boolean retscan = startScan();
-			if(!retscan) return;
-			TLog.d("scan開始");
+			/* 結果をUWSアプリに返却、自身(アプリ)は終了 */
+//			Intent retintent = new Intent("com.tks.uws.blecentral.BT_INIT");
+//			retintent.putExtra("RET_BT_INIT", ret);
+//			setResult(Activity.RESULT_OK, retintent);
+			finish();
 
-			/* 30秒後にscan停止 */
-			mHandler.postDelayed(() -> {
-				stopScan();
-			}, SCAN_PERIOD);
+//			/* scan開始 */
+//			boolean retscan = startScan();
+//			if(!retscan) return;
+//			TLog.d("scan開始");
+//
+//			/* 30秒後にscan停止 */
+//			mHandler.postDelayed(() -> {
+//				stopScan();
+//			}, SCAN_PERIOD);
 		}
 
 		@Override
@@ -180,19 +227,16 @@ public class MainActivity extends AppCompatActivity {
 	/* AIDLコールバック */
 	private IBleServiceCallback mCb = new IBleServiceCallback.Stub() {
 		@Override
-		public void notifyScanResultlist() throws RemoteException {
-			List<ScanResult> result = mBleServiceIf.getScanResultlist();
+		public void notifyDeviceInfolist() throws RemoteException {
+			List<DeviceInfo> result = mBleServiceIf.getDeviceInfolist();
 			runOnUiThread(() -> mDeviceListAdapter.addDevice(result));
 		}
 
 		@Override
-		public void notifyScanResult() throws RemoteException {
-			ScanResult result = mBleServiceIf.getScanResult();
+		public void notifyDeviceInfo() throws RemoteException {
+			DeviceInfo result = mBleServiceIf.getDeviceInfo();
 			runOnUiThread(() -> mDeviceListAdapter.addDevice(result));
-			if(result.getScanRecord() != null && result.getScanRecord().getServiceUuids() != null)
-				TLog.d("発見!! {0}({1}):Rssi({2}) Uuids({3})", result.getDevice().getAddress(), result.getDevice().getName(), result.getRssi(), result.getScanRecord().getServiceUuids().toString());
-			else
-				TLog.d("発見!! {0}({1}):Rssi({2})", result.getDevice().getAddress(), result.getDevice().getName(), result.getRssi());
+			TLog.d("発見!! {0}({1}):Rssi({2})", result.getDeviceAddress() , result.getDeviceName(), result.getDeviceRssi());
 		}
 
 		@Override
@@ -222,7 +266,7 @@ public class MainActivity extends AppCompatActivity {
 
 		@Override
 		public void notifyServicesDiscovered(String Address, int status) throws RemoteException {
-			if(status == BleService.UWS_NG_GATT_SUCCESS) {
+			if(status == Constants.UWS_NG_GATT_SUCCESS) {
 				TLog.d("Services発見. -> 対象Serviceかチェック ret={0}", status);
 				runOnUiThread(() -> { mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.CHECKAPPLI); });
 			}
@@ -289,25 +333,27 @@ public class MainActivity extends AppCompatActivity {
 	};
 
 	/* Bluetooth初期化 */
-	private boolean initBt() {
+	private int initBt() {
 		TLog.d("コールバック設定完了");
 		/* BT初期化 */
 		int retini = 0;
 		try { retini = mBleServiceIf.initBle(); }
 		catch (RemoteException e) { e.printStackTrace(); throw new RuntimeException("Bt初期化で失敗!!"); /* ここで例外が起きたら終了する */}
 		TLog.d("Bletooth初期化 ret={0}", retini);
-		if(retini == BleService.UWS_NG_SERVICE_NOTFOUND)
-			ErrPopUp.create(MainActivity.this).setErrMsg("この端末はBluetoothに対応していません!!終了します。").Show(MainActivity.this);
-		else if(retini == BleService.UWS_NG_ADAPTER_NOTFOUND)
-			ErrPopUp.create(MainActivity.this).setErrMsg("この端末はBluetoothに対応していません!!終了します。").Show(MainActivity.this);
-		else if(retini == BleService.UWS_NG_BT_OFF) {
+		if(retini == Constants.UWS_NG_PERMISSION_DENIED)
+			ErrPopUp.create(MainActivity.this).setErrMsg("このアプリに権限がありません!!\n終了します。").Show(MainActivity.this);
+		else if(retini == Constants.UWS_NG_SERVICE_NOTFOUND)
+			ErrPopUp.create(MainActivity.this).setErrMsg("この端末はBluetoothに対応していません!!\n終了します。").Show(MainActivity.this);
+		else if(retini == Constants.UWS_NG_ADAPTER_NOTFOUND)
+			ErrPopUp.create(MainActivity.this).setErrMsg("この端末はBluetoothに対応していません!!\n終了します。").Show(MainActivity.this);
+		else if(retini == Constants.UWS_NG_BT_OFF) {
 			Snackbar.make(findViewById(R.id.root_view), "BluetoothがOFFです。\nONにして操作してください。", Snackbar.LENGTH_LONG).show();
-			return false;
+			return Constants.UWS_NG_BT_OFF;
 		}
-		else if(retini != BleService.UWS_NG_SUCCESS)
-			ErrPopUp.create(MainActivity.this).setErrMsg("原因不明のエラーが発生しました!!終了します。").Show(MainActivity.this);
+		else if(retini != Constants.UWS_NG_SUCCESS)
+			ErrPopUp.create(MainActivity.this).setErrMsg("原因不明のエラーが発生しました!!\n終了します。").Show(MainActivity.this);
 
-		return true;
+		return retini;
 	}
 
 	/* scan開始 */
@@ -316,11 +362,11 @@ public class MainActivity extends AppCompatActivity {
 		try { ret = mBleServiceIf.startScan();}
 		catch (RemoteException e) { e.printStackTrace();}
 		TLog.d("ret={0}", ret);
-		if(ret == BleService.UWS_NG_ALREADY_SCANNED) {
+		if(ret == Constants.UWS_NG_ALREADY_SCANNED) {
 			Snackbar.make(findViewById(R.id.root_view), "すでにscan中です。継続します。", Snackbar.LENGTH_LONG).show();
 			return false;
 		}
-		else if(ret == BleService.UWS_NG_BT_OFF) {
+		else if(ret == Constants.UWS_NG_BT_OFF) {
 			Snackbar.make(findViewById(R.id.root_view), "BluetoothがOFFです。\nONにして操作してください。", Snackbar.LENGTH_LONG).show();
 			return false;
 		}

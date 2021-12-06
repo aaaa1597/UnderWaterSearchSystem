@@ -1,18 +1,18 @@
-package com.tks.uws.blecentral;
+package com.tks.uwsunit00.ui;
 
-import android.bluetooth.le.ScanResult;
-import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.tks.uws.blecentral.DeviceListAdapter.ConnectStatus.NONE;
+import com.tks.uws.blecentral.DeviceInfo;
+import com.tks.uwsunit00.R;
 
 /**
  * -30 dBm	素晴らしい	達成可能な最大信号強度。クライアントは、これを実現するには、APから僅か数フィートである必要があります。現実的には一般的ではなく、望ましいものでもありません	N/A
@@ -49,18 +49,18 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	private DeviceListAdapterListener	mListener;
 
 	public enum ConnectStatus { NONE, CONNECTING, EXPLORING, CHECKAPPLI, TOBEPREPARED, READY}
-	private class DevicveInfoModel {
+	private static class DevicveInfoModel {
 		public String			mDeviceName;
 		public String			mDeviceAddress;
 		public int				mDeviceRssi;
-		public ConnectStatus	mStatus;
+		public ConnectStatus	mConnectStatus;
 		public int				mHertBeat;
-		public DevicveInfoModel(String devicename, String deviceaddress, int devicerssi, ConnectStatus status, int hertBeat) {
+		public DevicveInfoModel(String devicename, String deviceaddress, int devicerssi, ConnectStatus status, int hertbeat) {
 			mDeviceName		= devicename;
 			mDeviceAddress	= deviceaddress;
 			mDeviceRssi		= devicerssi;
-			mStatus		= status;
-			mHertBeat	= hertBeat;
+			mConnectStatus	= status;
+			mHertBeat		= hertbeat;
 		}
 	}
 
@@ -69,37 +69,37 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		mListener = listener;
 	}
 
-	public DeviceListAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-		View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.lay_listitem_devices, parent, false);
+	@NonNull
+	@Override
+	public DeviceListAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+		View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.listitem_devices, parent, false);
 		return new ViewHolder(view);
 	}
 
 	@Override
-	public void onBindViewHolder(ViewHolder holder, int position) {
+	public void onBindViewHolder(@NonNull DeviceListAdapter. ViewHolder holder, int position) {
 		DevicveInfoModel model = mDeviceList.get(position);
 		final String deviceName		= model.mDeviceName;
 		final String deviceAddress	= model.mDeviceAddress;
 		final int rssiresid	=	model.mDeviceRssi > -60 ? R.drawable.wifi_level_3 :
 								model.mDeviceRssi > -70 ? R.drawable.wifi_level_2 :
 								model.mDeviceRssi > -80 ? R.drawable.wifi_level_1 : R.drawable.wifi_level_0;
-		final int constsresid = model.mStatus == ConnectStatus.NONE			? R.drawable.status0_none :
-								model.mStatus == ConnectStatus.CONNECTING	? R.drawable.status1_connectiong :
-								model.mStatus == ConnectStatus.EXPLORING	? R.drawable.status2_exploring :
-								model.mStatus == ConnectStatus.CHECKAPPLI	? R.drawable.status3_chkappli :
-								model.mStatus == ConnectStatus.TOBEPREPARED	? R.drawable.status4_tobeprepared :
-								model.mStatus == ConnectStatus.READY		? R.drawable.status5_ready : R.drawable.status0_none;
+		final int constsresid = model.mConnectStatus == ConnectStatus.NONE			? R.drawable.status0_none :
+								model.mConnectStatus == ConnectStatus.CONNECTING	? R.drawable.status1_connectiong :
+								model.mConnectStatus == ConnectStatus.EXPLORING		? R.drawable.status2_exploring :
+								model.mConnectStatus == ConnectStatus.CHECKAPPLI	? R.drawable.status3_chkappli :
+								model.mConnectStatus == ConnectStatus.TOBEPREPARED	? R.drawable.status4_tobeprepared :
+								model.mConnectStatus == ConnectStatus.READY			? R.drawable.status5_ready : R.drawable.status0_none;
 
 		holder.mTxtDeviceName.setText(TextUtils.isEmpty(deviceName) ? "" : deviceName);
 		holder.mTxtDeviceNameAddress.setText(TextUtils.isEmpty(deviceAddress) ? "" : deviceAddress);
 		holder.mImvConnectStatus.setImageResource(constsresid);
 		holder.mImvRssi.setImageResource(rssiresid);
 		holder.mTxtHertBeat.setText(model.mHertBeat == 0 ? "-" : ""+model.mHertBeat);
-		holder.itemView.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				if (mListener != null)
-					mListener.onDeviceItemClick(view, deviceName, deviceAddress);
-			}
+		holder.itemView.setOnClickListener(view -> {
+			/* 接続実行 */
+			if (mListener != null)
+				mListener.onDeviceItemClick(view, deviceName, deviceAddress);
 		});
 	}
 
@@ -129,11 +129,11 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 
 		if (existingPosition >= 0) {
 			/* 追加済 更新する */
-			mDeviceList.set(existingPosition, new DevicveInfoModel(deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getDeviceRssi(), mDeviceList.get(existingPosition).mStatus, mDeviceList.get(existingPosition).mHertBeat));
+			mDeviceList.set(existingPosition, new DevicveInfoModel(deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getDeviceRssi(), mDeviceList.get(existingPosition).mConnectStatus, mDeviceList.get(existingPosition).mHertBeat));
 		}
 		else {
 			/* 新規追加 */
-			mDeviceList.add(new DevicveInfoModel(deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getDeviceRssi(), NONE, 0));
+			mDeviceList.add(new DevicveInfoModel(deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getDeviceRssi(), ConnectStatus.NONE, 0));
 		}
 
 		if (notify) {
@@ -144,7 +144,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 
 	public void setStatus(String address, ConnectStatus status) {
 		int pos = getPosition(address);
-		mDeviceList.get(pos).mStatus = status;
+		mDeviceList.get(pos).mConnectStatus = status;
 		notifyItemChanged(pos);
 	}
 

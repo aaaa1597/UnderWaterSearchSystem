@@ -1,5 +1,8 @@
 package com.tks.uwsunit00.ui;
 
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 
 import android.os.Bundle;
@@ -13,10 +16,13 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import com.tks.uwsunit00.R;
+import com.tks.uwsunit00.TLog;
+
+import java.util.ArrayList;
 
 public class FragBizLogic extends Fragment {
-
-	private FragBizLogicViewModel mViewModel;
+//	private FragBizLogicViewModel	mViewModel;
+	private DeviceListAdapter		mDeviceListAdapter;
 
 	public static FragBizLogic newInstance() {
 		return new FragBizLogic();
@@ -30,6 +36,18 @@ public class FragBizLogic extends Fragment {
 	@Override
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
-		mViewModel = new ViewModelProvider(this).get(FragBizLogicViewModel.class);
+//		mViewModel = new ViewModelProvider(requireActivity()).get(FragBizLogicViewModel.class);
+//		mViewModel.clearDevice().observe(getViewLifecycleOwner(), new Observer() {
+//			@Override
+//			public void onChanged(Object o) {
+//				mDeviceListAdapter.clearDevice();
+//			}
+//		});
+
+		view.findViewById(R.id.btnSelectMember).setOnClickListener(v -> {
+			DrawerLayout naviview = getActivity().findViewById(R.id.root_view);
+			naviview.openDrawer(GravityCompat.START);
+		});
+
 	}
 }
