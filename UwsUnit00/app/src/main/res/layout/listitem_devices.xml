@@ -55,6 +55,26 @@
                     android:gravity="center"
                     android:textSize="36sp"
                     android:text="-" />
+
+                <Button
+                    android:id="@+id/btnConnect"
+                    android:layout_height="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_gravity="center"
+                    android:layout_weight="0.6"
+                    android:text="@string/connect_device"
+                    android:textAllCaps="true"
+                    android:clickable="false"
+                    android:focusable="false"/>
+
+                <ImageButton
+                    android:id="@+id/btnBuoy"
+                    android:layout_gravity="center"
+                    android:layout_height="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="0.6"
+                    android:src="@drawable/buoy_diagonal"
+                    />
             </LinearLayout>
 
             <LinearLayout
@@ -76,26 +96,5 @@
 
             </LinearLayout>
         </LinearLayout>
-
-        <Button
-            android:id="@+id/connect_device"
-            android:layout_height="wrap_content"
-            android:layout_width="0dp"
-            android:layout_gravity="center"
-            android:layout_weight="0.6"
-            android:text="@string/connect_device"
-            android:background="@color/white"
-            android:textAllCaps="true"
-            android:clickable="false"
-            android:focusable="false"/>
-
-        <ImageButton
-            android:layout_gravity="center"
-            android:layout_height="wrap_content"
-            android:layout_width="0dp"
-            android:layout_weight="0.6"
-            android:background="@color/white"
-            android:src="@drawable/buoy_diagonal"
-            />
     </LinearLayout>
 </LinearLayout>

@@ -2,23 +2,14 @@ package com.tks.uwsunit00.ui;
 
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.lifecycle.Observer;
-import androidx.lifecycle.ViewModelProvider;
-
 import android.os.Bundle;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-
 import com.tks.uwsunit00.R;
-import com.tks.uwsunit00.TLog;
-
-import java.util.ArrayList;
 
 public class FragBizLogic extends Fragment {
 //	private FragBizLogicViewModel	mViewModel;
@@ -48,6 +39,5 @@ public class FragBizLogic extends Fragment {
 			DrawerLayout naviview = getActivity().findViewById(R.id.root_view);
 			naviview.openDrawer(GravityCompat.START);
 		});
-
 	}
 }

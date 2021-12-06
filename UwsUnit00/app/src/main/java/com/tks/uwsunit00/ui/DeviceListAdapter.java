@@ -4,6 +4,8 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
@@ -29,6 +31,8 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		ImageView	mImvRssi;
 		ImageView	mImvConnectStatus;
 		TextView	mTxtHertBeat;
+		Button		mBtnConnect;
+		ImageButton mBtnBuoy;
 		ViewHolder(View view) {
 			super(view);
 			mTxtDeviceName			= view.findViewById(R.id.device_name);
@@ -36,6 +40,8 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			mImvRssi				= view.findViewById(R.id.imvRssi);
 			mImvConnectStatus		= view.findViewById(R.id.imvConnectStatus);
 			mTxtHertBeat			= view.findViewById(R.id.txtHertBeat);
+			mBtnConnect				= view.findViewById(R.id.btnConnect);
+			mBtnBuoy				= view.findViewById(R.id.btnBuoy);
 		}
 	}
 
@@ -96,10 +102,18 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		holder.mImvConnectStatus.setImageResource(constsresid);
 		holder.mImvRssi.setImageResource(rssiresid);
 		holder.mTxtHertBeat.setText(model.mHertBeat == 0 ? "-" : ""+model.mHertBeat);
-		holder.itemView.setOnClickListener(view -> {
-			/* 接続実行 */
+//		holder.itemView.setOnClickListener(view -> {
+//			/* 接続実行 */
+//			if (mListener != null)
+//				mListener.onDeviceItemClick(view, deviceName, deviceAddress);
+//		});
+		holder.mBtnConnect.setOnClickListener(v -> {
+			/* 接続ボタン押下 */
 			if (mListener != null)
-				mListener.onDeviceItemClick(view, deviceName, deviceAddress);
+				mListener.onDeviceItemClick(null, deviceName, deviceAddress);
+		});
+		holder.mBtnBuoy.setOnClickListener(v -> {
+			/* 浮標ボタン押下 */
 		});
 	}
 
