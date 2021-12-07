@@ -10,12 +10,15 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.Manifest;
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -37,19 +40,17 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.snackbar.Snackbar;
-import com.tks.uws.blecentral.DeviceInfo;
-import com.tks.uws.blecentral.IBleService;
-import com.tks.uws.blecentral.IBleServiceCallback;
 import com.tks.uwsunit00.ui.DeviceListAdapter;
 
 import java.text.MessageFormat;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-public class MainActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MainActivity extends FragmentActivity {
 //	private FragBizLogicViewModel	mViewModel;
 	private DeviceListAdapter		mDeviceListAdapter;
-	private final static int		REQUEST_PERMISSIONS = 111;
+	private final static int		REQUEST_PERMISSIONS = 1111;
 	private GoogleMap				mMap;
 	private Location				mLocation;
 
@@ -75,51 +76,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
 			startScan();
 		});
-
-		/* BLE初期化アプリを起動 */
-		Intent bleAppWakeupintent = new Intent();
-		bleAppWakeupintent.setClassName("com.tks.uws.blecentral", "com.tks.uws.blecentral.MainActivity");
-		startActivity(bleAppWakeupintent);
-//		ActivityResultLauncher<Intent> startForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
-//				result -> {
-//					if(result.getResultCode() != Activity.RESULT_OK)
-//						return;	/* 対象外なので無視 */
-//					if( !result.getData().getAction().equals("com.tks.uws.blecentral.BT_INIT"))
-//						return;	/* 対象外なので無視 */
-//
-//					int ret = result.getData().getIntExtra("RET_BT_INIT", -999);
-//					switch (ret) {
-//						case Constants.UWS_NG_SUCCESS:
-//							/* 問題なし ->Bleアプリ起動へ. */
-//							break;
-//						case Constants.UWS_NG_PERMISSION_DENIED:
-//							ErrPopUp.create(MainActivity.this).setErrMsg("このアプリに権限がありません!!\n終了します。").Show(MainActivity.this);
-//							break;
-//						case Constants.UWS_NG_SERVICE_NOTFOUND:
-//							ErrPopUp.create(MainActivity.this).setErrMsg("この端末はBluetoothに対応していません!!\n終了します。").Show(MainActivity.this);
-//							break;
-//						case Constants.UWS_NG_ADAPTER_NOTFOUND:
-//							ErrPopUp.create(MainActivity.this).setErrMsg("この端末はBluetoothに対応していません!!\n終了します。").Show(MainActivity.this);
-//							break;
-//						case Constants.UWS_NG_BT_OFF:
-//							ErrPopUp.create(MainActivity.this).setErrMsg("BluetoothがOFFです。ONにして操作してください。\n終了します。").Show(MainActivity.this);
-//							break;
-//						default:
-//							ErrPopUp.create(MainActivity.this).setErrMsg("原因不明のエラーが発生しました!!\n終了します。").Show(MainActivity.this);
-//							break;
-//					}
-//
-//					TLog.d("Bleアプリ初期正常終了 -> Bleサービス接続開始. ret={0}", ret);
-//					Intent intent = new Intent("com.tsk.uws.blecentral.BINDSERVICE");
-//					intent.setPackage("com.tks.uws.blecentral");
-//					bindService(intent, mCon, Context.BIND_AUTO_CREATE);
-//				});
-//		startForResult.launch(bleAppWakeupintent);
-
-//		TLog.d("Bleアプリ初期正常終了 -> Bleサービス接続開始. ret={0}", ret);
-		Intent intent = new Intent("com.tsk.uws.blecentral.BINDSERVICE");
-		intent.setPackage("com.tks.uws.blecentral");
-		bindService(intent, mCon, Context.BIND_AUTO_CREATE);
 
 		/* BLEデバイスリストの初期化 */
 		RecyclerView deviceListRvw = findViewById(R.id.rvw_devices);
@@ -165,14 +121,50 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 			ErrPopUp.create(MainActivity.this).setErrMsg("Bluetoothが、未サポートの端末です。\n終了します。").Show(MainActivity.this);
 		}
 
-		/* 地図用権限が許可されていない場合はリクエスト. */
+		/* 地図権限とBluetooth権限が許可されていない場合はリクエスト. */
 		if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-			requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_PERMISSIONS);
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+				requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT}, REQUEST_PERMISSIONS);
+			else
+				requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_PERMISSIONS);
+		}
+
+		final BluetoothManager bluetoothManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
+		BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
+		/* Bluetooth未サポート判定 未サポートならエラーpopupで終了 */
+		if (bluetoothAdapter == null)
+			ErrPopUp.create(MainActivity.this).setErrMsg("Bluetoothが、未サポートの端末です。").Show(MainActivity.this);
+		/* Bluetooth ON/OFF判定 -> OFFならONにするようにリクエスト */
+		else if( !bluetoothAdapter.isEnabled()) {
+			Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+			ActivityResultLauncher<Intent> startForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+					result -> {
+						if(result.getResultCode() != Activity.RESULT_OK) {
+							ErrPopUp.create(MainActivity.this).setErrMsg("BluetoothがOFFです。ONにして操作してください。\n終了します。").Show(MainActivity.this);
+						}
+						else {
+							bindBleService();
+						}
+					});
+			startForResult.launch(enableBtIntent);
 		}
 
 		/* SupportMapFragmentを取得し、マップを使用する準備ができたら通知を受取る */
 		SupportMapFragment mapFragment = (SupportMapFragment)getSupportFragmentManager().findFragmentById(R.id.frfMap);
-		Objects.requireNonNull(mapFragment).getMapAsync(this);
+		Objects.requireNonNull(mapFragment).getMapAsync(new OnMapReadyCallback() {
+			@Override
+			public void onMapReady(@NonNull GoogleMap googleMap) {
+				TLog.d("mLocation={0} googleMap={1}", mLocation, googleMap);
+				if (mLocation == null) {
+					/* 位置が取れない時は、小城消防署で */
+					mLocation = new Location("");
+					mLocation.setLongitude(130.20307019743947);
+					mLocation.setLatitude(33.25923509336276);
+				}
+				mMap = googleMap;
+				initDraw(mLocation, mMap);
+			}
+		});
 
 		/* 位置情報管理オブジェクト */
 		FusedLocationProviderClient flpc = LocationServices.getFusedLocationProviderClient(this);
@@ -198,19 +190,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 			}
 		});
 
-	}
-
-	@Override
-	public void onMapReady(@NonNull GoogleMap googleMap) {
-		TLog.d("mLocation={0} googleMap={1}", mLocation, googleMap);
-		if (mLocation == null) {
-			/* 位置が取れない時は、小城消防署で */
-			mLocation = new Location("");
-			mLocation.setLongitude(130.20307019743947);
-			mLocation.setLatitude(33.25923509336276);
-		}
-		mMap = googleMap;
-		initDraw(mLocation, mMap);
+		bindBleService();
 	}
 
 	/* 初期地図描画(起動直後は現在地を表示する) */
@@ -246,9 +226,60 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 		if (requestCode != REQUEST_PERMISSIONS) return;
 
 		/* 権限リクエストの結果を取得する. */
-		if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-			ErrPopUp.create(MainActivity.this).setErrMsg("失敗しました。\nこのアプリに、権限を与えて下さい。").Show(MainActivity.this);
+ 		long ngcnt = Arrays.stream(grantResults).filter(value -> value != PackageManager.PERMISSION_GRANTED).count();
+		if (ngcnt > 0) {
+			ErrPopUp.create(MainActivity.this).setErrMsg("このアプリには必要な権限です。\n再起動後に許可してください。\n終了します。").Show(MainActivity.this);
+			return;
 		}
+		else {
+			bindBleService();
+		}
+	}
+
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		TLog.d("onDestroy()");
+		unbindService(mCon);
+	}
+
+	private void bindBleService() {
+		/* Bluetooth未サポート */
+		if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+			TLog.d("Bluetooth未サポートの端末.何もしない.");
+			return;
+		}
+
+		/* 権限が許可されていない */
+		if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+			TLog.d("Bluetooth権限なし.何もしない.");
+			return;
+		}
+
+		/* Bluetooth未サポート */
+		final BluetoothManager bluetoothManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
+		if(bluetoothManager == null) {
+			TLog.d("Bluetooth未サポートの端末.何もしない.");
+			return;
+		}
+
+		/* Bluetooth未サポート */
+		BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
+		if (bluetoothAdapter == null) {
+			TLog.d("Bluetooth未サポートの端末.何もしない.");
+			return;
+		}
+
+		/* Bluetooth ON/OFF判定 */
+		if( !bluetoothAdapter.isEnabled()) {
+			TLog.d("Bluetooth OFF.何もしない.");
+			return;
+		}
+
+		/* Bluetoothサービス起動 */
+		Intent intent = new Intent(MainActivity.this, BleService.class);
+		bindService(intent, mCon, Context.BIND_AUTO_CREATE);
+		TLog.d("Bluetooth使用クリア -> Bluetoothサービス起動");
 	}
 
 	/* Serviceコールバック */

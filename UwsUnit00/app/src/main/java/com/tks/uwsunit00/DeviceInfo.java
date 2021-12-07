@@ -1,4 +1,4 @@
-package com.tks.uws.blecentral;
+package com.tks.uwsunit00;
 
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -7,17 +7,20 @@ public class DeviceInfo implements Parcelable {
 	private final String	mDeviceName;
 	private final String	mDeviceAddress;
 	private final int		mDeviceRssi;
+	private final boolean	mIsApplicable;
 
-	public DeviceInfo(String devicename, String deviceaddress, int devicerssi) {
+	public DeviceInfo(String devicename, String deviceaddress, int devicerssi, boolean isApplicable) {
 		mDeviceName		= devicename;
 		mDeviceAddress	= deviceaddress;
 		mDeviceRssi		= devicerssi;
+		mIsApplicable	= isApplicable;
 	}
 
 	protected DeviceInfo(Parcel in) {
 		mDeviceName		= in.readString();
 		mDeviceAddress	= in.readString();
 		mDeviceRssi		= in.readInt();
+		mIsApplicable	= in.readByte() != 0x00;
 	}
 
 	public static final Creator<DeviceInfo> CREATOR = new Creator<DeviceInfo>() {
@@ -42,9 +45,11 @@ public class DeviceInfo implements Parcelable {
 		dest.writeString(mDeviceName);
 		dest.writeString(mDeviceAddress);
 		dest.writeInt(mDeviceRssi);
+		dest.writeByte((byte)(mIsApplicable?0x01:0x00));
 	}
 
 	public String	getDeviceName()		{ return mDeviceName;}
 	public String	getDeviceAddress()	{ return mDeviceAddress;}
 	public int		getDeviceRssi()		{ return mDeviceRssi;}
+	public boolean	isApplicable()		{ return mIsApplicable;}
 }

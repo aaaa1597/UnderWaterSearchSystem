@@ -1,5 +1,5 @@
 // IBleServiceCallback.aidl
-package com.tks.uws.blecentral;
+package com.tks.uwsunit00;
 
 interface IBleServiceCallback {
     void notifyGattConnected(String Address);

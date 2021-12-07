@@ -1,7 +1,7 @@
 // IBleService.aidl
-package com.tks.uws.blecentral;
-import com.tks.uws.blecentral.IBleServiceCallback;
-import com.tks.uws.blecentral.DeviceInfo;
+package com.tks.uwsunit00;
+import com.tks.uwsunit00.IBleServiceCallback;
+import com.tks.uwsunit00.DeviceInfo;
 
 interface IBleService {
     void setCallback(IBleServiceCallback callback);	/* 常に後勝ち */

@@ -13,7 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.tks.uws.blecentral.DeviceInfo;
+import com.tks.uwsunit00.DeviceInfo;
 import com.tks.uwsunit00.R;
 
 /**
