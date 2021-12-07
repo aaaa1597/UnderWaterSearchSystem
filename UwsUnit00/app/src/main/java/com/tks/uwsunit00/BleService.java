@@ -196,7 +196,7 @@ public class BleService extends Service {
 				if(result.getScanRecord()!=null && result.getScanRecord().getServiceUuids()!=null) {
 					String retUuisStr = result.getScanRecord().getServiceUuids().get(0).toString();
 					TLog.d("aaaaaaaaa retUuisStr={0}", retUuisStr);
-					if(retUuisStr.equals(Constants.UWS_SERVICE_UUID))
+					if(retUuisStr.startsWith(Constants.UWS_SERVICE_UUID.toString().substring(0,5)))
 						isApplicable = true;
 				}
 				else {

@@ -20,7 +20,7 @@ public class Constants {
 	public static final int BLEMSG_1 = 1;
 	public static final int BLEMSG_2 = 2;
 	/* ServiceUUIDは0000xxxx-0000-1000-8000-00805f9b34fbの形を守る必要がある。CharacteristicUUIDはなんでもOK.*/
-	public static final UUID UWS_SERVICE_UUID					= UUID.fromString("00002c2c-0000-1000-8000-00805f9b34fb");
+	public static final UUID UWS_SERVICE_UUID					= UUID.fromString("00002c00-0000-1000-8000-00805f9b34fb");
 	public static final UUID UWS_CHARACTERISTIC_HRATBEAT_UUID	= UUID.fromString("29292c2c-728c-4a2b-81cb-7b4d884adb04");
 
 	/* 定義済UUIDに変換する "0000xxxx-0000-1000-8000-00805f9b34fb" */

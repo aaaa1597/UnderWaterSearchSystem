@@ -61,12 +61,14 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		public int				mDeviceRssi;
 		public ConnectStatus	mConnectStatus;
 		public int				mHertBeat;
-		public DevicveInfoModel(String devicename, String deviceaddress, int devicerssi, ConnectStatus status, int hertbeat) {
+		public  boolean			mIsApplicable;
+		public DevicveInfoModel(String devicename, String deviceaddress, int devicerssi, ConnectStatus status, int hertbeat, boolean isApplicable) {
 			mDeviceName		= devicename;
 			mDeviceAddress	= deviceaddress;
 			mDeviceRssi		= devicerssi;
 			mConnectStatus	= status;
 			mHertBeat		= hertbeat;
+			mIsApplicable	= isApplicable;
 		}
 	}
 
@@ -87,16 +89,17 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		DevicveInfoModel model = mDeviceList.get(position);
 		final String deviceName		= model.mDeviceName;
 		final String deviceAddress	= model.mDeviceAddress;
+		final int statusresid=	model.mIsApplicable ? R.drawable.status0_none : R.drawable.statusx_na;
 		final int rssiresid	=	model.mDeviceRssi > -60 ? R.drawable.wifi_level_3 :
 								model.mDeviceRssi > -70 ? R.drawable.wifi_level_2 :
 								model.mDeviceRssi > -80 ? R.drawable.wifi_level_1 : R.drawable.wifi_level_0;
-		final int constsresid = model.mConnectStatus == ConnectStatus.NONE			? R.drawable.status0_none :
+		final int constsresid =	!model.mIsApplicable								? R.drawable.statusx_na :
+								model.mConnectStatus == ConnectStatus.NONE			? R.drawable.status0_none :
 								model.mConnectStatus == ConnectStatus.CONNECTING	? R.drawable.status1_connectiong :
 								model.mConnectStatus == ConnectStatus.EXPLORING		? R.drawable.status2_exploring :
 								model.mConnectStatus == ConnectStatus.CHECKAPPLI	? R.drawable.status3_chkappli :
 								model.mConnectStatus == ConnectStatus.TOBEPREPARED	? R.drawable.status4_tobeprepared :
 								model.mConnectStatus == ConnectStatus.READY			? R.drawable.status5_ready : R.drawable.status0_none;
-
 		holder.mTxtDeviceName.setText(TextUtils.isEmpty(deviceName) ? "" : deviceName);
 		holder.mTxtDeviceNameAddress.setText(TextUtils.isEmpty(deviceAddress) ? "" : deviceAddress);
 		holder.mImvConnectStatus.setImageResource(constsresid);
@@ -143,11 +146,10 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 
 		if (existingPosition >= 0) {
 			/* 追加済 更新する */
-			mDeviceList.set(existingPosition, new DevicveInfoModel(deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getDeviceRssi(), mDeviceList.get(existingPosition).mConnectStatus, mDeviceList.get(existingPosition).mHertBeat));
-		}
+			mDeviceList.set(existingPosition, new DevicveInfoModel(deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getDeviceRssi(), mDeviceList.get(existingPosition).mConnectStatus, mDeviceList.get(existingPosition).mHertBeat, mDeviceList.get(existingPosition).mIsApplicable));		}
 		else {
 			/* 新規追加 */
-			mDeviceList.add(new DevicveInfoModel(deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getDeviceRssi(), ConnectStatus.NONE, 0));
+			mDeviceList.add(new DevicveInfoModel(deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getDeviceRssi(), ConnectStatus.NONE, 0, deviceInfo.isApplicable()));
 		}
 
 		if (notify) {
