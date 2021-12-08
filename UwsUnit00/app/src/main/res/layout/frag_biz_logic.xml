@@ -19,21 +19,10 @@
         tools:ignore="HardcodedText" />
 
     <Button
-        android:id="@+id/btnSetBuoy"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@+id/btnSelectMember"
-        app:layout_constraintRight_toRightOf="parent"
-        android:layout_marginTop="10dp"
-        android:layout_marginEnd="10dp"
-        android:text=" 浮標設定 "
-        tools:ignore="HardcodedText" />
-
-    <Button
         android:id="@+id/btnSerchStartEnd"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@+id/btnSetBuoy"
+        app:layout_constraintTop_toBottomOf="@+id/btnSelectMember"
         app:layout_constraintRight_toRightOf="parent"
         android:layout_marginEnd="10dp"
         android:text=" 検索開始 "
