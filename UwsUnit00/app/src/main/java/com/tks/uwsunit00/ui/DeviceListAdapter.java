@@ -11,7 +11,10 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.tks.uwsunit00.DeviceInfo;
 import com.tks.uwsunit00.R;
@@ -150,6 +153,18 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		else {
 			/* 新規追加 */
 			mDeviceList.add(new DevicveInfoModel(deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getDeviceRssi(), ConnectStatus.NONE, 0, deviceInfo.isApplicable()));
+			mDeviceList.sort((o1, o2) -> {
+				/* 対象のデバイス優先 */
+				if(o1.mIsApplicable && !o2.mIsApplicable)
+					return -1;
+				else if(!o1.mIsApplicable && o2.mIsApplicable)
+					return 1;
+
+				/* 次にアドレス名で並び替え */
+				int compare = o1.mDeviceAddress.compareTo(o2.mDeviceAddress);
+				if(compare == 0) return 0;
+				return compare < 0 ? -1 : 1;
+			});
 		}
 
 		if (notify) {
