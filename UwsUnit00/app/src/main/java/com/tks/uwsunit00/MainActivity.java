@@ -150,7 +150,7 @@ public class MainActivity extends FragmentActivity {
 		}
 
 		/* SupportMapFragmentを取得し、マップを使用する準備ができたら通知を受取る */
-		SupportMapFragment mapFragment = (SupportMapFragment)getSupportFragmentManager().findFragmentById(R.id.frfMap);
+		SupportMapFragment mapFragment = (SupportMapFragment)getSupportFragmentManager().findFragmentById(R.id.frgMap);
 		Objects.requireNonNull(mapFragment).getMapAsync(new OnMapReadyCallback() {
 			@Override
 			public void onMapReady(@NonNull GoogleMap googleMap) {
