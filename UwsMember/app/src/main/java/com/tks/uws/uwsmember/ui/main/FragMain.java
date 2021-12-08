@@ -2,6 +2,7 @@ package com.tks.uws.uwsmember.ui.main;
 
 import androidx.lifecycle.ViewModelProvider;
 
+import android.os.Build;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -11,6 +12,7 @@ import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.NumberPicker;
 
 import com.tks.uws.uwsmember.R;
 
@@ -27,6 +29,17 @@ public class FragMain extends Fragment {
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
 
-		/***************/
+		/* NumberPicker */
+		NumberPicker npkNo = view.findViewById(R.id.npkNo);
+		npkNo.setMinValue(0);
+		npkNo.setMaxValue(255);
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+			npkNo.setTextSize(54);
+		}
+
+		/* No決定 */
+		view.findViewById(R.id.btnSetNo).setOnClickListener(view2 -> {
+
+		});
 	}
 }
