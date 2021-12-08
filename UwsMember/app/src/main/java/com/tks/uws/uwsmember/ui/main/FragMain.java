@@ -33,9 +33,6 @@ public class FragMain extends Fragment {
 		NumberPicker npkNo = view.findViewById(R.id.npkNo);
 		npkNo.setMinValue(0);
 		npkNo.setMaxValue(255);
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-			npkNo.setTextSize(54);
-		}
 
 		/* No決定 */
 		view.findViewById(R.id.btnSetNo).setOnClickListener(view2 -> {
