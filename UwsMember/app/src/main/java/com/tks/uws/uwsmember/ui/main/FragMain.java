@@ -42,6 +42,9 @@ public class FragMain extends Fragment {
 		npkNo.setMaxValue(255);
 		npkNo.setFormatter(value -> String.format(Locale.JAPANESE,"%03d", value));
 
+		/* phase2レイヤは無効化しとく */
+		setEnableView(view.findViewById(R.id.ph2), false);
+
 		/* No決定 */
 		view.findViewById(R.id.btnSetId).setOnClickListener(view2 -> {
 			/* アドバタイズ開始 */
@@ -55,5 +58,17 @@ public class FragMain extends Fragment {
 			/* アドバタイズ停止(サービス終了) */
 //			getActivity().stopService(new Intent(getActivity().getApplicationContext(), PeripheralAdvertiseService.class));
 		});
+	}
+
+	/* 配下を全部(有効/無効)にする */
+	private void setEnableView(View view, boolean enabled) {
+		view.setEnabled(enabled);
+
+		if (view instanceof ViewGroup) {
+			ViewGroup group = (ViewGroup) view;
+
+			for (int idx = 0; idx < group.getChildCount(); idx++)
+				setEnableView(group.getChildAt(idx), enabled);
+		}
 	}
 }
