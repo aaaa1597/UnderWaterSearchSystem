@@ -157,12 +157,15 @@ public class BleService extends Service {
 				super.onBatchScanResults(results);
 				mTmpDeviceInfoList = results.stream().map(ret -> {
 					boolean isApplicable = false;
+					int id = -1;
 					if(ret.getScanRecord()!=null && ret.getScanRecord().getServiceUuids()!=null) {
 						String retUuisStr = ret.getScanRecord().getServiceUuids().get(0).toString();
-						if(retUuisStr.equals(Constants.UWS_SERVICE_UUID))
+						if(retUuisStr.startsWith(Constants.UWS_SERVICE_UUID.toString().substring(0,5))) {
 							isApplicable = true;
+							id = Integer.decode("0x"+retUuisStr.substring(6,8));
+						}
 					}
-					return new DeviceInfo(ret.getDevice().getName(), ret.getDevice().getAddress(), ret.getRssi(), isApplicable);
+					return new DeviceInfo(ret.getDevice().getName(), ret.getDevice().getAddress(), ret.getRssi(), isApplicable, id);
 				}).collect(Collectors.toList());
 				try { mListener.notifyDeviceInfolist();}
 				catch (RemoteException e) {e.printStackTrace();}
@@ -193,16 +196,19 @@ public class BleService extends Service {
 			public void onScanResult(int callbackType, ScanResult result) {
 				super.onScanResult(callbackType, result);
 				boolean isApplicable = false;
+				int id = -1;
 				if(result.getScanRecord()!=null && result.getScanRecord().getServiceUuids()!=null) {
 					String retUuisStr = result.getScanRecord().getServiceUuids().get(0).toString();
 					TLog.d("aaaaaaaaa retUuisStr={0}", retUuisStr);
-					if(retUuisStr.startsWith(Constants.UWS_SERVICE_UUID.toString().substring(0,5)))
+					if(retUuisStr.startsWith(Constants.UWS_SERVICE_UUID.toString().substring(0,5))) {
 						isApplicable = true;
+						id = Integer.decode("0x"+retUuisStr.substring(6,8));
+					}
 				}
 				else {
 					TLog.d("aaaaaaaaa retUuisStr is null");
 				}
-				mTmpDeviceInfo = new DeviceInfo(result.getDevice().getName(), result.getDevice().getAddress(), result.getRssi(), isApplicable);
+				mTmpDeviceInfo = new DeviceInfo(result.getDevice().getName(), result.getDevice().getAddress(), result.getRssi(), isApplicable, id);
 				if(result.getScanRecord() != null && result.getScanRecord().getServiceUuids() != null)
 				TLog.d("発見!! {0}({1}):Rssi({2}) ScanRecord={3}", result.getDevice().getAddress(), result.getDevice().getName(), result.getRssi(), result.getScanRecord());
 				try { mListener.notifyDeviceInfo();}

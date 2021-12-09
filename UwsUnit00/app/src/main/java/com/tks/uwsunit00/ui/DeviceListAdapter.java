@@ -33,6 +33,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		TextView	mTxtDeviceNameAddress;
 		ImageView	mImvRssi;
 		ImageView	mImvConnectStatus;
+		TextView	mTxtId;
 		TextView	mTxtHertBeat;
 		Button		mBtnConnect;
 		ImageButton mBtnBuoy;
@@ -42,6 +43,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			mTxtDeviceNameAddress	= view.findViewById(R.id.device_address);
 			mImvRssi				= view.findViewById(R.id.imvRssi);
 			mImvConnectStatus		= view.findViewById(R.id.imvConnectStatus);
+			mTxtId					= view.findViewById(R.id.txtId);
 			mTxtHertBeat			= view.findViewById(R.id.txtHertBeat);
 			mBtnConnect				= view.findViewById(R.id.btnConnect);
 			mBtnBuoy				= view.findViewById(R.id.btnBuoy);
@@ -63,13 +65,15 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		public String			mDeviceAddress;
 		public int				mDeviceRssi;
 		public ConnectStatus	mConnectStatus;
+		public int				mId;
 		public int				mHertBeat;
 		public  boolean			mIsApplicable;
-		public DevicveInfoModel(String devicename, String deviceaddress, int devicerssi, ConnectStatus status, int hertbeat, boolean isApplicable) {
+		public DevicveInfoModel(String devicename, String deviceaddress, int devicerssi, ConnectStatus status, int hertbeat, boolean isApplicable, int id) {
 			mDeviceName		= devicename;
 			mDeviceAddress	= deviceaddress;
 			mDeviceRssi		= devicerssi;
 			mConnectStatus	= status;
+			mId				= id;
 			mHertBeat		= hertbeat;
 			mIsApplicable	= isApplicable;
 		}
@@ -92,7 +96,6 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		DevicveInfoModel model = mDeviceList.get(position);
 		final String deviceName		= model.mDeviceName;
 		final String deviceAddress	= model.mDeviceAddress;
-		final int statusresid=	model.mIsApplicable ? R.drawable.status0_none : R.drawable.statusx_na;
 		final int rssiresid	=	model.mDeviceRssi > -60 ? R.drawable.wifi_level_3 :
 								model.mDeviceRssi > -70 ? R.drawable.wifi_level_2 :
 								model.mDeviceRssi > -80 ? R.drawable.wifi_level_1 : R.drawable.wifi_level_0;
@@ -106,6 +109,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		holder.mTxtDeviceName.setText(TextUtils.isEmpty(deviceName) ? "" : deviceName);
 		holder.mTxtDeviceNameAddress.setText(TextUtils.isEmpty(deviceAddress) ? "" : deviceAddress);
 		holder.mImvConnectStatus.setImageResource(constsresid);
+		holder.mTxtId.setText((model.mId==-1) ? " - " : String.valueOf(model.mId));
 		holder.mImvRssi.setImageResource(rssiresid);
 		holder.mTxtHertBeat.setText(model.mHertBeat == 0 ? "-" : ""+model.mHertBeat);
 //		holder.itemView.setOnClickListener(view -> {
@@ -149,10 +153,12 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 
 		if (existingPosition >= 0) {
 			/* 追加済 更新する */
-			mDeviceList.set(existingPosition, new DevicveInfoModel(deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getDeviceRssi(), mDeviceList.get(existingPosition).mConnectStatus, mDeviceList.get(existingPosition).mHertBeat, mDeviceList.get(existingPosition).mIsApplicable));		}
+			DevicveInfoModel model = mDeviceList.get(existingPosition);
+			mDeviceList.set(existingPosition, new DevicveInfoModel(deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getDeviceRssi(), model.mConnectStatus, model.mHertBeat, model.mIsApplicable, model.mId));
+		}
 		else {
 			/* 新規追加 */
-			mDeviceList.add(new DevicveInfoModel(deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getDeviceRssi(), ConnectStatus.NONE, 0, deviceInfo.isApplicable()));
+			mDeviceList.add(new DevicveInfoModel(deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getDeviceRssi(), ConnectStatus.NONE, 0, deviceInfo.isApplicable(), deviceInfo.getId()));
 			mDeviceList.sort((o1, o2) -> {
 				/* 対象のデバイス優先 */
 				if(o1.mIsApplicable && !o2.mIsApplicable)

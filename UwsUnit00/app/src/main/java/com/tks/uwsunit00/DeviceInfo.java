@@ -8,12 +8,14 @@ public class DeviceInfo implements Parcelable {
 	private final String	mDeviceAddress;
 	private final int		mDeviceRssi;
 	private final boolean	mIsApplicable;
+	private final int		mId;
 
-	public DeviceInfo(String devicename, String deviceaddress, int devicerssi, boolean isApplicable) {
+	public DeviceInfo(String devicename, String deviceaddress, int devicerssi, boolean isApplicable, int id) {
 		mDeviceName		= devicename;
 		mDeviceAddress	= deviceaddress;
 		mDeviceRssi		= devicerssi;
 		mIsApplicable	= isApplicable;
+		mId				= id;
 	}
 
 	protected DeviceInfo(Parcel in) {
@@ -21,6 +23,7 @@ public class DeviceInfo implements Parcelable {
 		mDeviceAddress	= in.readString();
 		mDeviceRssi		= in.readInt();
 		mIsApplicable	= in.readByte() != 0x00;
+		mId				= in.readInt();
 	}
 
 	public static final Creator<DeviceInfo> CREATOR = new Creator<DeviceInfo>() {
@@ -46,10 +49,12 @@ public class DeviceInfo implements Parcelable {
 		dest.writeString(mDeviceAddress);
 		dest.writeInt(mDeviceRssi);
 		dest.writeByte((byte)(mIsApplicable?0x01:0x00));
+		dest.writeInt(mId);
 	}
 
 	public String	getDeviceName()		{ return mDeviceName;}
 	public String	getDeviceAddress()	{ return mDeviceAddress;}
 	public int		getDeviceRssi()		{ return mDeviceRssi;}
 	public boolean	isApplicable()		{ return mIsApplicable;}
+	public int		getId()				{ return mId;}
 }
