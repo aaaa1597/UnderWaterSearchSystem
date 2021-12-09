@@ -1,60 +1,145 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
-    android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".ui.main.FragMain">
+    android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/lblNo"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:text="No."
-        tools:ignore="HardcodedText" />
-
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        app:layout_constraintTop_toBottomOf="@+id/lblNo"
-        app:layout_constraintStart_toStartOf="parent">
-
-        <NumberPicker
-            android:id="@+id/npkNo"
-            android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+        <LinearLayout
+            android:id="@+id/main"
+            android:orientation="vertical"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:theme="@style/NumberPickerText"
-            android:layout_gravity="center"/>
+            tools:context=".ui.main.FragMain">
 
-        <TextView
-            android:id="@+id/lblslash"
-            android:layout_width="50dp"
-            android:layout_height="150dp"
-            android:autoSizeTextType="uniform"
-            android:text="/"
-            tools:ignore="HardcodedText" />
+            <LinearLayout
+                android:id="@+id/ph1"
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
 
-        <TextView
-            android:id="@+id/lblMax"
-            android:layout_width="150dp"
-            android:layout_height="150dp"
-            android:autoSizeTextType="uniform"
-            android:text="255"
-            tools:ignore="HardcodedText" />
-    </LinearLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:text="My ID is "
+                    tools:ignore="HardcodedText" />
 
-    <Button
-        android:id="@+id/btnSetNo"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="end"
-        android:text="No設定"
-        tools:ignore="HardcodedText" />
-</LinearLayout>
+                <NumberPicker
+                    android:id="@+id/npkNo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:theme="@style/NumberPickerText"
+                    android:layout_gravity="center"/>
+
+                <Button
+                    android:id="@+id/btnSetId"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:text="ID設定"
+                    tools:ignore="HardcodedText" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/ph2"
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:descendantFocusability="beforeDescendants"
+                android:focusableInTouchMode="true">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:text="値"
+                    tools:ignore="HardcodedText" />
+
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="50dp"
+                        android:text="緯度 : "
+                        tools:ignore="HardcodedText" />
+                    <EditText
+                        android:id="@+id/etxLatitude"
+                        android:ems="10"
+                        android:digits="0123456789."
+                        android:inputType="number"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="50dp"
+                        android:text="経度 : "
+                        tools:ignore="HardcodedText" />
+                    <EditText
+                        android:id="@+id/etxLongitude"
+                        android:ems="11"
+                        android:digits="0123456789."
+                        android:inputType="number"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="50dp"
+                        android:text="脈拍 : "
+                        tools:ignore="HardcodedText" />
+                    <EditText
+                        android:id="@+id/etxHeartbeat"
+                        android:ems="3"
+                        android:inputType="number"
+                        android:digits="0123456789."
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnSetIaaaaaaaaaaaaaad"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:text="設定"
+                    tools:ignore="HardcodedText" />
+            </LinearLayout>
+
+            <Space
+                android:layout_width="wrap_content"
+                android:layout_height="50dp"/>
+
+            <Button
+                android:id="@+id/btnInit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end|bottom"
+                android:text="初期化"
+                tools:ignore="HardcodedText" />
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>
