@@ -9,12 +9,20 @@ import android.bluetooth.le.AdvertiseSettings;
 import android.bluetooth.le.BluetoothLeAdvertiser;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Binder;
 import android.os.IBinder;
 import android.os.ParcelUuid;
 
 import androidx.annotation.Nullable;
 
 public class PeripheralAdvertiseService extends Service {
+	private final IBinder mBinder = new LocalBinder();
+	public class LocalBinder extends Binder {
+		PeripheralAdvertiseService getService() {
+			return PeripheralAdvertiseService.this;
+		}
+	}
+
 	public final static String KEY_NO = "com.tks.uws.uwsmember.NO";
 	private int mNo = -1;
 
@@ -48,7 +56,7 @@ public class PeripheralAdvertiseService extends Service {
 		TLog.d("aaaaaaaaaaaaaa {0}={1}", KEY_NO, mNo);
 		initialize();
 		startAdvertising();
-		return null;
+		return mBinder;
 	}
 
 	@Override

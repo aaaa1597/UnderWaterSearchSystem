@@ -14,6 +14,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.NumberPicker;
+import android.widget.TextView;
 
 import com.tks.uws.uwsmember.PeripheralAdvertiseService;
 import com.tks.uws.uwsmember.R;
@@ -45,16 +46,26 @@ public class FragMain extends Fragment {
 		/* phase2レイヤは無効化しとく */
 		setEnableView(view.findViewById(R.id.ph2), false);
 
-		/* No決定 */
+		/* ID決定 */
 		view.findViewById(R.id.btnSetId).setOnClickListener(view2 -> {
+			((TextView)view.findViewById(R.id.txtStatus)).setText("ID設定中...");
+
 			/* アドバタイズ開始 */
 			Intent intent = new Intent(getActivity().getApplicationContext(), PeripheralAdvertiseService.class);
 			TLog.d("NumberPicker={0}", npkNo.getValue());
 			intent.putExtra(KEY_NO, npkNo.getValue());
 			getActivity().bindService(intent, new ServiceConnection() {
-				@Override public void onServiceConnected(ComponentName name, IBinder service) {}
+				@Override
+				public void onServiceConnected(ComponentName name, IBinder service) {
+					getActivity().runOnUiThread(() -> {
+						((TextView)view.findViewById(R.id.txtStatus)).setText("アドバタイズ中...");
+						setEnableView(view.findViewById(R.id.ph1), false);
+						setEnableView(view.findViewById(R.id.ph2), true);
+					});
+				}
 				@Override public void onServiceDisconnected(ComponentName name) {}
 			}, Context.BIND_AUTO_CREATE);
+			((TextView)view.findViewById(R.id.txtStatus)).setText("アドバタイズ開始");
 			/* アドバタイズ停止(サービス終了) */
 //			getActivity().stopService(new Intent(getActivity().getApplicationContext(), PeripheralAdvertiseService.class));
 		});
