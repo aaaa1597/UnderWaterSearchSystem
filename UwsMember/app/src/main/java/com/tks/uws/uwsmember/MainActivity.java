@@ -4,6 +4,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
 
 import android.Manifest;
 import android.app.Activity;
@@ -14,16 +15,27 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Looper;
+
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.tks.uws.uwsmember.ui.main.FragMainViewModel;
 
 import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
 	private final static int		REQUEST_PERMISSIONS = 1111;
+	private FragMainViewModel		mViewModel;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main_activity);
+
+		mViewModel = new ViewModelProvider(this).get(FragMainViewModel.class);
 
 		/* Bluetoothのサポート状況チェック 未サポート端末なら起動しない */
 		if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
@@ -61,6 +73,31 @@ public class MainActivity extends AppCompatActivity {
 			startForResult.launch(enableBtIntent);
 		}
 
+		/* 位置情報管理オブジェクト */
+		FusedLocationProviderClient flpc = LocationServices.getFusedLocationProviderClient(this);
+		flpc.getLastLocation().addOnSuccessListener(this, location -> {
+			if (location == null) {
+				TLog.d("mLocation={0}", location);
+				LocationRequest locreq = LocationRequest.create().setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY).setInterval(500).setFastestInterval(300);
+				flpc.requestLocationUpdates(locreq, new LocationCallback() {
+					@Override
+					public void onLocationResult(@NonNull LocationResult locationResult) {
+						super.onLocationResult(locationResult);
+						TLog.d("locationResult={0}({1},{2})", locationResult, locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude());
+						runOnUiThread(() -> {
+							mViewModel.Longitude().setValue(locationResult.getLastLocation().getLongitude());
+							mViewModel.Latitude().setValue(locationResult.getLastLocation().getLatitude());
+						});
+						flpc.removeLocationUpdates(this);
+					}
+				}, Looper.getMainLooper());
+			}
+			else {
+				TLog.d("mLocation=(経度:{0} 緯度:{1})", location.getLatitude(), location.getLongitude());
+				mViewModel.Longitude().setValue(location.getLongitude());
+				mViewModel.Latitude().setValue(location.getLatitude());
+			}
+		});
 	}
 
 	@Override
