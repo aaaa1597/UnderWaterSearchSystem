@@ -3,6 +3,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/frag_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -29,12 +30,20 @@
                     android:text="My ID is "
                     tools:ignore="HardcodedText" />
 
-                <NumberPicker
-                    android:id="@+id/npkNo"
+                <EditText
+                    android:id="@+id/etxID"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:gravity="right"
+                    android:ems="3"
+                    android:digits="0123456789"
+                    android:maxLength="3"
+                    android:inputType="number"
+                    android:text="0"
+                    android:hint="0~255"
                     android:theme="@style/NumberPickerText"
-                    android:layout_gravity="center"/>
+                    android:layout_gravity="center"
+                    android:autofillHints="" />
 
                 <Button
                     android:id="@+id/btnSetId"

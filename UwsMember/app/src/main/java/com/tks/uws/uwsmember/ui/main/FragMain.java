@@ -10,15 +10,18 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
-
 import android.os.IBinder;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
 import android.widget.EditText;
+import android.widget.ListAdapter;
 import android.widget.NumberPicker;
 import android.widget.TextView;
-
+import com.google.android.material.snackbar.Snackbar;
 import com.tks.uws.uwsmember.PeripheralAdvertiseService;
 import com.tks.uws.uwsmember.R;
 import com.tks.uws.uwsmember.TLog;
@@ -39,7 +42,9 @@ public class FragMain extends Fragment {
 	@Override
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
+		/* ViewModelインスタンス取得 */
 		mViewModel = new ViewModelProvider(requireActivity()).get(FragMainViewModel.class);
+		/* ViewModelふるまい定義 */
 		mViewModel.Longitude().observe(getActivity(), new Observer<Double>() {
 			@Override
 			public void onChanged(Double lng) {
@@ -52,31 +57,52 @@ public class FragMain extends Fragment {
 				((EditText)view.findViewById(R.id.etxLatitude)).setText(String.valueOf(lat));
 			}
 		});
+		mViewModel.HearBeat().observe(getActivity(), new Observer<Integer>() {
+			@Override
+			public void onChanged(Integer heartbeat) {
+				((EditText)view.findViewById(R.id.etxHeartbeat)).setText(String.valueOf(heartbeat));
+			}
+		});
 
-		/* NumberPicker */
-		NumberPicker npkNo = view.findViewById(R.id.npkNo);
-		npkNo.setMinValue(0);
-		npkNo.setMaxValue(255);
-		npkNo.setFormatter(value -> String.format(Locale.JAPANESE,"%03d", value));
+		((EditText)view.findViewById(R.id.etxID)).addTextChangedListener(new TextWatcher() {
+			@Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+			@Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+			@Override
+			public void afterTextChanged(Editable s) {
+				String tmp = s.toString();
+				mViewModel.setID(Integer.parseInt(tmp.equals("")?"-1":tmp));
+			}
+		});
 
 		/* phase2レイヤは無効化しとく */
 		setEnableView(view.findViewById(R.id.ph2), false);
 
 		/* ID決定 */
-		view.findViewById(R.id.btnSetId).setOnClickListener(view2 -> {
+		view.findViewById(R.id.btnSetId).setOnClickListener(btnview -> {
 			((TextView)view.findViewById(R.id.txtStatus)).setText("ID設定中...");
+			/* IDの正常性チェック(0-255の間の数値かどうか) */
+			String idstr = ((EditText)view.findViewById(R.id.etxID)).getText().toString();
+			if(idstr.equals("")) {
+				Snackbar.make(view.findViewById(R.id.frag_root), "IDが設定されていません\nIDを設定してください。", Snackbar.LENGTH_LONG).show();
+				return;
+			}
+
+			int id = Integer.parseInt(idstr);
+			if(id < 0 || id > 255) {
+				Snackbar.make(view.findViewById(R.id.frag_root), "IDは、0~255の数値を設定してください。", Snackbar.LENGTH_LONG).show();
+				return;
+			}
 
 			/* アドバタイズ開始 */
 			Intent intent = new Intent(getActivity().getApplicationContext(), PeripheralAdvertiseService.class);
-			TLog.d("NumberPicker={0}", npkNo.getValue());
-			intent.putExtra(KEY_NO, npkNo.getValue());
+			TLog.d("ID ={0}", ((EditText)view.findViewById(R.id.etxID)).getText().toString());
+			intent.putExtra(KEY_NO, id);
 			getActivity().bindService(intent, new ServiceConnection() {
 				@Override
 				public void onServiceConnected(ComponentName name, IBinder service) {
 					getActivity().runOnUiThread(() -> {
-						((TextView)view.findViewById(R.id.txtStatus)).setText("アドバタイズ中...");
+						((TextView)view.findViewById(R.id.txtStatus)).setText("アドバタイズ中... 接続待ち");
 						setEnableView(view.findViewById(R.id.ph1), false);
-						setEnableView(view.findViewById(R.id.ph2), true);
 					});
 				}
 				@Override public void onServiceDisconnected(ComponentName name) {}
