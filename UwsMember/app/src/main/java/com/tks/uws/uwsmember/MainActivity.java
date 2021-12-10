@@ -40,10 +40,13 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.tks.uws.uwsmember.Constants.UWS_CHARACTERISTIC_SAMLE_UUID;
 import static com.tks.uws.uwsmember.Constants.createServiceUuid;
 import static com.tks.uws.uwsmember.PeripheralAdvertiseService.KEY_NO;
+import com.tks.uws.uwsmember.ui.main.FragMainViewModel.ConnectStatus;
 
 public class MainActivity extends AppCompatActivity {
 	private final static int				REQUEST_PERMISSIONS = 1111;
@@ -149,8 +152,10 @@ public class MainActivity extends AppCompatActivity {
 			}
 			else {
 				TLog.d("mLocation=(経度:{0} 緯度:{1})", location.getLatitude(), location.getLongitude());
-				mViewModel.Longitude().setValue(location.getLongitude());
-				mViewModel.Latitude().setValue(location.getLatitude());
+				runOnUiThread(() -> {
+					mViewModel.Longitude().setValue(location.getLongitude());
+					mViewModel.Latitude().setValue(location.getLatitude());
+				});
 			}
 		});
 
@@ -221,7 +226,11 @@ public class MainActivity extends AppCompatActivity {
 
 		/* 全条件クリア 初期化開始 */
 		/* 自身が提供するサービスを定義 */
-		UUID serviceUuid = UUID.fromString(createServiceUuid(mViewModel.getID()));
+		AtomicInteger lid = new AtomicInteger();
+		runOnUiThread(() -> {
+			lid.set(mViewModel.getID());
+		});
+		UUID serviceUuid = UUID.fromString(createServiceUuid(lid.get()));
 		BluetoothGattService ownService = new BluetoothGattService(serviceUuid, BluetoothGattService.SERVICE_TYPE_PRIMARY);
 
 		/* 自身が提供するCharacteristic(特性)を定義 : 通知と読込みに対し、読込み許可 */
@@ -237,21 +246,26 @@ public class MainActivity extends AppCompatActivity {
 
 	private byte[] getBytesFromModelView() {
 		Date now = new Date();
-		double	dlongitude= mViewModel.Longitude().getValue();
-		double	dlatitude = mViewModel.Latitude().getValue();
-		int		ihearBeat = mViewModel.HearBeat().getValue();
+		AtomicReference<Double> dlongitude = new AtomicReference<>((double)0);
+		AtomicReference<Double> dlatitude = new AtomicReference<>((double)0);
+		AtomicReference<Integer> ihearBeat = new AtomicReference<>(0);
+		runOnUiThread(() -> {
+			dlongitude.set(mViewModel.Longitude().getValue());
+			dlatitude.set(mViewModel.Latitude().getValue());
+			ihearBeat.set(mViewModel.HearBeat().getValue());
+		});
 
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd E HH:mm:ss.SSS Z", Locale.JAPANESE);
-		TLog.d("{0} 脈拍:{1} 緯度:{2} 経度:{3}", sdf.format(now), ihearBeat, dlatitude, dlongitude);
+		TLog.d("{0} 脈拍:{1} 緯度:{2} 経度:{3}", sdf.format(now), ihearBeat.get(), dlatitude.get(), dlongitude.get());
 
 		byte[] ret = new byte[8 + 8 + 8 + 4];
 		byte[] datetime = l2bs(now.getTime());
 		System.arraycopy(datetime, 0, ret, 0, datetime.length);
-		byte[] longitude = d2bs(dlongitude);
+		byte[] longitude = d2bs(dlongitude.get());
 		System.arraycopy(longitude, 0, ret, datetime.length, longitude.length);
-		byte[] latitude = d2bs(dlatitude);
+		byte[] latitude = d2bs(dlatitude.get());
 		System.arraycopy(latitude, 0, ret, datetime.length+longitude.length, latitude.length);
-		byte[] heartbeat = i2bs(ihearBeat);
+		byte[] heartbeat = i2bs(ihearBeat.get());
 		System.arraycopy(heartbeat, 0, ret, datetime.length+longitude.length+latitude.length, heartbeat.length);
 		return ret;
 	}
@@ -279,15 +293,21 @@ public class MainActivity extends AppCompatActivity {
 			TLog.d("status-BluetoothGatt.GATT_SUCCESS({0}) newState-BluetoothGatt.STATE_xxxx(STATE_CONNECTED({1}),STATE_DISCONNECTED({2}))", BluetoothGatt.GATT_SUCCESS, BluetoothGatt.STATE_CONNECTED, BluetoothGatt.STATE_DISCONNECTED);
 			if (status == BluetoothGatt.GATT_SUCCESS) {
 				if (newState == BluetoothGatt.STATE_CONNECTED) {
+					/* 接続確立 */
+					runOnUiThread(() -> { mViewModel.ConnectStatus().setValue(ConnectStatus.CONNECTED);});
 					mBluetoothCentrals.add(device);
 					TLog.d("Connected to device: {0}", device.getAddress());
 				}
 				else if (newState == BluetoothGatt.STATE_DISCONNECTED) {
+					/* 接続断 */
+					runOnUiThread(() -> { mViewModel.ConnectStatus().setValue(ConnectStatus.NONE);});
 					mBluetoothCentrals.remove(device);
 					TLog.d("Disconnected from device");
 				}
 			}
 			else {
+				/* 接続断 */
+				runOnUiThread(() -> { mViewModel.ConnectStatus().setValue(ConnectStatus.NONE);});
 				mBluetoothCentrals.remove(device);
 				TLog.e("{0} : {1}", getString(R.string.status_error_when_connecting), status);
 				ErrPopUp.create(MainActivity.this).setErrMsg(getString(R.string.status_error_when_connecting) + ":" + status).Show(MainActivity.this);
@@ -306,7 +326,7 @@ public class MainActivity extends AppCompatActivity {
 		public void onCharacteristicReadRequest(BluetoothDevice device, int requestId, int offset, BluetoothGattCharacteristic characteristic) {
 			super.onCharacteristicReadRequest(device, requestId, offset, characteristic);
 
-			TLog.d("CentralからのRead要求 返却値:(UUID:{0},vat:{1}))", characteristic.getUuid(), Arrays.toString(characteristic.getValue()));
+			TLog.d("CentralからのRead要求({0}) 返却値:(UUID:{1},offset{2},val:{3}))", requestId, characteristic.getUuid(), offset, Arrays.toString(characteristic.getValue()));
 			mGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, characteristic.getValue());
 		}
 
