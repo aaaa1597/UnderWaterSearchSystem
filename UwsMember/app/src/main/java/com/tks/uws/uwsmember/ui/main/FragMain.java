@@ -1,34 +1,22 @@
 package com.tks.uws.uwsmember.ui.main;
 
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
-import android.os.IBinder;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AbsListView;
 import android.widget.EditText;
-import android.widget.ListAdapter;
-import android.widget.NumberPicker;
 import android.widget.TextView;
 import com.google.android.material.snackbar.Snackbar;
-import com.tks.uws.uwsmember.PeripheralAdvertiseService;
 import com.tks.uws.uwsmember.R;
-import com.tks.uws.uwsmember.TLog;
 
-import static com.tks.uws.uwsmember.PeripheralAdvertiseService.KEY_NO;
-
-import java.util.Locale;
+import com.tks.uws.uwsmember.ui.main.FragMainViewModel.ConnectStatus;
 
 public class FragMain extends Fragment {
 	private FragMainViewModel mViewModel;
@@ -63,7 +51,31 @@ public class FragMain extends Fragment {
 				((EditText)view.findViewById(R.id.etxHeartbeat)).setText(String.valueOf(heartbeat));
 			}
 		});
+		mViewModel.ConnectStatus().observe(getActivity(), new Observer<ConnectStatus>() {
+			@Override
+			public void onChanged(ConnectStatus status) {
+				TextView txtStatus = view.findViewById(R.id.txtStatus);
+				switch (status) {
+					case NONE:
+						txtStatus.setText("-- none --");
+						setEnableView(view.findViewById(R.id.ph1), true);
+						setEnableView(view.findViewById(R.id.ph2), false);
+						break;
+					case SETTING_ID:		txtStatus.setText("ID設定中...");			break;
+					case START_ADVERTISE:
+						txtStatus.setText("アドバタイズ開始");
+						setEnableView(view.findViewById(R.id.ph1), false);
+						break;
+					case ADVERTISING:		txtStatus.setText("アドバタイズ中... 接続待ち");break;
+					case CONNECTED:
+						txtStatus.setText("接続確立");
+						setEnableView(view.findViewById(R.id.ph2), true);
+						break;
+				}
+			}
+		});
 
+		/* ID入力監視 */
 		((EditText)view.findViewById(R.id.etxID)).addTextChangedListener(new TextWatcher() {
 			@Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 			@Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
@@ -77,9 +89,10 @@ public class FragMain extends Fragment {
 		/* phase2レイヤは無効化しとく */
 		setEnableView(view.findViewById(R.id.ph2), false);
 
-		/* ID決定 */
+		/* ID決定ボタン押下 */
 		view.findViewById(R.id.btnSetId).setOnClickListener(btnview -> {
-			((TextView)view.findViewById(R.id.txtStatus)).setText("ID設定中...");
+			/* ID設定中... */
+			mViewModel.ConnectStatus().setValue(ConnectStatus.SETTING_ID);
 			/* IDの正常性チェック(0-255の間の数値かどうか) */
 			String idstr = ((EditText)view.findViewById(R.id.etxID)).getText().toString();
 			if(idstr.equals("")) {
@@ -93,23 +106,20 @@ public class FragMain extends Fragment {
 				return;
 			}
 
-			/* アドバタイズ開始 */
-			Intent intent = new Intent(getActivity().getApplicationContext(), PeripheralAdvertiseService.class);
-			TLog.d("ID ={0}", ((EditText)view.findViewById(R.id.etxID)).getText().toString());
-			intent.putExtra(KEY_NO, id);
-			getActivity().bindService(intent, new ServiceConnection() {
-				@Override
-				public void onServiceConnected(ComponentName name, IBinder service) {
-					getActivity().runOnUiThread(() -> {
-						((TextView)view.findViewById(R.id.txtStatus)).setText("アドバタイズ中... 接続待ち");
-						setEnableView(view.findViewById(R.id.ph1), false);
-					});
-				}
-				@Override public void onServiceDisconnected(ComponentName name) {}
-			}, Context.BIND_AUTO_CREATE);
-			((TextView)view.findViewById(R.id.txtStatus)).setText("アドバタイズ開始");
-			/* アドバタイズ停止(サービス終了) */
-//			getActivity().stopService(new Intent(getActivity().getApplicationContext(), PeripheralAdvertiseService.class));
+			mViewModel.ConnectStatus().setValue(ConnectStatus.START_ADVERTISE);
+		});
+
+		/* 値設定ボタン押下 */
+		view.findViewById(R.id.btnSetValue).setOnClickListener(btnview -> {
+			mViewModel.PressSetBtn().setValue(true);
+		});
+
+		/* 初期化ボタン押下 */
+		view.findViewById(R.id.btnInit).setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				mViewModel.ConnectStatus().setValue(ConnectStatus.NONE);
+			}
 		});
 	}
 

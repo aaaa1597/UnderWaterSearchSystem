@@ -4,6 +4,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import android.Manifest;
 import android.app.Activity;
@@ -16,12 +17,16 @@ import android.bluetooth.BluetoothGattServer;
 import android.bluetooth.BluetoothGattServerCallback;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.os.Looper;
+
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -29,14 +34,16 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.tks.uws.uwsmember.ui.main.FragMainViewModel;
 import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 import static com.tks.uws.uwsmember.Constants.UWS_CHARACTERISTIC_SAMLE_UUID;
 import static com.tks.uws.uwsmember.Constants.createServiceUuid;
+import static com.tks.uws.uwsmember.PeripheralAdvertiseService.KEY_NO;
 
 public class MainActivity extends AppCompatActivity {
 	private final static int				REQUEST_PERMISSIONS = 1111;
@@ -49,6 +56,43 @@ public class MainActivity extends AppCompatActivity {
 		setContentView(R.layout.main_activity);
 		/* ViewModelインスタンス取得 */
 		mViewModel = new ViewModelProvider(this).get(FragMainViewModel.class);
+		mViewModel.PressSetBtn().observe(this, new Observer<Boolean>() {
+			@Override
+			public void onChanged(Boolean aBoolean) {
+				mUwsCharacteristic.setValue(getBytesFromModelView());
+			}
+		});
+		mViewModel.ConnectStatus().observe(this, new Observer<FragMainViewModel.ConnectStatus>() {
+			@Override
+			public void onChanged(FragMainViewModel.ConnectStatus status) {
+				switch (status) {
+					/* 初期化 */
+					case NONE:
+						createOwnCharacteristic();
+						break;
+					case SETTING_ID:/* 何もしない */ break;
+					/* アドバタイズ開始 */
+					case START_ADVERTISE:
+						Intent intent = new Intent(getApplicationContext(), PeripheralAdvertiseService.class);
+						TLog.d("ID ={0}", String.valueOf(mViewModel.getID()));
+						intent.putExtra(KEY_NO, mViewModel.getID());
+						/* Service起動 */
+						bindService(intent, new ServiceConnection() {
+							@Override
+							public void onServiceConnected(ComponentName name, IBinder service) {
+								mViewModel.ConnectStatus().setValue(FragMainViewModel.ConnectStatus.ADVERTISING);
+							}
+							@Override public void onServiceDisconnected(ComponentName name) {}
+						}, Context.BIND_AUTO_CREATE);
+						break;
+					case ADVERTISING:/* 何もしない */ break;
+					/* アドバタイズ停止(サービス終了) */
+					case CONNECTED:
+						stopService(new Intent(getApplicationContext(), PeripheralAdvertiseService.class));
+						break;
+				}
+			}
+		});
 
 		/* Bluetoothのサポート状況チェック 未サポート端末なら起動しない */
 		if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
@@ -168,6 +212,11 @@ public class MainActivity extends AppCompatActivity {
 			return;
 		}
 
+		if(mGattServer != null) {
+			for(BluetoothDevice device : mBluetoothCentrals)
+				mGattServer.cancelConnection(device);
+			mGattServer.clearServices();
+		}
 		mGattServer = bluetoothManager.openGattServer(this, mGattServerCallback);
 
 		/* 全条件クリア 初期化開始 */
@@ -187,14 +236,22 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	private byte[] getBytesFromModelView() {
+		Date now = new Date();
+		double	dlongitude= mViewModel.Longitude().getValue();
+		double	dlatitude = mViewModel.Latitude().getValue();
+		int		ihearBeat = mViewModel.HearBeat().getValue();
+
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd E HH:mm:ss.SSS Z", Locale.JAPANESE);
+		TLog.d("{0} 脈拍:{1} 緯度:{2} 経度:{3}", sdf.format(now), ihearBeat, dlatitude, dlongitude);
+
 		byte[] ret = new byte[8 + 8 + 8 + 4];
-		byte[] datetime = l2bs(new Date().getTime());
+		byte[] datetime = l2bs(now.getTime());
 		System.arraycopy(datetime, 0, ret, 0, datetime.length);
-		byte[] longitude = d2bs(mViewModel.Longitude().getValue());
+		byte[] longitude = d2bs(dlongitude);
 		System.arraycopy(longitude, 0, ret, datetime.length, longitude.length);
-		byte[] latitude = d2bs(mViewModel.Latitude().getValue());
+		byte[] latitude = d2bs(dlatitude);
 		System.arraycopy(latitude, 0, ret, datetime.length+longitude.length, latitude.length);
-		byte[] heartbeat = i2bs(mViewModel.HearBeat().getValue());
+		byte[] heartbeat = i2bs(ihearBeat);
 		System.arraycopy(heartbeat, 0, ret, datetime.length+longitude.length+latitude.length, heartbeat.length);
 		return ret;
 	}
