@@ -30,6 +30,14 @@
                     android:scaleType="fitStart"
                     android:layout_gravity="center_vertical"
                     android:layout_width="0dp">
+                    <TextView
+                        android:id="@+id/txtId"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="18sp"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        android:text=" - " />
                     <ImageView
                         android:id="@+id/imvConnectStatus"
                         android:layout_height="wrap_content"
@@ -40,14 +48,6 @@
                         app:layout_constraintTop_toTopOf="parent"
                         app:layout_constraintBottom_toBottomOf="parent"
                         android:src="@drawable/status0_none" />
-                    <TextView
-                        android:id="@+id/txtId"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="18sp"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        android:text=" - " />
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
                 <ImageView

@@ -82,7 +82,11 @@ public class FragMain extends Fragment {
 			@Override
 			public void afterTextChanged(Editable s) {
 				String tmp = s.toString();
-				mViewModel.setID(Integer.parseInt(tmp.equals("")?"-1":tmp));
+				try { mViewModel.setID(Integer.parseInt(tmp.equals("")?"-1":tmp)); }
+				catch(NumberFormatException e) {
+					Snackbar.make(view.findViewById(R.id.frag_root), "0~255までの数値を入力してください。", Snackbar.LENGTH_LONG).show();
+					((EditText)view.findViewById(R.id.etxID)).setText("0");
+				}
 			}
 		});
 
@@ -100,9 +104,17 @@ public class FragMain extends Fragment {
 				return;
 			}
 
-			int id = Integer.parseInt(idstr);
-			if(id < 0 || id > 255) {
-				Snackbar.make(view.findViewById(R.id.frag_root), "IDは、0~255の数値を設定してください。", Snackbar.LENGTH_LONG).show();
+			try {
+				int id = Integer.parseInt(idstr);
+				if(id < 0 || id > 255) {
+					Snackbar.make(view.findViewById(R.id.frag_root), "IDは、0~255の数値を設定してください。", Snackbar.LENGTH_LONG).show();
+					return;
+				}
+				mViewModel.setID(id);
+			}
+			catch(NumberFormatException e) {
+				Snackbar.make(view.findViewById(R.id.frag_root), "0~255までの数値を入力してください。", Snackbar.LENGTH_LONG).show();
+				((EditText)view.findViewById(R.id.etxID)).setText("0");
 				return;
 			}
 

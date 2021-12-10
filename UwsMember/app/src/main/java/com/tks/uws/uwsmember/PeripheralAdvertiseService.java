@@ -52,7 +52,7 @@ public class PeripheralAdvertiseService extends Service {
 	@Nullable
 	@Override
 	public IBinder onBind(Intent intent) {
-		mNo = intent.getIntExtra(KEY_NO, -1);
+		mNo = intent.getIntExtra(KEY_NO, -999);
 		TLog.d("aaaaaaaaaaaaaa {0}={1}", KEY_NO, mNo);
 		initialize();
 		startAdvertising();
