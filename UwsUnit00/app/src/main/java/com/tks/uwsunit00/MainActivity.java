@@ -191,6 +191,8 @@ public class MainActivity extends FragmentActivity {
 		});
 
 		bindBleService();
+
+//		mDmyflpc = LocationServices.getFusedLocationProviderClient(this);
 	}
 
 	/* 初期地図描画(起動直後は現在地を表示する) */
@@ -226,7 +228,7 @@ public class MainActivity extends FragmentActivity {
 		if (requestCode != REQUEST_PERMISSIONS) return;
 
 		/* 権限リクエストの結果を取得する. */
- 		long ngcnt = Arrays.stream(grantResults).filter(value -> value != PackageManager.PERMISSION_GRANTED).count();
+		long ngcnt = Arrays.stream(grantResults).filter(value -> value != PackageManager.PERMISSION_GRANTED).count();
 		if (ngcnt > 0) {
 			ErrPopUp.create(MainActivity.this).setErrMsg("このアプリには必要な権限です。\n再起動後に許可してください。\n終了します。").Show(MainActivity.this);
 			return;
@@ -316,7 +318,7 @@ public class MainActivity extends FragmentActivity {
 			/* scan開始 */
 			boolean retscan = startScan();
 			TLog.d("scan開始 ret={0}", retscan);
-			if(!retscan) return;
+			if( !retscan) return;
 
 			/* 30秒後にscan停止 */
 			mHandler.postDelayed(() -> {
@@ -481,4 +483,63 @@ public class MainActivity extends FragmentActivity {
 			btn.setEnabled(true);
 		});
 	}
+
+//	@Override
+//	protected void onResume() {
+//		super.onResume();
+//
+//		if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+//			return;
+//
+//		/* 位置情報管理オブジェクト */
+//		LocationRequest locreq = LocationRequest.create().setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY).setInterval(1000);
+//		mDmyflpc.requestLocationUpdates(locreq, mDmyLocationCallback, Looper.getMainLooper());
+//	}
+//
+//	@Override
+//	protected void onPause() {
+//		super.onPause();
+//
+//		mDmyflpc.removeLocationUpdates(mDmyLocationCallback);
+//	}
+//
+//	FusedLocationProviderClient mDmyflpc;
+//	LocationCallback mDmyLocationCallback = new LocationCallback() {
+//		@Override
+//		public void onLocationResult(@NonNull LocationResult locationResult) {
+//			super.onLocationResult(locationResult);
+//			String logstr = MessageFormat.format("再描画します。 Last=({0},{0})", locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude());
+//			for(Location location : locationResult.getLocations()) {
+//				logstr += "\n";
+//				logstr += MessageFormat.format("    location=({0},{0})", location.getLatitude(), location.getLongitude());
+//			}
+//			TLog.d(logstr);
+//			reDraw(locationResult.getLastLocation(), mMap);
+//			Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show();
+//		}
+//	};
+//
+//	private void reDraw(Location location, GoogleMap googleMap) {
+//		if (location == null) return;
+//		if (googleMap == null) return;
+//
+//		LatLng nowposgps = new LatLng(location.getLatitude(), location.getLongitude());
+//		TLog.d("経度:{0} 緯度:{1}", location.getLatitude(), location.getLongitude());
+//		TLog.d("拡縮 min:{0} max:{1}", googleMap.getMinZoomLevel(), googleMap.getMaxZoomLevel());
+//
+//		/* 現在地マーカ追加 */
+//		googleMap.addMarker(new MarkerOptions().position(nowposgps).title("BasePos"));
+//
+//		/* 現在地マーカを中心に */
+//		googleMap.moveCamera(CameraUpdateFactory.newLatLng(nowposgps));
+//		TLog.d("CameraPosition:{0}", googleMap.getCameraPosition().toString());
+//
+//		/* 地図拡大率設定 */
+//		TLog.d("拡縮 zoom:{0}", 19);
+//		googleMap.moveCamera(CameraUpdateFactory.zoomTo(19));
+//
+//		/* 地図俯角 50° */
+//		CameraPosition tilt = new CameraPosition.Builder(googleMap.getCameraPosition()).tilt(70).build();
+//		googleMap.moveCamera(CameraUpdateFactory.newCameraPosition(tilt));
+//	}
 }
