@@ -414,7 +414,7 @@ public class BleService extends Service {
 			for(BluetoothGattCharacteristic gattChara : service.getCharacteristics())
 				TLog.d("{0} : service-UUID={1} Chara-UUID={2}", gatt.getDevice().getAddress(), service.getUuid(), gattChara.getUuid());
 			/*-*-----------------------------------*/
-			if( !service.getUuid().equals(ServiceUuid))
+			if( !service.getUuid().toString().startsWith(ServiceUuid.toString().substring(0,5)))
 				continue;
 
 			final List<BluetoothGattCharacteristic> findc = service.getCharacteristics().stream().filter(c -> {

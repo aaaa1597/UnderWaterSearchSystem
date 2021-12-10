@@ -78,7 +78,7 @@
                     android:layout_width="0dp"
                     android:layout_gravity="center"
                     android:layout_weight="0.6"
-                    android:text="@string/connect_device"
+                    android:text="接続"
                     android:textAllCaps="true"
                     android:clickable="false"
                     android:focusable="false"/>
