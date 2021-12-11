@@ -34,6 +34,7 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.tks.uws.uwsmember.ui.main.FragMainViewModel;
 import java.nio.ByteBuffer;
+import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -62,7 +63,8 @@ public class MainActivity extends AppCompatActivity {
 		mViewModel.PressSetBtn().observe(this, new Observer<Boolean>() {
 			@Override
 			public void onChanged(Boolean aBoolean) {
-				mUwsCharacteristic.setValue(getBytesFromModelView());
+				if(mUwsCharacteristic != null)
+					mUwsCharacteristic.setValue(getBytesFromModelView());
 			}
 		});
 		mViewModel.ConnectStatus().observe(this, new Observer<FragMainViewModel.ConnectStatus>() {
@@ -141,6 +143,8 @@ public class MainActivity extends AppCompatActivity {
 						runOnUiThread(() -> {
 							mViewModel.Longitude().setValue(locationResult.getLastLocation().getLongitude());
 							mViewModel.Latitude().setValue(locationResult.getLastLocation().getLatitude());
+							if(mUwsCharacteristic != null)
+								mUwsCharacteristic.setValue(getBytesFromModelView());
 						});
 						flpc.removeLocationUpdates(this);
 					}
@@ -151,6 +155,8 @@ public class MainActivity extends AppCompatActivity {
 				runOnUiThread(() -> {
 					mViewModel.Longitude().setValue(location.getLongitude());
 					mViewModel.Latitude().setValue(location.getLatitude());
+					if(mUwsCharacteristic != null)
+						mUwsCharacteristic.setValue(getBytesFromModelView());
 				});
 			}
 		});
@@ -181,6 +187,9 @@ public class MainActivity extends AppCompatActivity {
 	private BluetoothGattCharacteristic	mUwsCharacteristic;
 	private BluetoothGattServer			mGattServer;
 	private void createOwnCharacteristic() {
+		if(mUwsCharacteristic != null)
+			return;	/* すでに生成済なのでreturn */
+
 		/* Bluetooth未サポート */
 		if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
 			TLog.d("Bluetooth未サポートの端末.何もしない.");
@@ -331,8 +340,11 @@ public class MainActivity extends AppCompatActivity {
 		public void onCharacteristicReadRequest(BluetoothDevice device, int requestId, int offset, BluetoothGattCharacteristic characteristic) {
 			super.onCharacteristicReadRequest(device, requestId, offset, characteristic);
 
-			TLog.d("CentralからのRead要求({0}) 返却値:(UUID:{1},offset{2},val:{3}))", requestId, characteristic.getUuid(), offset, Arrays.toString(characteristic.getValue()));
-			mGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, characteristic.getValue());
+			byte[] resData = new byte[characteristic.getValue().length-offset];
+			System.arraycopy(characteristic.getValue(), offset, resData, 0, resData.length);
+
+			TLog.d("CentralからのRead要求({0}) 返却値:(UUID:{1},resData(byte数{2}:データ{3}) org(offset{4},val:{5}))", requestId, characteristic.getUuid(), resData.length, Arrays.toString(resData), offset, Arrays.toString(characteristic.getValue()));
+			mGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, resData);
 		}
 
 

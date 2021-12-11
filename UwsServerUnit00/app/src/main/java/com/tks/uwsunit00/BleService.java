@@ -201,14 +201,14 @@ public class BleService extends Service {
 				int id = -1;
 				if(result.getScanRecord()!=null && result.getScanRecord().getServiceUuids()!=null) {
 					String retUuisStr = result.getScanRecord().getServiceUuids().get(0).toString();
-					TLog.d("aaaaaaaaa retUuisStr={0}", retUuisStr);
+					TLog.d("retUuisStr={0}", retUuisStr);
 					if(retUuisStr.startsWith(Constants.UWS_SERVICE_UUID.toString().substring(0,5))) {
 						isApplicable = true;
 						id = Integer.decode("0x"+retUuisStr.substring(6,8));
 					}
 				}
 				else {
-					TLog.d("aaaaaaaaa retUuisStr is null");
+					TLog.d("retUuisStr is null");
 				}
 				mTmpDeviceInfo = new DeviceInfo(result.getDevice().getName(), result.getDevice().getAddress(), result.getRssi(), isApplicable, id);
 				if(result.getScanRecord() != null && result.getScanRecord().getServiceUuids() != null)
@@ -393,7 +393,7 @@ public class BleService extends Service {
 				Object[] rcvval = parseRcvData(characteristic);
 				try { mListener.notifyResRead(gatt.getDevice().getAddress(), (long)rcvval[0], (double)rcvval[1], (double)rcvval[2], (int)rcvval[3], status); }
 				catch (RemoteException e) { e.printStackTrace(); }
-				TLog.d("読込み要求の応答 rcvval={0} status={1} BluetoothGatt.GATT_SUCCESS({2}) BluetoothGatt.GATT_FAILURE({3})", rcvval, status, BluetoothGatt.GATT_SUCCESS, BluetoothGatt.GATT_FAILURE);
+				TLog.d("読込み要求の応答 rcvval=({0},{1},{2},{3}) status={4} BluetoothGatt.GATT_SUCCESS({5}) BluetoothGatt.GATT_FAILURE({6})", new Date((long)rcvval[0]), (double)rcvval[1], (double)rcvval[2], (int)rcvval[3], status, BluetoothGatt.GATT_SUCCESS, BluetoothGatt.GATT_FAILURE);
 			}
 			else {
 				TLog.d("GATT_FAILURE");
@@ -406,7 +406,7 @@ public class BleService extends Service {
 		@Override
 		public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
 			Object[] rcvval = parseRcvData(characteristic);
-			TLog.d("ペリフェラルからの受信 rcvval=({0} 経度:{1} 緯度:{2} 脈拍:{3})", new Date(ldatetime), longitude, latitude, heartbeat);
+			TLog.d("ペリフェラルからの受信 rcvval=({0} 経度:{1} 緯度:{2} 脈拍:{3})", new Date((long)rcvval[0]), (double)rcvval[1], (double)rcvval[2], (int)rcvval[3]);
 			try { mListener.notifyFromPeripheral(gatt.getDevice().getAddress(), (long)rcvval[0], (double)rcvval[1], (double)rcvval[2], (int)rcvval[3]); }
 			catch (RemoteException e) { e.printStackTrace(); }
 		}

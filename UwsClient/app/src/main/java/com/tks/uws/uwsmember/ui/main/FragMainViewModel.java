@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel;
 public class FragMainViewModel extends ViewModel {
 	private final MutableLiveData<Double>			mLatitude		= new MutableLiveData<>(0.0);
 	private final MutableLiveData<Double>			mLongitude		= new MutableLiveData<>(0.0);
-	private final MutableLiveData<Integer>			mHearBeat		= new MutableLiveData<>(0);
+	private final MutableLiveData<Integer>			mHearBeat		= new MutableLiveData<>(105);
 	private final MutableLiveData<Integer>			mID				= new MutableLiveData<>(-1);
 	private final MutableLiveData<ConnectStatus>	mStatus			= new MutableLiveData<>(ConnectStatus.NONE);
 	private final MutableLiveData<Boolean>			mPressSetBtn	= new MutableLiveData<>(false);
