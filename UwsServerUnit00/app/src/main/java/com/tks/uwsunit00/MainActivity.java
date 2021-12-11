@@ -44,6 +44,7 @@ import com.tks.uwsunit00.ui.DeviceListAdapter;
 
 import java.text.MessageFormat;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
@@ -406,18 +407,24 @@ public class MainActivity extends FragmentActivity {
 		}
 
 		@Override
-		public void notifyResRead(String Address, int rcvval, int status) throws RemoteException {
-			String logstr = MessageFormat.format("デバイス読込成功. Address={0} val={1} status={2}", Address, rcvval, status);
+		public void notifyResRead(String Address, long ldatetime, double longitude, double latitude, int heartbeat, int status) throws RemoteException {
+			String logstr = MessageFormat.format("デバイス読込成功 {0}=({1} 経度:{2} 緯度:{3} 脈拍:{4}) status={5}", Address, new Date(ldatetime), longitude, latitude, heartbeat, status);
 			TLog.d(logstr);
-			runOnUiThread(() -> { mDeviceListAdapter.setHertBeat(Address, rcvval); });
+			runOnUiThread(() -> {
+				mDeviceListAdapter.setHertBeat(Address, heartbeat);
+				/* TODO 緯度/経度 設定処理 */
+			});
 			Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show();
 		}
 
 		@Override
-		public void notifyFromPeripheral(String Address, int rcvval) throws RemoteException {
-			String logstr = MessageFormat.format("デバイス通知({0}). Address={1}", rcvval, Address);
+		public void notifyFromPeripheral(String Address, long ldatetime, double longitude, double latitude, int heartbeat) throws RemoteException {
+			String logstr = MessageFormat.format("デバイス通知 {0}=({1} 経度:{2} 緯度:{3} 脈拍:{4})", Address, new Date(ldatetime), longitude, latitude, heartbeat);
 			TLog.d(logstr);
-			runOnUiThread(() -> { mDeviceListAdapter.setHertBeat(Address, rcvval); });
+			runOnUiThread(() -> {
+				mDeviceListAdapter.setHertBeat(Address, heartbeat);
+				/* TODO 緯度/経度 設定処理 */
+			});
 			Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show();
 		}
 

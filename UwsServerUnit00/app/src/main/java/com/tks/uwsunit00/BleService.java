@@ -22,7 +22,9 @@ import android.content.pm.PackageManager;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.RemoteException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -309,6 +311,9 @@ public class BleService extends Service {
 			return Constants.UWS_NG_DEVICE_NOTFOUND;
 		}
 
+		/* ここでは、追加しない。Service発見後に追加する */
+//		mConnectedDevices.put(blegatt.getDevice().getAddress(), blegatt);
+
 		/* Gatt接続中 */
 		TLog.d("Gattサーバ接続成功. address={0} gattAddress={1}", deviceAddress, blegatt.getDevice().getAddress());
 
@@ -353,7 +358,7 @@ public class BleService extends Service {
 					catch (RemoteException e) { e.printStackTrace(); }
 
 					TLog.d("find it. Services and Characteristic.");
-					boolean ret1 = gatt.readCharacteristic(mCharacteristic);
+					boolean ret1 = gatt.readCharacteristic(mCharacteristic);	/* 初回読み出し */
 					boolean ret2 = gatt.setCharacteristicNotification(mCharacteristic, true);
 					if(ret1 && ret2) {
 						TLog.d("BLEデバイス通信 準備完了. address={0}", gatt.getDevice().getAddress());
@@ -385,14 +390,14 @@ public class BleService extends Service {
 		@Override
 		public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
 			if (status == BluetoothGatt.GATT_SUCCESS) {
-				int rcvval = parseIntRcvData(characteristic);
-				try { mListener.notifyResRead(gatt.getDevice().getAddress(), rcvval, status); }
+				Object[] rcvval = parseRcvData(characteristic);
+				try { mListener.notifyResRead(gatt.getDevice().getAddress(), (long)rcvval[0], (double)rcvval[1], (double)rcvval[2], (int)rcvval[3], status); }
 				catch (RemoteException e) { e.printStackTrace(); }
 				TLog.d("読込み要求の応答 rcvval={0} status={1} BluetoothGatt.GATT_SUCCESS({2}) BluetoothGatt.GATT_FAILURE({3})", rcvval, status, BluetoothGatt.GATT_SUCCESS, BluetoothGatt.GATT_FAILURE);
 			}
 			else {
 				TLog.d("GATT_FAILURE");
-				try { mListener.notifyResRead(gatt.getDevice().getAddress(), -1, status); }
+				try { mListener.notifyResRead(gatt.getDevice().getAddress(), new Date().getTime(), 0, 0, 0, status); }
 				catch (RemoteException e) { e.printStackTrace(); }
 				TLog.d("読込み要求の応答 status={1} BluetoothGatt.GATT_SUCCESS({2}) BluetoothGatt.GATT_FAILURE({3})", status, BluetoothGatt.GATT_SUCCESS, BluetoothGatt.GATT_FAILURE);
 			}
@@ -400,9 +405,9 @@ public class BleService extends Service {
 
 		@Override
 		public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-			int rcvval = parseIntRcvData(characteristic);
-			TLog.d("ペリフェラルからの受信 rcvval={0}", rcvval);
-			try { mListener.notifyFromPeripheral(gatt.getDevice().getAddress(), rcvval); }
+			Object[] rcvval = parseRcvData(characteristic);
+			TLog.d("ペリフェラルからの受信 rcvval=({0} 経度:{1} 緯度:{2} 脈拍:{3})", new Date(ldatetime), longitude, latitude, heartbeat);
+			try { mListener.notifyFromPeripheral(gatt.getDevice().getAddress(), (long)rcvval[0], (double)rcvval[1], (double)rcvval[2], (int)rcvval[3]); }
 			catch (RemoteException e) { e.printStackTrace(); }
 		}
 	};
@@ -426,25 +431,18 @@ public class BleService extends Service {
 		return ret;
 	}
 
-	/* データParse */
-	private int parseIntRcvData(final BluetoothGattCharacteristic characteristic) {
+	/* 受信データParse */
+	private Object[] parseRcvData(final BluetoothGattCharacteristic characteristic) {
 		if (Constants.UWS_CHARACTERISTIC_HRATBEAT_UUID.equals(characteristic.getUuid())) {
 			/* 受信データ取出し */
-			int flag = characteristic.getProperties();
-			int format = ((flag & 0x01) != 0) ? BluetoothGattCharacteristic.FORMAT_UINT16 : BluetoothGattCharacteristic.FORMAT_UINT8;
-			int intval = characteristic.getIntValue(format, 0);
-			TLog.d("message={0}", intval);
-			return intval;
+			final byte[] orgdata = characteristic.getValue();
+			long	ldatetime	= ByteBuffer.wrap(orgdata).getLong();
+			double	longitude	= ByteBuffer.wrap(orgdata).getDouble(8);
+			double	latitude	= ByteBuffer.wrap(orgdata).getDouble(16);
+			int		heartbeat	= ByteBuffer.wrap(orgdata).getInt(24);
+			TLog.d("受信データ=({0} 経度:{1} 緯度:{2} 脈拍:{3})", new Date(ldatetime), longitude, latitude, heartbeat);
+			return new Object[] {ldatetime, longitude, latitude, heartbeat};
 		}
-		/* ↓↓↓この処理はサンプルコード。実際には動かない。 */
-		else {
-			final byte[] data = characteristic.getValue();
-			if (data != null && data.length > 0) {
-				final StringBuilder stringBuilder = new StringBuilder(data.length);
-				for (byte byteChar : data)
-					stringBuilder.append(String.format("%02X ", byteChar));
-			}
-		}
-		return -9999;
+		return new Object[] {new Date().getTime(),0,0,0};
 	}
 }
