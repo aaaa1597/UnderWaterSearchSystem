@@ -338,9 +338,6 @@ public class MainActivity extends FragmentActivity {
 		@Override
 		public void notifyDeviceInfolist() throws RemoteException {
 			List<DeviceInfo> result = mBleServiceIf.getDeviceInfolist();
-			result.forEach(scanResult -> {
-
-			});
 			runOnUiThread(() -> mDeviceListAdapter.addDevice(result));
 		}
 
@@ -348,7 +345,7 @@ public class MainActivity extends FragmentActivity {
 		public void notifyDeviceInfo() throws RemoteException {
 			DeviceInfo result = mBleServiceIf.getDeviceInfo();
 			runOnUiThread(() -> mDeviceListAdapter.addDevice(result));
-			TLog.d("発見!! {0}({1}):Rssi({2})", result.getDeviceAddress(), result.getDeviceName(), result.getDeviceRssi());
+			TLog.d("発見!! No:{0}, {1}({2}):Rssi({3})", result.getId(), result.getDeviceAddress(), result.getDeviceName(), result.getDeviceRssi());
 		}
 
 		@Override

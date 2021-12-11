@@ -154,7 +154,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		if (existingPosition >= 0) {
 			/* 追加済 更新する */
 			DevicveInfoModel model = mDeviceList.get(existingPosition);
-			mDeviceList.set(existingPosition, new DevicveInfoModel(deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getDeviceRssi(), model.mConnectStatus, model.mHertBeat, model.mIsApplicable, model.mId));
+			mDeviceList.set(existingPosition, new DevicveInfoModel(deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getDeviceRssi(), model.mConnectStatus, model.mHertBeat, model.mIsApplicable, deviceInfo.getId()));
 		}
 		else {
 			/* 新規追加 */
