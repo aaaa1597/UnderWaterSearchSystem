@@ -71,6 +71,8 @@ public class MainActivity extends AppCompatActivity {
 				switch (status) {
 					/* 初期化 */
 					case NONE:
+						try { unbindService(mCon); }
+						catch(java.lang.IllegalArgumentException ignored) { /* 失敗許容 */ }
 						createOwnCharacteristic();
 						break;
 					case SETTING_ID:/* 何もしない */ break;
@@ -80,13 +82,7 @@ public class MainActivity extends AppCompatActivity {
 						TLog.d("ID ={0}", String.valueOf(mViewModel.getID()));
 						intent.putExtra(KEY_NO, mViewModel.getID());
 						/* Service起動 */
-						bindService(intent, new ServiceConnection() {
-							@Override
-							public void onServiceConnected(ComponentName name, IBinder service) {
-								mViewModel.ConnectStatus().setValue(FragMainViewModel.ConnectStatus.ADVERTISING);
-							}
-							@Override public void onServiceDisconnected(ComponentName name) {}
-						}, Context.BIND_AUTO_CREATE);
+						bindService(intent, mCon, Context.BIND_AUTO_CREATE);
 						break;
 					case ADVERTISING:/* 何もしない */ break;
 					/* アドバタイズ停止(サービス終了) */
@@ -221,6 +217,7 @@ public class MainActivity extends AppCompatActivity {
 			for(BluetoothDevice device : mBluetoothCentrals)
 				mGattServer.cancelConnection(device);
 			mGattServer.clearServices();
+			mGattServer.close();
 		}
 		mGattServer = bluetoothManager.openGattServer(this, mGattServerCallback);
 
@@ -246,9 +243,9 @@ public class MainActivity extends AppCompatActivity {
 
 	private byte[] getBytesFromModelView() {
 		Date now = new Date();
-		AtomicReference<Double> dlongitude = new AtomicReference<>((double)0);
-		AtomicReference<Double> dlatitude = new AtomicReference<>((double)0);
-		AtomicReference<Integer> ihearBeat = new AtomicReference<>(0);
+		AtomicReference<Double> dlongitude	= new AtomicReference<>((double)0);
+		AtomicReference<Double> dlatitude	= new AtomicReference<>((double)0);
+		AtomicReference<Integer> ihearBeat	= new AtomicReference<>(0);
 		runOnUiThread(() -> {
 			dlongitude.set(mViewModel.Longitude().getValue());
 			dlatitude.set(mViewModel.Latitude().getValue());
@@ -278,6 +275,14 @@ public class MainActivity extends AppCompatActivity {
 	private byte[] d2bs(double value) {
 		return ByteBuffer.allocate(8).putDouble(value).array();
 	}
+
+	private final ServiceConnection mCon = new ServiceConnection() {
+		@Override
+		public void onServiceConnected(ComponentName name, IBinder service) {
+			mViewModel.ConnectStatus().setValue(FragMainViewModel.ConnectStatus.ADVERTISING);
+		}
+		@Override public void onServiceDisconnected(ComponentName name) {}
+	};
 
 	private final BluetoothGattServerCallback mGattServerCallback = new BluetoothGattServerCallback() {
 		/**

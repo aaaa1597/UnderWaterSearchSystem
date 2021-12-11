@@ -53,7 +53,7 @@ public class PeripheralAdvertiseService extends Service {
 	@Override
 	public IBinder onBind(Intent intent) {
 		mNo = intent.getIntExtra(KEY_NO, -999);
-		TLog.d("aaaaaaaaaaaaaa {0}={1}", KEY_NO, mNo);
+		TLog.d("{0}={1}", KEY_NO, mNo);
 		initialize();
 		startAdvertising();
 		return mBinder;
@@ -113,7 +113,8 @@ public class PeripheralAdvertiseService extends Service {
 
 	private AdvertiseSettings buildAdvertiseSettings() {
 		AdvertiseSettings.Builder settingsBuilder = new AdvertiseSettings.Builder();
-		settingsBuilder.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER);
+		settingsBuilder.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY);
+		settingsBuilder.setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
 		settingsBuilder.setTimeout(0);  /* タイムアウトは自前で管理する。 */
 		return settingsBuilder.build();
 	}

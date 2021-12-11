@@ -16,6 +16,7 @@ import android.widget.TextView;
 import com.google.android.material.snackbar.Snackbar;
 import com.tks.uws.uwsmember.R;
 
+import com.tks.uws.uwsmember.TLog;
 import com.tks.uws.uwsmember.ui.main.FragMainViewModel.ConnectStatus;
 
 public class FragMain extends Fragment {
