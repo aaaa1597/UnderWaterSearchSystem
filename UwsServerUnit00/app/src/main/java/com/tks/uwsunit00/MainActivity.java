@@ -61,24 +61,22 @@ public class MainActivity extends FragmentActivity {
 		TLog.d("");
 //		mViewModel = new ViewModelProvider(this).get(FragBizLogicViewModel.class);
 
-		/* リストに区切り線を表示する。 */
-		RecyclerView rvw = findViewById(R.id.rvw_devices);
-		DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(rvw.getContext(),
-				new LinearLayoutManager(getApplicationContext()).getOrientation());
-		rvw.addItemDecoration(dividerItemDecoration);
-
 		/* Scanボタン押下処理 */
 		findViewById(R.id.btnScan).setOnClickListener(v -> {
-			if( !((Button)v).getText().equals("scan開始") ) {
-				Snackbar.make(findViewById(R.id.root_view), "すでに実行中です。\n完了してから開始して下さい。", Snackbar.LENGTH_LONG).show();
-				return;
+			Button btn = (Button)v;
+			if(btn.getText().equals("scan開始")) {
+				startScan();
 			}
-
-			startScan();
+			else {
+				stopScan();
+			}
 		});
 
 		/* BLEデバイスリストの初期化 */
 		RecyclerView deviceListRvw = findViewById(R.id.rvw_devices);
+		/* BLEデバイスリストに区切り線を表示 */
+		DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(deviceListRvw.getContext(), new LinearLayoutManager(getApplicationContext()).getOrientation());
+		deviceListRvw.addItemDecoration(dividerItemDecoration);
 		deviceListRvw.setHasFixedSize(true);
 		deviceListRvw.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
 		mDeviceListAdapter = new DeviceListAdapter(new DeviceListAdapter.DeviceListAdapterListener() {
@@ -318,12 +316,7 @@ public class MainActivity extends FragmentActivity {
 			/* scan開始 */
 			boolean retscan = startScan();
 			TLog.d("scan開始 ret={0}", retscan);
-			if( !retscan) return;
-
-			/* 30秒後にscan停止 */
-			mHandler.postDelayed(() -> {
-				stopScan();
-			}, SCAN_PERIOD);
+			return;
 		}
 
 		@Override
@@ -351,11 +344,6 @@ public class MainActivity extends FragmentActivity {
 		@Override
 		public void notifyScanEnd() throws RemoteException {
 			TLog.d("scan終了");
-			runOnUiThread(() -> {
-				Button btn = findViewById(R.id.btnScan);
-				btn.setText("scan開始");
-				btn.setEnabled(true);
-			});
 		}
 
 		@Override
@@ -461,8 +449,7 @@ public class MainActivity extends FragmentActivity {
 		runOnUiThread(() -> {
 			mDeviceListAdapter.clearDevice();
 			Button btn = findViewById(R.id.btnScan);
-			btn.setText("scan中");
-			btn.setEnabled(false);
+			btn.setText("scan停止");
 		});
 
 		return true;
@@ -477,7 +464,6 @@ public class MainActivity extends FragmentActivity {
 		runOnUiThread(() -> {
 			Button btn = findViewById(R.id.btnScan);
 			btn.setText("scan開始");
-			btn.setEnabled(true);
 		});
 	}
 
