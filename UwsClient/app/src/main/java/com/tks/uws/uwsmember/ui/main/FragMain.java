@@ -77,7 +77,9 @@ public class FragMain extends Fragment {
 		});
 
 		/* ID入力監視 */
-		((EditText)view.findViewById(R.id.etxID)).addTextChangedListener(new TextWatcher() {
+		EditText etxID = view.findViewById(R.id.etxID);
+		etxID.setSelection(etxID.getText().length());
+		etxID.addTextChangedListener(new TextWatcher() {
 			@Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 			@Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
 			@Override
@@ -99,7 +101,7 @@ public class FragMain extends Fragment {
 			/* ID設定中... */
 			mViewModel.ConnectStatus().setValue(ConnectStatus.SETTING_ID);
 			/* IDの正常性チェック(0-255の間の数値かどうか) */
-			String idstr = ((EditText)view.findViewById(R.id.etxID)).getText().toString();
+			String idstr = etxID.getText().toString();
 			if(idstr.equals("")) {
 				Snackbar.make(view.findViewById(R.id.frag_root), "IDが設定されていません\nIDを設定してください。", Snackbar.LENGTH_LONG).show();
 				return;
@@ -115,7 +117,7 @@ public class FragMain extends Fragment {
 			}
 			catch(NumberFormatException e) {
 				Snackbar.make(view.findViewById(R.id.frag_root), "0~255までの数値を入力してください。", Snackbar.LENGTH_LONG).show();
-				((EditText)view.findViewById(R.id.etxID)).setText("0");
+				etxID.setText("0");
 				return;
 			}
 
