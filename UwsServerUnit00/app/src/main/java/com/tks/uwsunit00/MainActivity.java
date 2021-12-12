@@ -20,7 +20,6 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
@@ -36,16 +35,23 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.material.snackbar.Snackbar;
 import com.tks.uwsunit00.ui.DeviceListAdapter;
 
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class MainActivity extends FragmentActivity {
@@ -54,6 +60,14 @@ public class MainActivity extends FragmentActivity {
 	private final static int		REQUEST_PERMISSIONS = 1111;
 	private GoogleMap				mMap;
 	private Location				mLocation;
+	GoogleMap						mGoogleMap;
+	Map<String, SerchInfo>			mSerchInfos = new HashMap<>();
+	int								mNowSerchColor = 0xff78e06b;	/* 緑っぽい色 */
+	/* 検索情報 */
+	static class SerchInfo {
+		public Marker	maker;		/* GoogleMapの Marker */
+		public Polyline	polyline;	/* GoogleMapの polyline */
+	};
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -199,12 +213,14 @@ public class MainActivity extends FragmentActivity {
 		if (location == null) return;
 		if (googleMap == null) return;
 
+		mGoogleMap = googleMap;
 		LatLng nowposgps = new LatLng(location.getLatitude(), location.getLongitude());
 		TLog.d("経度:{0} 緯度:{1}", location.getLatitude(), location.getLongitude());
 		TLog.d("拡縮 min:{0} max:{1}", googleMap.getMinZoomLevel(), googleMap.getMaxZoomLevel());
 
 		/* 現在地マーカ追加 */
-		googleMap.addMarker(new MarkerOptions().position(nowposgps).title("BasePos"));
+		Marker basemarker = googleMap.addMarker(new MarkerOptions().position(nowposgps).title("BasePos"));
+		mSerchInfos.put("base", new SerchInfo(){{maker=basemarker; polyline=null;}});
 
 		/* 現在地マーカを中心に */
 		googleMap.moveCamera(CameraUpdateFactory.newLatLng(nowposgps));
@@ -285,8 +301,6 @@ public class MainActivity extends FragmentActivity {
 
 	/* Serviceコールバック */
 	private IBleService			mBleServiceIf;
-	private final Handler		mHandler = new Handler(Looper.getMainLooper());
-	private final static long	SCAN_PERIOD = 30000;	/* m秒 */
 	private final ServiceConnection mCon = new ServiceConnection() {
 		@Override
 		public void onServiceConnected(ComponentName name, IBinder service) {
@@ -413,6 +427,51 @@ public class MainActivity extends FragmentActivity {
 			runOnUiThread(() -> {
 				mDeviceListAdapter.setHertBeat(Address, heartbeat);
 				/* TODO 緯度/経度 設定処理 */
+				SerchInfo serchinfo = mSerchInfos.get(Address);
+				if(serchinfo == null) {
+					/* 新規マーカ */
+					BitmapDescriptor bd = null;
+					switch (mSerchInfos.size()) {
+						case 0: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);	break;
+						case 1: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE);	break;
+						case 2: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN);	break;
+						case 3: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN);	break;
+						case 4: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA);break;
+						case 5: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE);	break;
+						case 6: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED);	break;
+						case 7: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ROSE);	break;
+						case 8: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_VIOLET);	break;
+						case 9: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW);	break;
+						default:bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);	break;
+					}
+					LatLng nowpos = new LatLng(latitude, longitude);
+					Marker   lmarker  = mGoogleMap.addMarker(new MarkerOptions().position(nowpos).icon(bd));
+					Polyline lpolyline= mGoogleMap.addPolyline(new PolylineOptions().add(nowpos).color(mNowSerchColor));
+					mSerchInfos.put(Address, new SerchInfo(){{maker=lmarker; polyline=lpolyline;}});
+				}
+				else {
+					/* 既にマーカ済 */
+					serchinfo.maker.remove();
+					serchinfo.polyline.remove();
+
+					BitmapDescriptor bd = null;
+					switch (mSerchInfos.size()) {
+						case 0: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);	break;
+						case 1: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE);	break;
+						case 2: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN);	break;
+						case 3: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN);	break;
+						case 4: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA);break;
+						case 5: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE);	break;
+						case 6: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED);	break;
+						case 7: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ROSE);	break;
+						case 8: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_VIOLET);	break;
+						case 9: bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW);	break;
+						default:bd = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);	break;
+					}
+					LatLng nowpos = new LatLng(latitude, longitude);
+					serchinfo.maker = mGoogleMap.addMarker(new MarkerOptions().position(nowpos).icon(bd));
+					serchinfo.polyline = mGoogleMap.addPolyline(new PolylineOptions().add(nowpos).color(mNowSerchColor));
+				}
 			});
 			Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show();
 		}
@@ -474,6 +533,7 @@ public class MainActivity extends FragmentActivity {
 		});
 	}
 
+/* ここから 現在値更新の実績コード(2021/12/12) */
 //	@Override
 //	protected void onResume() {
 //		super.onResume();
@@ -532,4 +592,5 @@ public class MainActivity extends FragmentActivity {
 //		CameraPosition tilt = new CameraPosition.Builder(googleMap.getCameraPosition()).tilt(70).build();
 //		googleMap.moveCamera(CameraUpdateFactory.newCameraPosition(tilt));
 //	}
+/* ここまで 現在値更新の実績コード(2021/12/12) */
 }
