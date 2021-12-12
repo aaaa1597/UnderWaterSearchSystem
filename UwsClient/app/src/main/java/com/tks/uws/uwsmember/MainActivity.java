@@ -57,6 +57,18 @@ public class MainActivity extends AppCompatActivity {
 	private final static int				REQUEST_PERMISSIONS = 1111;
 	private FragMainViewModel				mViewModel;
 	private final HashSet<BluetoothDevice>	mBluetoothCentrals = new HashSet<>();
+	private FusedLocationProviderClient		m1sflpc;
+	private final LocationCallback			m1sLocationCallback = new LocationCallback() {
+												@Override
+												public void onLocationResult(@NonNull LocationResult locationResult) {
+													super.onLocationResult(locationResult);
+													TLog.d("1秒定期 (経度:{0} 緯度:{1})", locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude());
+													mViewModel.Longitude().setValue(locationResult.getLastLocation().getLongitude());
+													mViewModel.Latitude().setValue(locationResult.getLastLocation().getLatitude());
+													if(mUwsCharacteristic != null)
+														mUwsCharacteristic.setValue(getBytesFromModelView());
+												}
+											};
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -80,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
 						try { unbindService(mCon); }
 						catch(java.lang.IllegalArgumentException ignored) { /* 失敗許容 */ }
 						createOwnCharacteristic();
+						mViewModel.Priodic1sNotifyFlg().setValue(false);
 						break;
 					case SETTING_ID:/* 何もしない */ break;
 					/* アドバタイズ開始 */
@@ -102,34 +115,24 @@ public class MainActivity extends AppCompatActivity {
 		mViewModel.Priodic1sNotifyFlg().observe(this, new Observer<Boolean>() {
 			@Override
 			public void onChanged(Boolean aBoolean) {
-				FusedLocationProviderClient	flpc = null;
-				LocationCallback			locationCallback = null;
 				if((aBoolean!=null) && (aBoolean)) {
 					if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION)  != PackageManager.PERMISSION_GRANTED ||
 						ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION)!= PackageManager.PERMISSION_GRANTED)
 						throw new RuntimeException("ここで権限なしはありえない!!");
 //						return;
 
-					locationCallback = new LocationCallback() {
-						@Override
-						public void onLocationResult(@NonNull LocationResult locationResult) {
-							super.onLocationResult(locationResult);
-							TLog.d("1秒定期 (経度:{0} 緯度:{1})", locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude());
-							mViewModel.Longitude().setValue(locationResult.getLastLocation().getLongitude());
-							mViewModel.Latitude().setValue(locationResult.getLastLocation().getLatitude());
-							if(mUwsCharacteristic != null)
-								mUwsCharacteristic.setValue(getBytesFromModelView());
-						}
-					};
-
 					/* 位置情報管理オブジェクト */
 					LocationRequest locreq = LocationRequest.create().setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY).setInterval(1000);
-					flpc = LocationServices.getFusedLocationProviderClient(MainActivity.this);
-					flpc.requestLocationUpdates(locreq, locationCallback, Looper.getMainLooper());
+					m1sflpc = LocationServices.getFusedLocationProviderClient(MainActivity.this);
+					m1sflpc.requestLocationUpdates(locreq, m1sLocationCallback, Looper.getMainLooper());
 				}
 				else {
-					if(flpc != null)
-						flpc.removeLocationUpdates(locationCallback);
+					if(m1sflpc != null) {
+						TLog.d("1秒定期 終了");
+						m1sflpc.removeLocationUpdates(m1sLocationCallback);
+					}
+					
+					m1sflpc = null;
 				}
 			}
 		});
@@ -169,12 +172,12 @@ public class MainActivity extends AppCompatActivity {
 		}
 
 		/* 位置情報管理オブジェクト */
-		FusedLocationProviderClient flpc = LocationServices.getFusedLocationProviderClient(this);
-		flpc.getLastLocation().addOnSuccessListener(this, location -> {
+		FusedLocationProviderClient flpc2 = LocationServices.getFusedLocationProviderClient(this);
+		flpc2.getLastLocation().addOnSuccessListener(this, location -> {
 			if (location == null) {
 				TLog.d("mLocation={0}", location);
 				LocationRequest locreq = LocationRequest.create().setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY).setInterval(500).setFastestInterval(300);
-				flpc.requestLocationUpdates(locreq, new LocationCallback() {
+				flpc2.requestLocationUpdates(locreq, new LocationCallback() {
 					@Override
 					public void onLocationResult(@NonNull LocationResult locationResult) {
 						super.onLocationResult(locationResult);
@@ -185,7 +188,7 @@ public class MainActivity extends AppCompatActivity {
 							if(mUwsCharacteristic != null)
 								mUwsCharacteristic.setValue(getBytesFromModelView());
 						});
-						flpc.removeLocationUpdates(this);
+						flpc2.removeLocationUpdates(this);
 					}
 				}, Looper.getMainLooper());
 			}
@@ -266,6 +269,7 @@ public class MainActivity extends AppCompatActivity {
 				mGattServer.cancelConnection(device);
 			mGattServer.clearServices();
 			mGattServer.close();
+			TLog.d("gatt切断!!");
 		}
 		mGattServer = bluetoothManager.openGattServer(getApplicationContext(), mGattServerCallback);
 
@@ -349,13 +353,13 @@ public class MainActivity extends AppCompatActivity {
 					/* 接続確立 */
 					runOnUiThread(() -> { mViewModel.ConnectStatus().setValue(ConnectStatus.CONNECTED);});
 					mBluetoothCentrals.add(device);
-					TLog.d("Connected to device: {0}", device.getAddress());
+					TLog.d("Connected to serever: {0}", device.getAddress());
 				}
 				else if (newState == BluetoothGatt.STATE_DISCONNECTED) {
 					/* 接続断 */
 					runOnUiThread(() -> { mViewModel.ConnectStatus().setValue(ConnectStatus.NONE);});
 					mBluetoothCentrals.remove(device);
-					TLog.d("Disconnected from device");
+					TLog.d("Disconnected from serever");
 				}
 			}
 			else {

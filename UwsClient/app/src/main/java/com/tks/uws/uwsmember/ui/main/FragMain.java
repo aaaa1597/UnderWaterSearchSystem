@@ -53,6 +53,15 @@ public class FragMain extends Fragment {
 				((EditText)view.findViewById(R.id.etxHeartbeat)).setText(String.valueOf(heartbeat));
 			}
 		});
+		mViewModel.Priodic1sNotifyFlg().observe(getActivity(), new Observer<Boolean>() {
+			@Override
+			public void onChanged(Boolean aBoolean) {
+				if(aBoolean != null && aBoolean)
+					((Button)view.findViewById(R.id.btn1sPeriodicNotify)).setText("1秒定期通知 停止");
+				else
+					((Button)view.findViewById(R.id.btn1sPeriodicNotify)).setText("1秒定期通知 開始");
+			}
+		});
 		mViewModel.ConnectStatus().observe(getActivity(), new Observer<ConnectStatus>() {
 			@Override
 			public void onChanged(ConnectStatus status) {
@@ -145,10 +154,6 @@ public class FragMain extends Fragment {
 				Boolean flg = mViewModel.Priodic1sNotifyFlg().getValue();
 				boolean notifyflg = (flg!=null) && (flg);
 				mViewModel.Priodic1sNotifyFlg().setValue( !notifyflg);
-				if(notifyflg)
-					((Button)v).setText("1秒定期通知 開始");
-				else
-					((Button)v).setText("1秒定期通知 停止");
 			}
 		});
 	}
