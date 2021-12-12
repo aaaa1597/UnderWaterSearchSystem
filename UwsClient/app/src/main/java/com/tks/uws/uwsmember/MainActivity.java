@@ -4,6 +4,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import android.Manifest;
@@ -22,10 +23,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.Looper;
+import android.view.View;
+import android.widget.Button;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -91,6 +95,41 @@ public class MainActivity extends AppCompatActivity {
 					case CONNECTED:
 						stopService(new Intent(getApplicationContext(), PeripheralAdvertiseService.class));
 						break;
+				}
+			}
+		});
+
+		mViewModel.Priodic1sNotifyFlg().observe(this, new Observer<Boolean>() {
+			@Override
+			public void onChanged(Boolean aBoolean) {
+				FusedLocationProviderClient	flpc = null;
+				LocationCallback			locationCallback = null;
+				if((aBoolean!=null) && (aBoolean)) {
+					if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION)  != PackageManager.PERMISSION_GRANTED ||
+						ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION)!= PackageManager.PERMISSION_GRANTED)
+						throw new RuntimeException("ここで権限なしはありえない!!");
+//						return;
+
+					locationCallback = new LocationCallback() {
+						@Override
+						public void onLocationResult(@NonNull LocationResult locationResult) {
+							super.onLocationResult(locationResult);
+							TLog.d("1秒定期 (経度:{0} 緯度:{1})", locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude());
+							mViewModel.Longitude().setValue(locationResult.getLastLocation().getLongitude());
+							mViewModel.Latitude().setValue(locationResult.getLastLocation().getLatitude());
+							if(mUwsCharacteristic != null)
+								mUwsCharacteristic.setValue(getBytesFromModelView());
+						}
+					};
+
+					/* 位置情報管理オブジェクト */
+					LocationRequest locreq = LocationRequest.create().setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY).setInterval(1000);
+					flpc = LocationServices.getFusedLocationProviderClient(MainActivity.this);
+					flpc.requestLocationUpdates(locreq, locationCallback, Looper.getMainLooper());
+				}
+				else {
+					if(flpc != null)
+						flpc.removeLocationUpdates(locationCallback);
 				}
 			}
 		});
@@ -228,7 +267,7 @@ public class MainActivity extends AppCompatActivity {
 			mGattServer.clearServices();
 			mGattServer.close();
 		}
-		mGattServer = bluetoothManager.openGattServer(this, mGattServerCallback);
+		mGattServer = bluetoothManager.openGattServer(getApplicationContext(), mGattServerCallback);
 
 		/* 全条件クリア 初期化開始 */
 		/* 自身が提供するサービスを定義 */

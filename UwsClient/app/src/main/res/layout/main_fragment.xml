@@ -162,6 +162,14 @@
                     android:layout_gravity="end"
                     android:text="設定"
                     tools:ignore="HardcodedText" />
+
+                <Button
+                    android:id="@+id/btn1sPeriodicNotify"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:text="1秒定期通知 開始"
+                    tools:ignore="HardcodedText" />
             </LinearLayout>
 
             <View

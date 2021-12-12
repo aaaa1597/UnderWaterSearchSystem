@@ -11,6 +11,7 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import com.google.android.material.snackbar.Snackbar;
@@ -134,6 +135,20 @@ public class FragMain extends Fragment {
 			@Override
 			public void onClick(View v) {
 				mViewModel.ConnectStatus().setValue(ConnectStatus.NONE);
+			}
+		});
+
+		/* 1秒定期通知ボタン押下 */
+		view.findViewById(R.id.btn1sPeriodicNotify).setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				Boolean flg = mViewModel.Priodic1sNotifyFlg().getValue();
+				boolean notifyflg = (flg!=null) && (flg);
+				mViewModel.Priodic1sNotifyFlg().setValue( !notifyflg);
+				if(notifyflg)
+					((Button)v).setText("1秒定期通知 開始");
+				else
+					((Button)v).setText("1秒定期通知 停止");
 			}
 		});
 	}

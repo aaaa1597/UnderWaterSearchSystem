@@ -10,6 +10,7 @@ public class FragMainViewModel extends ViewModel {
 	private final MutableLiveData<Integer>			mID				= new MutableLiveData<>(-1);
 	private final MutableLiveData<ConnectStatus>	mStatus			= new MutableLiveData<>(ConnectStatus.NONE);
 	private final MutableLiveData<Boolean>			mPressSetBtn	= new MutableLiveData<>(false);
+	private final MutableLiveData<Boolean>			m1sNotifyFlg	=new MutableLiveData<>(false);
 
 	public MutableLiveData<Double>	Latitude()	{
 		return mLatitude;
@@ -33,7 +34,9 @@ public class FragMainViewModel extends ViewModel {
 	public MutableLiveData<Boolean> PressSetBtn()	{
 		return mPressSetBtn;
 	}
-
+	public MutableLiveData<Boolean> Priodic1sNotifyFlg() {
+		return m1sNotifyFlg;
+	}
 	public enum ConnectStatus {
 		NONE,
 		SETTING_ID,		/* ID設定中 */
