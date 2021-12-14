@@ -65,8 +65,16 @@ public class MainActivity extends AppCompatActivity {
 													TLog.d("1秒定期 (経度:{0} 緯度:{1})", locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude());
 													mViewModel.Longitude().setValue(locationResult.getLastLocation().getLongitude());
 													mViewModel.Latitude().setValue(locationResult.getLastLocation().getLatitude());
-													if(mUwsCharacteristic != null)
+													if(mUwsCharacteristic != null) {
+														TLog.d("1秒定期000");
 														mUwsCharacteristic.setValue(getBytesFromModelView());
+														for(BluetoothDevice central : mBluetoothCentrals) {
+															TLog.d("1秒定期001 central={0}", central);
+															boolean indicate = (mUwsCharacteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_INDICATE) == BluetoothGattCharacteristic.PROPERTY_INDICATE;
+															TLog.d("indicate={0}", indicate);
+															mGattServer.notifyCharacteristicChanged(central, mUwsCharacteristic, indicate);
+														}
+													}
 												}
 											};
 
