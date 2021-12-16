@@ -1,4 +1,4 @@
-package com.tks.uwsunit00;
+package com.tks.uwsserverunit00;
 
 import androidx.annotation.Nullable;
 import android.Manifest;
@@ -39,13 +39,13 @@ import java.util.stream.Collectors;
  * -90 dBm	使用不可	ノイズレベルに近いかそれ以下の信号強度。殆ど機能しない	N/A
  **/
 
-public class BleService extends Service {
+public class BleServerService extends Service {
 	/* Binder */
-	private IBleServiceCallback	mListener;	/* 常に後発のみ */
-	private Binder binder = new IBleService.Stub() {
+	private IBleServerServiceCallback mCb;	/* 常に後発のみ */
+	private Binder scanServiceBinder = new IBleServerService.Stub() {
 		@Override
-		public void setCallback(IBleServiceCallback callback) throws RemoteException {
-			mListener = callback;
+		public void setCallback(IBleServerServiceCallback callback) throws RemoteException {
+			mCb = callback;
 		}
 
 		@Override
@@ -92,7 +92,7 @@ public class BleService extends Service {
 	@Override
 	public IBinder onBind(Intent intent) {
 		TLog.d("");
-		return binder;
+		return scanServiceBinder;
 	}
 
 	@Override
@@ -169,7 +169,7 @@ public class BleService extends Service {
 					}
 					return new DeviceInfo(ret.getDevice().getName(), ret.getDevice().getAddress(), ret.getRssi(), isApplicable, id);
 				}).collect(Collectors.toList());
-				try { mListener.notifyDeviceInfolist();}
+				try { mCb.notifyDeviceInfolist();}
 				catch (RemoteException e) {e.printStackTrace();}
 //				for(ScanResult result : results) {
 //					TLog.d("---------------------------------- size=" + results.size());
@@ -213,7 +213,7 @@ public class BleService extends Service {
 				mTmpDeviceInfo = new DeviceInfo(result.getDevice().getName(), result.getDevice().getAddress(), result.getRssi(), isApplicable, id);
 				if(result.getScanRecord() != null && result.getScanRecord().getServiceUuids() != null)
 				TLog.d("発見!! {0}({1}):Rssi({2}) ScanRecord={3}", result.getDevice().getAddress(), result.getDevice().getName(), result.getRssi(), result.getScanRecord());
-				try { mListener.notifyDeviceInfo();}
+				try { mCb.notifyDeviceInfo();}
 				catch (RemoteException e) {e.printStackTrace();}
 
 //				if(result !=null && result.getDevice() != null) {
@@ -268,11 +268,15 @@ public class BleService extends Service {
 		mBLeScanner.stopScan(mScanCallback);
 		mScanCallback = null;
 		TLog.d("scan終了");
-		try { mListener.notifyScanEnd();}
+		try { mCb.notifyScanEnd();}
 		catch (RemoteException e) { e.printStackTrace(); }
 
 		return Constants.UWS_NG_SUCCESS;
 	}
+
+	/* TODO BluetoothGatt blegatt */
+	BluetoothGatt mGatt;
+	/* BluetoothGatt blegatt */
 
 	/* Bluetoothサービス-デバイス接続 */
 	private int BsvConnectDevice(String deviceAddress) {
@@ -306,6 +310,7 @@ public class BleService extends Service {
 		/* デバイスに直接接続したい時に、autoConnectをfalseにする。 */
 		/* デバイスが使用可能になったら自動的にすぐに接続する様にする時に、autoConnectをtrueにする。 */
 		BluetoothGatt blegatt = device.connectGatt(getApplicationContext(), false, mGattCallback);
+		mGatt = blegatt;
 		if (blegatt == null) {
 			TLog.d("Gattサーバ接続失敗!! address={0}", deviceAddress);
 			return Constants.UWS_NG_DEVICE_NOTFOUND;
@@ -326,9 +331,10 @@ public class BleService extends Service {
 		public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
 			TLog.d("BluetoothGattCallback::onConnectionStateChange() {0} -> {1}", status, newState);
 			TLog.d("BluetoothProfile.STATE_CONNECTING({0}) STATE_CONNECTED({1}) STATE_DISCONNECTING({2}) STATE_DISCONNECTED({3})", BluetoothProfile.STATE_CONNECTING, BluetoothProfile.STATE_CONNECTED, BluetoothProfile.STATE_DISCONNECTING, BluetoothProfile.STATE_DISCONNECTED);
+			TLog.d("mGatt={0} gatt={1}", mGatt, gatt);
 			/* Gattサーバ接続完了 */
 			if(newState == BluetoothProfile.STATE_CONNECTED) {
-				try { mListener.notifyGattConnected(gatt.getDevice().getAddress()); }
+				try { mCb.notifyGattConnected(gatt.getDevice().getAddress()); }
 				catch (RemoteException e) { e.printStackTrace(); }
 				TLog.d("GATTサーバ接続OK. address={0}", gatt.getDevice().getAddress());
 				gatt.discoverServices();
@@ -336,7 +342,7 @@ public class BleService extends Service {
 			}
 			/* Gattサーバ断 */
 			else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-				try { mListener.notifyGattDisConnected(gatt.getDevice().getAddress()); }
+				try { mCb.notifyGattDisConnected(gatt.getDevice().getAddress()); }
 				catch (RemoteException e) { e.printStackTrace(); }
 				TLog.d("GATTサーバ断. address={0}", gatt.getDevice().getAddress());
 				mConnectedDevices.remove(gatt.getDevice().getAddress());
@@ -348,13 +354,14 @@ public class BleService extends Service {
 		@Override
 		public void onServicesDiscovered(BluetoothGatt gatt, int status) {
 			TLog.d("Services発見!! address={0} ret={1}", gatt.getDevice().getAddress(), status);
-			try { mListener.notifyServicesDiscovered(gatt.getDevice().getAddress(), status); }
+			TLog.d("mGatt={0} gatt={1}", mGatt, gatt);
+			try { mCb.notifyServicesDiscovered(gatt.getDevice().getAddress(), status); }
 			catch (RemoteException e) { e.printStackTrace(); }
 
 			if (status == BluetoothGatt.GATT_SUCCESS) {
 				mCharacteristic = findTerget(gatt, Constants.UWS_SERVICE_UUID, Constants.UWS_CHARACTERISTIC_HRATBEAT_UUID);
 				if (mCharacteristic != null) {
-					try { mListener.notifyApplicable(gatt.getDevice().getAddress(), true); }
+					try { mCb.notifyApplicable(gatt.getDevice().getAddress(), true); }
 					catch (RemoteException e) { e.printStackTrace(); }
 
 					TLog.d("find it. Services and Characteristic.");
@@ -362,13 +369,13 @@ public class BleService extends Service {
 					boolean ret2 = gatt.setCharacteristicNotification(mCharacteristic, true);
 					if(ret1 && ret2) {
 						TLog.d("BLEデバイス通信 準備完了. address={0}", gatt.getDevice().getAddress());
-						try { mListener.notifyReady2DeviceCommunication(gatt.getDevice().getAddress(), true); }
+						try { mCb.notifyReady2DeviceCommunication(gatt.getDevice().getAddress(), true); }
 						catch (RemoteException e) { e.printStackTrace(); }
 						mConnectedDevices.put(gatt.getDevice().getAddress(), gatt);
 					}
 					else {
 						TLog.d("BLEデバイス通信 準備失敗!! address={0}", gatt.getDevice().getAddress());
-						try { mListener.notifyReady2DeviceCommunication(gatt.getDevice().getAddress(), false); }
+						try { mCb.notifyReady2DeviceCommunication(gatt.getDevice().getAddress(), false); }
 						catch (RemoteException e) { e.printStackTrace(); }
 						mConnectedDevices.remove(gatt.getDevice().getAddress());
 						gatt.disconnect();
@@ -377,7 +384,7 @@ public class BleService extends Service {
 				}
 				else {
 					TLog.d("対象外デバイス!! address={0}", gatt.getDevice().getAddress());
-					try { mListener.notifyApplicable(gatt.getDevice().getAddress(), false); }
+					try { mCb.notifyApplicable(gatt.getDevice().getAddress(), false); }
 					catch (RemoteException e) { e.printStackTrace(); }
 					mConnectedDevices.remove(gatt.getDevice().getAddress());
 					gatt.disconnect();
@@ -389,15 +396,16 @@ public class BleService extends Service {
 		/* 読込み要求の応答 */
 		@Override
 		public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+			TLog.d("mGatt={0} gatt={1}", mGatt, gatt);
 			if (status == BluetoothGatt.GATT_SUCCESS) {
 				Object[] rcvval = parseRcvData(characteristic);
-				try { mListener.notifyResRead(gatt.getDevice().getAddress(), (long)rcvval[0], (double)rcvval[1], (double)rcvval[2], (int)rcvval[3], status); }
+				try { mCb.notifyResRead(gatt.getDevice().getAddress(), (long)rcvval[0], (double)rcvval[1], (double)rcvval[2], (int)rcvval[3], status); }
 				catch (RemoteException e) { e.printStackTrace(); }
 				TLog.d("読込み要求の応答 rcvval=({0},{1},{2},{3}) status={4} BluetoothGatt.GATT_SUCCESS({5}) BluetoothGatt.GATT_FAILURE({6})", new Date((long)rcvval[0]), (double)rcvval[1], (double)rcvval[2], (int)rcvval[3], status, BluetoothGatt.GATT_SUCCESS, BluetoothGatt.GATT_FAILURE);
 			}
 			else {
 				TLog.d("GATT_FAILURE");
-				try { mListener.notifyResRead(gatt.getDevice().getAddress(), new Date().getTime(), 0, 0, 0, status); }
+				try { mCb.notifyResRead(gatt.getDevice().getAddress(), new Date().getTime(), 0, 0, 0, status); }
 				catch (RemoteException e) { e.printStackTrace(); }
 				TLog.d("読込み要求の応答 status={1} BluetoothGatt.GATT_SUCCESS({2}) BluetoothGatt.GATT_FAILURE({3})", status, BluetoothGatt.GATT_SUCCESS, BluetoothGatt.GATT_FAILURE);
 			}
@@ -405,9 +413,10 @@ public class BleService extends Service {
 
 		@Override
 		public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+			TLog.d("mGatt={0} gatt={1}", mGatt, gatt);
 			Object[] rcvval = parseRcvData(characteristic);
 			TLog.d("ペリフェラルからの受信 rcvval=({0} 経度:{1} 緯度:{2} 脈拍:{3})", new Date((long)rcvval[0]), (double)rcvval[1], (double)rcvval[2], (int)rcvval[3]);
-			try { mListener.notifyFromPeripheral(gatt.getDevice().getAddress(), (long)rcvval[0], (double)rcvval[1], (double)rcvval[2], (int)rcvval[3]); }
+			try { mCb.notifyFromPeripheral(gatt.getDevice().getAddress(), (long)rcvval[0], (double)rcvval[1], (double)rcvval[2], (int)rcvval[3]); }
 			catch (RemoteException e) { e.printStackTrace(); }
 		}
 	};

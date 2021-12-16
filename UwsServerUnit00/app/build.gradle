@@ -6,7 +6,7 @@ android {
     compileSdk 31
 
     defaultConfig {
-        applicationId "com.tks.uwsunit00"
+        applicationId "com.tks.uwsserverunit00"
         minSdk 26
         targetSdk 31
         versionCode 1

@@ -1,4 +1,4 @@
-package com.tks.uwsunit00.ui;
+package com.tks.uwsserverunit00.ui;
 
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -11,13 +11,10 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 
-import com.tks.uwsunit00.DeviceInfo;
-import com.tks.uwsunit00.R;
+import com.tks.uwsserverunit00.DeviceInfo;
+import com.tks.uwsserverunit00.R;
 
 /**
  * -30 dBm	素晴らしい	達成可能な最大信号強度。クライアントは、これを実現するには、APから僅か数フィートである必要があります。現実的には一般的ではなく、望ましいものでもありません	N/A
@@ -36,7 +33,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		TextView	mTxtId;
 		TextView	mTxtHertBeat;
 		Button		mBtnConnect;
-		ImageButton mBtnBuoy;
+		ImageButton	mBtnBuoy;
 		ViewHolder(View view) {
 			super(view);
 			mTxtDeviceName			= view.findViewById(R.id.device_name);
@@ -57,7 +54,6 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 
 	/* メンバ変数 */
 	private ArrayList<DevicveInfoModel>	mDeviceList = new ArrayList<>();
-	private DeviceListAdapterListener	mListener;
 
 	public enum ConnectStatus { NONE, CONNECTING, EXPLORING, CHECKAPPLI, TOBEPREPARED, READY}
 	private static class DevicveInfoModel {
@@ -77,11 +73,6 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			mHertBeat		= hertbeat;
 			mIsApplicable	= isApplicable;
 		}
-	}
-
-	/* コンストラクタ */
-	public DeviceListAdapter(DeviceListAdapterListener listener) {
-		mListener = listener;
 	}
 
 	@NonNull
@@ -113,14 +104,11 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		holder.mImvRssi.setImageResource(rssiresid);
 		holder.mTxtHertBeat.setText(model.mHertBeat == 0 ? "-" : ""+model.mHertBeat);
 //		holder.itemView.setOnClickListener(view -> {
-//			/* 接続実行 */
+//		});
+		holder.mBtnConnect.setOnClickListener(view -> {
+//			/* 接続ボタン押下 */
 //			if (mListener != null)
 //				mListener.onDeviceItemClick(view, deviceName, deviceAddress);
-//		});
-		holder.mBtnConnect.setOnClickListener(v -> {
-			/* 接続ボタン押下 */
-			if (mListener != null)
-				mListener.onDeviceItemClick(null, deviceName, deviceAddress);
 		});
 		holder.mBtnBuoy.setOnClickListener(v -> {
 			/* 浮標ボタン押下 */
@@ -137,7 +125,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			for (DeviceInfo deviceInfo : deviceInfos) {
 				addDevice(deviceInfo, false);
 			}
-			notifyDataSetChanged();
+//			notifyDataSetChanged();
 		}
 	}
 
@@ -173,22 +161,23 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			});
 		}
 
-		if (notify) {
-			notifyDataSetChanged();
-		}
-
+//		if (notify) {
+//			notifyDataSetChanged();
+//		}
 	}
 
-	public void setStatus(String address, ConnectStatus status) {
+	public int setStatus(String address, ConnectStatus status) {
 		int pos = getPosition(address);
 		mDeviceList.get(pos).mConnectStatus = status;
-		notifyItemChanged(pos);
+//		notifyItemChanged(pos);
+		return pos;
 	}
 
-	public void setHertBeat(String address, int rcvval) {
+	public int setHertBeat(String address, int rcvval) {
 		int pos = getPosition(address);
 		mDeviceList.get(pos).mHertBeat = rcvval;
-		notifyItemChanged(pos);
+//		notifyItemChanged(pos);
+		return pos;
 	}
 
 	private int getPosition(String address) {
@@ -204,6 +193,6 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 
 	public void clearDevice() {
 		mDeviceList.clear();
-		notifyDataSetChanged();
+//		notifyDataSetChanged();
 	}
 }

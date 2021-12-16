@@ -12,6 +12,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
+
         <LinearLayout
             android:orientation="vertical"
             android:layout_gravity="center"
@@ -24,6 +25,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="fill_horizontal">
+
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_height="wrap_content"
                     android:layout_weight="0.7"
@@ -74,8 +76,8 @@
 
                 <Button
                     android:id="@+id/btnConnect"
-                    android:layout_height="wrap_content"
                     android:layout_width="0dp"
+                    android:layout_height="wrap_content"
                     android:layout_gravity="center"
                     android:layout_weight="0.6"
                     android:text="接続"
@@ -97,6 +99,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:gravity="fill_horizontal">
+
                 <TextView
                     android:id="@+id/device_address"
                     android:layout_width="wrap_content"

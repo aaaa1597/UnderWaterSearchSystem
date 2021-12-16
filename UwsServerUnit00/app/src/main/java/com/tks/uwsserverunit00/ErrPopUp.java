@@ -1,7 +1,6 @@
-package com.tks.uwsunit00;
+package com.tks.uwsserverunit00;
 
 import android.app.Activity;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -9,7 +8,6 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.PopupWindow;
 import android.widget.TextView;
-
 import androidx.core.content.res.ResourcesCompat;
 
 public class ErrPopUp extends PopupWindow {
@@ -23,8 +21,6 @@ public class ErrPopUp extends PopupWindow {
 		ErrPopUp retwindow = new ErrPopUp(activity);
 		View popupView = activity.getLayoutInflater().inflate(R.layout.popup_layout, null);
 		popupView.findViewById(R.id.btnClose).setOnClickListener(v -> {
-//                if (mClosePopup.isShowing())
-//                    mClosePopup.dismiss();
 			android.os.Process.killProcess(android.os.Process.myPid());
 		});
 		retwindow.setContentView(popupView);
@@ -48,8 +44,8 @@ public class ErrPopUp extends PopupWindow {
 		return this;
 	}
 
+	/* 表示 */
 	public void Show(Activity activity) {
-		Log.d("aaaaa", "aaaaa Show()");
 		View anchor = ((ViewGroup)activity.findViewById(android.R.id.content)).getChildAt(0);
 		this.showAtLocation(anchor, Gravity.CENTER,0, 0);
 	}

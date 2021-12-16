@@ -1,4 +1,4 @@
-package com.tks.uwsunit00;
+package com.tks.uwsserverunit00;
 
 import android.os.Parcel;
 import android.os.Parcelable;

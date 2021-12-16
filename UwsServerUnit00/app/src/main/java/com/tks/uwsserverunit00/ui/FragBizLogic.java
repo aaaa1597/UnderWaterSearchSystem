@@ -1,4 +1,4 @@
-package com.tks.uwsunit00.ui;
+package com.tks.uwsserverunit00.ui;
 
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -9,11 +9,11 @@ import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import com.tks.uwsunit00.R;
+
+import com.tks.uwsserverunit00.R;
 
 public class FragBizLogic extends Fragment {
 //	private FragBizLogicViewModel	mViewModel;
-	private DeviceListAdapter		mDeviceListAdapter;
 
 	public static FragBizLogic newInstance() {
 		return new FragBizLogic();
@@ -21,7 +21,7 @@ public class FragBizLogic extends Fragment {
 
 	@Override
 	public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-		return inflater.inflate(R.layout.frag_biz_logic, container, false);
+		return inflater.inflate(R.layout.frag_bizlogic, container, false);
 	}
 
 	@Override

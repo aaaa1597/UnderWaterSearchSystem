@@ -1,4 +1,4 @@
 // DeviceInfo.aidl
-package com.tks.uwsunit00;
+package com.tks.uwsserverunit00;
 
 parcelable DeviceInfo;

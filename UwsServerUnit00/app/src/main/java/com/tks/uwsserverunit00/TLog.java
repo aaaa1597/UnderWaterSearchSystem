@@ -1,6 +1,6 @@
-package com.tks.uwsunit00;
+package com.tks.uwsserverunit00;
 
-import android.icu.text.MessageFormat;
+import java.text.MessageFormat;
 import android.util.Log;
 
 public class TLog {
