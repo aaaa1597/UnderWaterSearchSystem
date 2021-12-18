@@ -11,11 +11,8 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
-import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
-import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
-import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -24,12 +21,19 @@ import android.os.IBinder;
 import android.os.RemoteException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static com.tks.uwsserverunit00.Constants.UWS_NG_SUCCESS;
+import static com.tks.uwsserverunit00.Constants.UWS_NG_ALREADY_CONNECTED;
+import static com.tks.uwsserverunit00.Constants.UWS_NG_DEVICE_NOTFOUND;
+import static com.tks.uwsserverunit00.Constants.UWS_SERVICE_UUID;
+import static com.tks.uwsserverunit00.Constants.UWS_CHARACTERISTIC_HRATBEAT_UUID;
 
 /**
  * -30 dBm	素晴らしい	達成可能な最大信号強度。クライアントは、これを実現するには、APから僅か数フィートである必要があります。現実的には一般的ではなく、望ましいものでもありません	N/A
@@ -40,9 +44,33 @@ import java.util.stream.Collectors;
  **/
 
 public class BleServerService extends Service {
-	/* Binder */
-	private IBleServerServiceCallback mCb;	/* 常に後発のみ */
-	private Binder scanServiceBinder = new IBleServerService.Stub() {
+	private BluetoothAdapter					mBluetoothAdapter;
+	private BluetoothGatt						mBleGatt;
+	private final Map<String, BluetoothGatt>	mConnectedDevices = new HashMap<>();
+	private IBleServerServiceCallback			mCb;	/* 常に後発優先 */
+
+	@Nullable
+	@Override
+	public IBinder onBind(Intent intent) {
+		TLog.d("");
+		return mBinder;
+	}
+
+	@Override
+	public boolean onUnbind(Intent intent) {
+		BsvClearDevice();
+		if (mBleGatt != null) {
+			mBleGatt.disconnect();
+			mBleGatt.close();
+			mBleGatt = null;
+		}
+		return super.onUnbind(intent);
+	}
+
+	/** *****
+	 * Binder
+	 * ******/
+	private Binder mBinder = new IBleServerService.Stub() {
 		@Override
 		public void setCallback(IBleServerServiceCallback callback) throws RemoteException {
 			mCb = callback;
@@ -59,11 +87,6 @@ public class BleServerService extends Service {
 		}
 
 		@Override
-		public int stopScan() throws RemoteException {
-			return BsvStopScan();
-		}
-
-		@Override
 		public List<DeviceInfo> getDeviceInfolist() throws RemoteException {
 			return mTmpDeviceInfoList;
 		}
@@ -74,44 +97,30 @@ public class BleServerService extends Service {
 		}
 
 		@Override
+		public int stopScan() throws RemoteException {
+			return BsvStopScan();
+		}
+
+		@Override
 		public int connectDevice(String deviceAddress) throws RemoteException {
 			return BsvConnectDevice(deviceAddress);
 		}
 
+//		まだ不要
+//		@Override
+//		void disconnectDevice(String deviceAddress) {
+//			BsvDisConnectDevice(deviceAddress);
+//		}
+
 		@Override
 		public void clearDevice() throws RemoteException {
-			mConnectedDevices.forEach((addr, gat) -> {
-				gat.disconnect();
-				gat.close();
-			});
-			mConnectedDevices.clear();
+			BsvClearDevice();
 		}
 	};
 
-	@Nullable
-	@Override
-	public IBinder onBind(Intent intent) {
-		TLog.d("");
-		return scanServiceBinder;
-	}
-
-	@Override
-	public boolean onUnbind(Intent intent) {
-		TLog.d("");
-		/* 保有する全デバイスの接続開放 */
-		mConnectedDevices.forEach((s, gatt) -> {
-			gatt.disconnect();
-			gatt.close();
-		});
-		mConnectedDevices.clear();
-		return super.onUnbind(intent);
-	}
-
-	/* BLuetooth定義 */
-	private final Map<String, BluetoothGatt>	mConnectedDevices = new HashMap<>();
-	private BluetoothAdapter					mBluetoothAdapter;
-	private BluetoothLeScanner					mBLeScanner;
-
+	/** *******
+	 * BLE初期化
+	 * ********/
 	int BsvInit() {
 		/* Bluetooth権限なし */
 		if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
@@ -134,12 +143,18 @@ public class BleServerService extends Service {
 			return Constants.UWS_NG_BT_OFF;
 		TLog.d( "Bluetooth ON.");
 
-		return Constants.UWS_NG_SUCCESS;
+		return UWS_NG_SUCCESS;
 	}
 
-	/* Bluetoothサービス-scan開始 */
-	private DeviceInfo			mTmpDeviceInfo;
-	private List<DeviceInfo>	mTmpDeviceInfoList = new ArrayList<>();
+	/************/
+	/*  Scan実装 */
+	/************/
+	private DeviceInfo					mTmpDeviceInfo;
+	private List<DeviceInfo>			mTmpDeviceInfoList = new ArrayList<>();
+
+	/** *******
+	 * Scan開始
+	 * ********/
 	private ScanCallback		mScanCallback = null;
 	private int BsvStartScan() {
 		/* 既にscan中 */
@@ -162,7 +177,7 @@ public class BleServerService extends Service {
 					int id = -1;
 					if(ret.getScanRecord()!=null && ret.getScanRecord().getServiceUuids()!=null) {
 						String retUuisStr = ret.getScanRecord().getServiceUuids().get(0).toString();
-						if(retUuisStr.startsWith(Constants.UWS_SERVICE_UUID.toString().substring(0,5))) {
+						if(retUuisStr.startsWith(UWS_SERVICE_UUID.toString().substring(0,5))) {
 							isApplicable = true;
 							id = Integer.decode("0x"+retUuisStr.substring(6,8));
 						}
@@ -202,7 +217,7 @@ public class BleServerService extends Service {
 				if(result.getScanRecord()!=null && result.getScanRecord().getServiceUuids()!=null) {
 					String retUuisStr = result.getScanRecord().getServiceUuids().get(0).toString();
 					TLog.d("retUuisStr={0}", retUuisStr);
-					if(retUuisStr.startsWith(Constants.UWS_SERVICE_UUID.toString().substring(0,5))) {
+					if(retUuisStr.startsWith(UWS_SERVICE_UUID.toString().substring(0,5))) {
 						isApplicable = true;
 						id = Integer.decode("0x"+retUuisStr.substring(6,8));
 					}
@@ -211,7 +226,6 @@ public class BleServerService extends Service {
 					TLog.d("retUuisStr is null");
 				}
 				mTmpDeviceInfo = new DeviceInfo(result.getDevice().getName(), result.getDevice().getAddress(), result.getRssi(), isApplicable, id);
-				if(result.getScanRecord() != null && result.getScanRecord().getServiceUuids() != null)
 				TLog.d("発見!! {0}({1}):Rssi({2}) ScanRecord={3}", result.getDevice().getAddress(), result.getDevice().getName(), result.getRssi(), result.getScanRecord());
 				try { mCb.notifyDeviceInfo();}
 				catch (RemoteException e) {e.printStackTrace();}
@@ -246,147 +260,153 @@ public class BleServerService extends Service {
 			}
 		};
 
-		/* scanフィルタ */
-		List<ScanFilter> scanFilters = new ArrayList<>();
-		scanFilters.add(new ScanFilter.Builder().build());
-
-		/* scan設定 */
-		ScanSettings.Builder scansetting = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_POWER);
+//		/* scanフィルタ */
+//		List<ScanFilter> scanFilters = new ArrayList<>();
+//		scanFilters.add(new ScanFilter.Builder().build());
+//
+//		/* scan設定 */
+//		ScanSettings.Builder scansetting = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_POWER);
 
 		/* scan開始 */
-		mBLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
-		mBLeScanner.startScan(scanFilters, scansetting.build(), mScanCallback);
+		mBluetoothAdapter.getBluetoothLeScanner().startScan(mScanCallback);
 
-		return Constants.UWS_NG_SUCCESS;
+		return UWS_NG_SUCCESS;
 	}
 
-	/* Bluetoothサービス-scan停止 */
+	/** *******
+	 * Scan終了
+	 * ********/
 	private int BsvStopScan() {
 		if(mScanCallback == null)
 			return Constants.UWS_NG_ALREADY_SCANSTOPEDNED;
 
-		mBLeScanner.stopScan(mScanCallback);
+		mBluetoothAdapter.getBluetoothLeScanner().stopScan(mScanCallback);
 		mScanCallback = null;
 		TLog.d("scan終了");
 		try { mCb.notifyScanEnd();}
 		catch (RemoteException e) { e.printStackTrace(); }
 
-		return Constants.UWS_NG_SUCCESS;
+		return UWS_NG_SUCCESS;
 	}
 
-	/* TODO BluetoothGatt blegatt */
-	BluetoothGatt mGatt;
-	/* BluetoothGatt blegatt */
-
-	/* Bluetoothサービス-デバイス接続 */
-	private int BsvConnectDevice(String deviceAddress) {
-		if(deviceAddress == null || deviceAddress.equals(""))
-			return Constants.UWS_NG_ILLEGALARGUMENT;
-
-		/* デバイスリスト検索 */
-		BluetoothGatt gat = mConnectedDevices.get(deviceAddress);
-
-		/* 再接続 */
-		if(gat != null) {
-			TLog.d("デバイス再接続({0})", deviceAddress);
-			boolean ret = gat.connect();
-			if(ret)
-				return Constants.UWS_NG_RECONNECT_OK;
-			/* デバイスなしなので、削除 */
-			gat.disconnect();
-			gat.close();
-			mConnectedDevices.remove(deviceAddress);
-			return Constants.UWS_NG_DEVICE_NOTFOUND;
+	/** *************
+	 * BLEデバイス接続
+	 ** *************/
+	private int BsvConnectDevice(final String address) {
+		if(address == null || address.equals("")) {
+			TLog.d("デバイスアドレスなし");
+			return UWS_NG_DEVICE_NOTFOUND;
 		}
 
-		TLog.d("デバイス初回接続({0})", deviceAddress);
+		/* 接続済判定 */
+		BluetoothGatt gat = mConnectedDevices.get(address);
+		if(gat != null) {
+			TLog.d("接続済デバイス({0})　何もしない", address);
+			return UWS_NG_ALREADY_CONNECTED;
+//			boolean ret = gat.connect();
+		}
+
+		TLog.d("デバイス初回接続({0})", address);
 		/* 初回接続 */
-		BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(deviceAddress);
+		BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
 		if (device == null) {
-			TLog.d("デバイス({0})が見つかりません。接続できませんでした。", deviceAddress);
-			return Constants.UWS_NG_DEVICE_NOTFOUND;
+			TLog.d("デバイス({0})が見つかりません。接続できませんでした。", address);
+			return UWS_NG_DEVICE_NOTFOUND;
 		}
 
 		/* デバイスに直接接続したい時に、autoConnectをfalseにする。 */
 		/* デバイスが使用可能になったら自動的にすぐに接続する様にする時に、autoConnectをtrueにする。 */
-		BluetoothGatt blegatt = device.connectGatt(getApplicationContext(), false, mGattCallback);
-		mGatt = blegatt;
-		if (blegatt == null) {
-			TLog.d("Gattサーバ接続失敗!! address={0}", deviceAddress);
-			return Constants.UWS_NG_DEVICE_NOTFOUND;
+		mBleGatt = device.connectGatt(getApplicationContext(), false, mGattCallback);
+		if (mBleGatt == null) {
+			TLog.d("Gattサーバ接続失敗!! address={0}", address);
+			return UWS_NG_DEVICE_NOTFOUND;
 		}
 
 		/* ここでは、追加しない。Service発見後に追加する */
 //		mConnectedDevices.put(blegatt.getDevice().getAddress(), blegatt);
 
 		/* Gatt接続中 */
-		TLog.d("Gattサーバ接続成功. address={0} gattAddress={1}", deviceAddress, blegatt.getDevice().getAddress());
+		TLog.d("Gattサーバ接続成功. address={0} gattAddress={1}", address, mBleGatt.getDevice().getAddress());
 
-		return Constants.UWS_NG_SUCCESS;
+		return UWS_NG_SUCCESS;
 	}
 
-	BluetoothGattCharacteristic mCharacteristic = null;
-	private final BluetoothGattCallback	mGattCallback = new BluetoothGattCallback() {
+	private void BsvClearDevice() {
+		mConnectedDevices.forEach((addr, gat) -> {
+			gat.disconnect();
+			gat.close();
+		});
+		mConnectedDevices.clear();
+		mTmpDeviceInfoList.clear();
+		mTmpDeviceInfo = null;
+	}
+
+	/** ***************
+	 * Gattコールバック
+	 ** ***************/
+	private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
 		@Override
 		public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
 			TLog.d("BluetoothGattCallback::onConnectionStateChange() {0} -> {1}", status, newState);
 			TLog.d("BluetoothProfile.STATE_CONNECTING({0}) STATE_CONNECTED({1}) STATE_DISCONNECTING({2}) STATE_DISCONNECTED({3})", BluetoothProfile.STATE_CONNECTING, BluetoothProfile.STATE_CONNECTED, BluetoothProfile.STATE_DISCONNECTING, BluetoothProfile.STATE_DISCONNECTED);
-			TLog.d("mGatt={0} gatt={1}", mGatt, gatt);
-			/* Gattサーバ接続完了 */
+			/* Gatt接続完了 */
 			if(newState == BluetoothProfile.STATE_CONNECTED) {
 				try { mCb.notifyGattConnected(gatt.getDevice().getAddress()); }
 				catch (RemoteException e) { e.printStackTrace(); }
-				TLog.d("GATTサーバ接続OK. address={0}", gatt.getDevice().getAddress());
+				TLog.d("Gatt接続OK. address={0}", gatt.getDevice().getAddress());
 				gatt.discoverServices();
 				TLog.d("Discovery開始 address={0}", gatt.getDevice().getAddress());
 			}
 			/* Gattサーバ断 */
 			else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+				TLog.d("Gatt断.");
 				try { mCb.notifyGattDisConnected(gatt.getDevice().getAddress()); }
 				catch (RemoteException e) { e.printStackTrace(); }
-				TLog.d("GATTサーバ断. address={0}", gatt.getDevice().getAddress());
-				mConnectedDevices.remove(gatt.getDevice().getAddress());
+
+				TLog.d("GATT 再接続");
 				gatt.disconnect();
 				gatt.close();
+				mBleGatt = gatt.getDevice().connectGatt(getApplicationContext(), false, mGattCallback);
 			}
 		}
 
 		@Override
 		public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-			TLog.d("Services発見!! address={0} ret={1}", gatt.getDevice().getAddress(), status);
-			TLog.d("mGatt={0} gatt={1}", mGatt, gatt);
+			String address = gatt.getDevice().getAddress();
+			TLog.d("Services発見!! address={0} ret={1}", address, status);
+
 			try { mCb.notifyServicesDiscovered(gatt.getDevice().getAddress(), status); }
 			catch (RemoteException e) { e.printStackTrace(); }
 
 			if (status == BluetoothGatt.GATT_SUCCESS) {
-				mCharacteristic = findTerget(gatt, Constants.UWS_SERVICE_UUID, Constants.UWS_CHARACTERISTIC_HRATBEAT_UUID);
-				if (mCharacteristic != null) {
-					try { mCb.notifyApplicable(gatt.getDevice().getAddress(), true); }
+				BluetoothGattCharacteristic charac = findTerget(gatt, UWS_SERVICE_UUID, UWS_CHARACTERISTIC_HRATBEAT_UUID);
+				if (charac != null) {
+					try { mCb.notifyApplicable(address, true); }
 					catch (RemoteException e) { e.printStackTrace(); }
 
 					TLog.d("find it. Services and Characteristic.");
-					boolean ret1 = gatt.readCharacteristic(mCharacteristic);	/* 初回読み出し */
-					boolean ret2 = gatt.setCharacteristicNotification(mCharacteristic, true);
+					boolean ret1 = gatt.readCharacteristic(charac);	/* 初回読み出し */
+					boolean ret2 = gatt.setCharacteristicNotification(charac, true);
 					if(ret1 && ret2) {
-						TLog.d("BLEデバイス通信 準備完了. address={0}", gatt.getDevice().getAddress());
-						try { mCb.notifyReady2DeviceCommunication(gatt.getDevice().getAddress(), true); }
+						TLog.d("BLEデバイス通信 準備完了. address={0}", address);
+						try { mCb.notifyReady2DeviceCommunication(address, true); }
 						catch (RemoteException e) { e.printStackTrace(); }
-						mConnectedDevices.put(gatt.getDevice().getAddress(), gatt);
+						mConnectedDevices.put(address, gatt);
 					}
 					else {
-						TLog.d("BLEデバイス通信 準備失敗!! address={0}", gatt.getDevice().getAddress());
-						try { mCb.notifyReady2DeviceCommunication(gatt.getDevice().getAddress(), false); }
+						TLog.d("BLEデバイス通信 準備失敗!! address={0}", address);
+						try { mCb.notifyReady2DeviceCommunication(address, false); }
 						catch (RemoteException e) { e.printStackTrace(); }
-						mConnectedDevices.remove(gatt.getDevice().getAddress());
+						mConnectedDevices.remove(address);
 						gatt.disconnect();
 						gatt.close();
 					}
 				}
 				else {
-					TLog.d("対象外デバイス!! address={0}", gatt.getDevice().getAddress());
-					try { mCb.notifyApplicable(gatt.getDevice().getAddress(), false); }
+					TLog.d("対象外デバイス!! address={0}", address);
+					try { mCb.notifyApplicable(address, false); }
 					catch (RemoteException e) { e.printStackTrace(); }
-					mConnectedDevices.remove(gatt.getDevice().getAddress());
+					mConnectedDevices.remove(address);
 					gatt.disconnect();
 					gatt.close();
 				}
@@ -396,7 +416,7 @@ public class BleServerService extends Service {
 		/* 読込み要求の応答 */
 		@Override
 		public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-			TLog.d("mGatt={0} gatt={1}", mGatt, gatt);
+			TLog.d("読込み要求の応答 status={0}", status);
 			if (status == BluetoothGatt.GATT_SUCCESS) {
 				Object[] rcvval = parseRcvData(characteristic);
 				try { mCb.notifyResRead(gatt.getDevice().getAddress(), (long)rcvval[0], (double)rcvval[1], (double)rcvval[2], (int)rcvval[3], status); }
@@ -413,7 +433,6 @@ public class BleServerService extends Service {
 
 		@Override
 		public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-			TLog.d("mGatt={0} gatt={1}", mGatt, gatt);
 			Object[] rcvval = parseRcvData(characteristic);
 			TLog.d("ペリフェラルからの受信 rcvval=({0} 経度:{1} 緯度:{2} 脈拍:{3})", new Date((long)rcvval[0]), (double)rcvval[1], (double)rcvval[2], (int)rcvval[3]);
 			try { mCb.notifyFromPeripheral(gatt.getDevice().getAddress(), (long)rcvval[0], (double)rcvval[1], (double)rcvval[2], (int)rcvval[3]); }
@@ -421,6 +440,9 @@ public class BleServerService extends Service {
 		}
 	};
 
+	/** *************************
+	 * 対象のCharacteristicを検索
+	 ** *************************/
 	private BluetoothGattCharacteristic findTerget(BluetoothGatt gatt, UUID ServiceUuid, UUID CharacteristicUuid) {
 		BluetoothGattCharacteristic ret = null;
 		for (BluetoothGattService service : gatt.getServices()) {
@@ -440,17 +462,42 @@ public class BleServerService extends Service {
 		return ret;
 	}
 
-	/* 受信データParse */
+	/** **********
+	 * データParse
+	 ** **********/
 	private Object[] parseRcvData(final BluetoothGattCharacteristic characteristic) {
-		if (Constants.UWS_CHARACTERISTIC_HRATBEAT_UUID.equals(characteristic.getUuid())) {
+		if (UWS_CHARACTERISTIC_HRATBEAT_UUID.equals(characteristic.getUuid())) {
 			/* 受信データ取出し */
-			final byte[] orgdata = characteristic.getValue();
-			long	ldatetime	= ByteBuffer.wrap(orgdata).getLong();
-			double	longitude	= ByteBuffer.wrap(orgdata).getDouble(8);
-			double	latitude	= ByteBuffer.wrap(orgdata).getDouble(16);
-			int		heartbeat	= ByteBuffer.wrap(orgdata).getInt(24);
-			TLog.d("受信データ=({0} 経度:{1} 緯度:{2} 脈拍:{3})", new Date(ldatetime), longitude, latitude, heartbeat);
-			return new Object[] {ldatetime, longitude, latitude, heartbeat};
+			final byte[] rcvdata = characteristic.getValue();
+			TLog.d("rcvdata:(size={0}, {1})", rcvdata.length, Arrays.toString(rcvdata));
+			if(rcvdata.length == 28) {
+				/* 全データ受信(日付,経度,緯度,脈拍) */
+				long	ldatetime	= ByteBuffer.wrap(rcvdata).getLong();
+				double	longitude	= ByteBuffer.wrap(rcvdata).getDouble(8);
+				double	latitude	= ByteBuffer.wrap(rcvdata).getDouble(16);
+				int		heartbeat	= ByteBuffer.wrap(rcvdata).getInt(24);
+				TLog.d("受信データ=({0} 経度:{1} 緯度:{2} 脈拍:{3})", new Date(ldatetime), longitude, latitude, heartbeat);
+				return new Object[] {ldatetime, longitude, latitude, heartbeat};
+			}
+			short seqno = ByteBuffer.wrap(rcvdata).getShort(2);
+			if(seqno == 0) {
+				/* 先行の通知データ(msgid,seqno,日付,経度)受信 */
+				short	msgid		= ByteBuffer.wrap(rcvdata).getShort();
+//				short	seqno		= ByteBuffer.wrap(rcvdata).getShort(2);
+				long	ldatetime	= ByteBuffer.wrap(rcvdata).getLong(4);
+				double	longitude	= ByteBuffer.wrap(rcvdata).getDouble(12);
+				TLog.d("受信データ=({0} 経度:{1} 緯度:{2} 脈拍:{3})", new Date(ldatetime), longitude, 999, 999);
+				return new Object[] {ldatetime, longitude, 999.0, 999};
+			}
+			else {
+				/* 後発の通知データ(msgid,seqno,緯度,脈拍)受信 */
+				short	msgid		= ByteBuffer.wrap(rcvdata).getShort();
+//				short	seqno		= ByteBuffer.wrap(rcvdata).getShort(2);
+				double	latitude	= ByteBuffer.wrap(rcvdata).getDouble(4);
+				int		heartbeat	= ByteBuffer.wrap(rcvdata).getInt(12);
+				TLog.d("受信データ=({0} 経度:{1} 緯度:{2} 脈拍:{3})", new Date(0), 999, latitude, heartbeat);
+				return new Object[] {999, 999.0, latitude, heartbeat};
+			}
 		}
 		return new Object[] {new Date().getTime(),0,0,0};
 	}

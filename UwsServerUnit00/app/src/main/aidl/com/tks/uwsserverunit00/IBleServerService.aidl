@@ -6,11 +6,13 @@ import com.tks.uwsserverunit00.DeviceInfo;
 interface IBleServerService {
     void setCallback(IBleServerServiceCallback callback);	/* 常に後勝ち */
     int initBle();
-	/* Scan */
+    /* Scan */
     int startScan();
-    int stopScan();
     List<DeviceInfo> getDeviceInfolist();
     DeviceInfo getDeviceInfo();
-    int connectDevice(String deviceAddress);
+    int stopScan();
     void clearDevice();
+    /* Communication */
+    int connectDevice(String deviceAddress);
+//    void disconnectDevice(String deviceAddress); まだ不要
 }

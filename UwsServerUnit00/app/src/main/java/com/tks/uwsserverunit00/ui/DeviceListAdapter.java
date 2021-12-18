@@ -47,9 +47,14 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		}
 	}
 
-	/* インターフェース : DeviceListAdapterListener */
-	public interface DeviceListAdapterListener {
-		void onDeviceItemClick(View view, String deviceName, String deviceAddress);
+	/* インターフェース : OnConnectBtnClickListener */
+	public interface OnConnectBtnClickListener {
+		void OnConnectBtnClick(View view, String deviceName, String deviceAddress);
+	}
+	private OnConnectBtnClickListener mClickListener;
+	/* コンストラクタ */
+	public DeviceListAdapter(OnConnectBtnClickListener clickListener) {
+		mClickListener = clickListener;
 	}
 
 	/* メンバ変数 */
@@ -103,12 +108,9 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		holder.mTxtId.setText((model.mId==-1) ? " - " : String.valueOf(model.mId));
 		holder.mImvRssi.setImageResource(rssiresid);
 		holder.mTxtHertBeat.setText(model.mHertBeat == 0 ? "-" : ""+model.mHertBeat);
-//		holder.itemView.setOnClickListener(view -> {
-//		});
 		holder.mBtnConnect.setOnClickListener(view -> {
-//			/* 接続ボタン押下 */
-//			if (mListener != null)
-//				mListener.onDeviceItemClick(view, deviceName, deviceAddress);
+			/* 接続ボタン押下 */
+			mClickListener.OnConnectBtnClick(view, deviceName, deviceAddress);
 		});
 		holder.mBtnBuoy.setOnClickListener(v -> {
 			/* 浮標ボタン押下 */

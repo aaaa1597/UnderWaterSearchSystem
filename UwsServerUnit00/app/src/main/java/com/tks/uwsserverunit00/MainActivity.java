@@ -4,6 +4,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.FragmentActivity;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import android.Manifest;
 import android.app.Activity;
@@ -19,10 +20,13 @@ import android.os.Bundle;
 import android.os.IBinder;
 import com.google.android.material.snackbar.Snackbar;
 import com.tks.uwsserverunit00.ui.FragBleViewModel;
+import com.tks.uwsserverunit00.ui.FragMapViewModel;
+
 import java.util.Arrays;
 
 public class MainActivity extends FragmentActivity {
 	private FragBleViewModel	mBleViewModel;
+	private FragMapViewModel	mMapViewModel;
 	private final static int	REQUEST_PERMISSIONS = 1111;
 
 	@Override
@@ -30,7 +34,11 @@ public class MainActivity extends FragmentActivity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		TLog.d("");
+		mMapViewModel = new ViewModelProvider(this).get(FragMapViewModel.class);
 		mBleViewModel = new ViewModelProvider(this).get(FragBleViewModel.class);
+		mBleViewModel.ShowSnacbar().observe(this, showMsg -> {
+			Snackbar.make(findViewById(R.id.root_view), showMsg, Snackbar.LENGTH_LONG).show();
+		});
 
 		/* Bluetoothのサポート状況チェック 未サポート端末なら起動しない */
 		if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
@@ -83,6 +91,7 @@ public class MainActivity extends FragmentActivity {
 			return;
 		}
 		else {
+			mMapViewModel.Permission().postValue(true);
 			bindBleService(mCon);
 		}
 	}
