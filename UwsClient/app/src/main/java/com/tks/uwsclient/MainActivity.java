@@ -77,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.main_activity);
+		setContentView(R.layout.activity_main);
 		/* ViewModelインスタンス取得 */
 		mViewModel = new ViewModelProvider(this).get(FragMainViewModel.class);
 		mViewModel.PressSetBtn().observe(this, new Observer<Boolean>() {
