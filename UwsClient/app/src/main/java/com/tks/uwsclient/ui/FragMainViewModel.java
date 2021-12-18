@@ -1,4 +1,4 @@
-package com.tks.uwsclient.ui.main;
+package com.tks.uwsclient.ui;
 
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;

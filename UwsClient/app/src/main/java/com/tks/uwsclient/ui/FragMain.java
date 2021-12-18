@@ -1,4 +1,4 @@
-package com.tks.uwsclient.ui.main;
+package com.tks.uwsclient.ui;
 
 import android.os.Bundle;
 import androidx.annotation.NonNull;
@@ -16,8 +16,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import com.google.android.material.snackbar.Snackbar;
 import com.tks.uwsclient.R;
-
-import com.tks.uwsclient.ui.main.FragMainViewModel.ConnectStatus;
+import com.tks.uwsclient.ui.FragMainViewModel.ConnectStatus;
 
 public class FragMain extends Fragment {
 	private FragMainViewModel mViewModel;

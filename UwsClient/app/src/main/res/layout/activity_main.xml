@@ -9,7 +9,7 @@
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/frgMain"
-        android:name="com.tks.uwsclient.ui.main.FragMain"
+        android:name="com.tks.uwsclient.ui.FragMain"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 </FrameLayout>

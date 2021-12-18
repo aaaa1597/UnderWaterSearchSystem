@@ -33,7 +33,6 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
-import com.tks.uwsclient.ui.main.FragMainViewModel;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -43,11 +42,12 @@ import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import com.tks.uwsclient.ui.FragMainViewModel.ConnectStatus;
+import com.tks.uwsclient.ui.FragMainViewModel;
 
 import static com.tks.uwsclient.Constants.UWS_CHARACTERISTIC_SAMLE_UUID;
 import static com.tks.uwsclient.Constants.createServiceUuid;
 import static com.tks.uwsclient.PeripheralAdvertiseService.KEY_NO;
-import com.tks.uwsclient.ui.main.FragMainViewModel.ConnectStatus;
 
 public class MainActivity extends AppCompatActivity {
 	private final static int				REQUEST_PERMISSIONS = 1111;
