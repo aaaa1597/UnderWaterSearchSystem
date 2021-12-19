@@ -271,8 +271,8 @@ public class BleClientService extends Service {
 					double longitude = mCb.getLongitude();
 					double latitude = mCb.getLatitude();
 					int heartbeat = mCb.getHeartbeat();
-					setValuetoCharacteristic(mUwsCharacteristic, new Date(),  longitude, latitude,  heartbeat);
-					TLog.d("arg(characteristic={0} mUwsCharacteristic={1} 同じであってほしい{2}", characteristic, mUwsCharacteristic, characteristic==mUwsCharacteristic);
+					setValuetoCharacteristic(characteristic, new Date(),  longitude, latitude,  heartbeat);
+//					TLog.d("arg(characteristic={0} mUwsCharacteristic={1} 両者は同じ{2}", characteristic, mUwsCharacteristic, characteristic==mUwsCharacteristic);
 				}
 				catch (RemoteException e) {
 					e.printStackTrace();

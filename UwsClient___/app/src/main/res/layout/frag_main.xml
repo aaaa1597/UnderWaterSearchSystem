@@ -71,8 +71,8 @@
                 android:checked="false"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_margin="1dp"
-                android:text="ここにいるよ通知"
+                android:paddingEnd="20dp"
+                android:text="アド通知"
                 tools:ignore="HardcodedText" />
 
             <androidx.appcompat.widget.SwitchCompat
@@ -82,7 +82,7 @@
                 android:checked="false"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_margin="1dp"
+                android:paddingEnd="20dp"
                 android:text="定期通知"
                 tools:ignore="HardcodedText" />
 
@@ -93,7 +93,6 @@
                 android:checked="false"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_margin="1dp"
                 android:text="初期化"
                 tools:ignore="HardcodedText" />
         </GridLayout>
