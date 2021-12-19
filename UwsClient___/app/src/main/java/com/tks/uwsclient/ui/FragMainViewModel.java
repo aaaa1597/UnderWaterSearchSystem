@@ -22,10 +22,7 @@ import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_FEATURE_UN
 import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_INTERNAL_ERROR;
 import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_TOO_MANY_ADVERTISERS;
 import static com.tks.uwsclient.Constants.UWS_NG_SUCCESS;
-import static com.tks.uwsclient.Constants.UWS_NG_AIDL_CALLBACK_FAILED;
-import static com.tks.uwsclient.Constants.UWS_NG_AIDL_INIT_BLE_FAILED;
-import static com.tks.uwsclient.Constants.UWS_NG_AIDL_START_ADVERTISING;
-import static com.tks.uwsclient.Constants.UWS_NG_AIDL_STOP_ADVERTISING;
+import static com.tks.uwsclient.Constants.UWS_NG_AIDL_REMOTE_ERROR;
 
 public class FragMainViewModel extends ViewModel {
 	private final MutableLiveData<String>			mDeviceAddress	= new MutableLiveData<>("");
@@ -66,7 +63,6 @@ public class FragMainViewModel extends ViewModel {
 	public LiveData<String>					ShowErrMsg()			{ return mShowErrMsg; }
 	public void								showErrMsg(String showmMsg) { mShowErrMsg.postValue(showmMsg);}
 
-
 	/** **********
 	 * Service接続
 	 ** *********/
@@ -76,12 +72,12 @@ public class FragMainViewModel extends ViewModel {
 
 		/* コールバック設定 */
 		try { mBleServiceIf.setCallback(mCb); }
-		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_CALLBACK_FAILED;}
+		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_REMOTE_ERROR;}
 
 		/* BLE初期化 */
 		int ret = 0;
 		try { ret = mBleServiceIf.initBle(); }
-		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_INIT_BLE_FAILED;}
+		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_REMOTE_ERROR;}
 
 		return ret;
 	}
@@ -98,7 +94,7 @@ public class FragMainViewModel extends ViewModel {
 	 ** ***********/
 	public int startAdvertising() {
 		try { mBleServiceIf.startAdvertising(mSeekerID); }
-		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_START_ADVERTISING;}
+		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_REMOTE_ERROR;}
 		return UWS_NG_SUCCESS;
 	}
 
@@ -107,7 +103,7 @@ public class FragMainViewModel extends ViewModel {
 	 ** ***********/
 	public int stopAdvertising() {
 		try { mBleServiceIf.stopAdvertising(); }
-		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_STOP_ADVERTISING;}
+		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_REMOTE_ERROR;}
 		return UWS_NG_SUCCESS;
 	}
 
@@ -151,6 +147,15 @@ public class FragMainViewModel extends ViewModel {
 		Intent intent = new Intent(context.getApplicationContext(), BleClientService.class);
 		context.bindService(intent, con, Context.BIND_AUTO_CREATE);
 		TLog.d("Bluetooth使用クリア -> Bluetoothサービス起動");
+	}
+
+	/** *************
+	 * 1秒周期通知 開始
+	 ** ************/
+	public int notifyOneShot() {
+		try { mBleServiceIf.notifyOneShot(); }
+		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_REMOTE_ERROR;}
+		return UWS_NG_SUCCESS;
 	}
 
 	/** *****************
@@ -221,17 +226,23 @@ public class FragMainViewModel extends ViewModel {
 
 		@Override
 		public double getLongitude() throws RemoteException {
-			return Longitude().getValue();
+			double loongitude = Longitude().getValue();
+			TLog.d("loongitude={0}", loongitude);
+			return loongitude;
 		}
 
 		@Override
 		public double getLatitude() throws RemoteException {
-			return Latitude().getValue();
+			double latitude = Latitude().getValue();
+			TLog.d("latitude={0}", latitude);
+			return latitude;
 		}
 
 		@Override
 		public int getHeartbeat() throws RemoteException {
-			return HearBeat().getValue();
+			int hearBeat = HearBeat().getValue();
+			TLog.d("hearBeat={0}", hearBeat);
+			return hearBeat;
 		}
 	};
 }

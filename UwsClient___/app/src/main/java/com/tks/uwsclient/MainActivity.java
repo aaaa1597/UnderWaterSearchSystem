@@ -2,13 +2,17 @@ package com.tks.uwsclient;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothManager;
 import android.content.ComponentName;
 import android.content.Context;
@@ -18,18 +22,27 @@ import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.material.snackbar.Snackbar;
 import com.tks.uwsclient.ui.FragMainViewModel;
+import com.google.android.gms.location.LocationCallback;
 
 import static com.tks.uwsclient.Constants.UWS_NG_SUCCESS;
-import static com.tks.uwsclient.Constants.UWS_NG_AIDL_CALLBACK_FAILED;
-import static com.tks.uwsclient.Constants.UWS_NG_AIDL_INIT_BLE_FAILED;
+import static com.tks.uwsclient.Constants.UWS_NG_AIDL_REMOTE_ERROR;
 import static com.tks.uwsclient.Constants.UWS_NG_ADAPTER_NOTFOUND;
 import static com.tks.uwsclient.Constants.UWS_NG_PERMISSION_DENIED;
 import static com.tks.uwsclient.Constants.UWS_NG_SERVICE_NOTFOUND;
 import static com.tks.uwsclient.Constants.UWS_NG_GATTSERVER_NOTFOUND;
+
+import java.util.Date;
+import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
 	private	FragMainViewModel	mViewModel;
@@ -46,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
 		LocationManager lm = (LocationManager)getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
 		final boolean gpsEnabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
 		final boolean wifiEnabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-		TLog.d("gpsEnabled={0} wifiEnabled={1}", gpsEnabled, wifiEnabled);
+		TLog.d("TODO1 gpsEnabled={0} wifiEnabled={1}", gpsEnabled, wifiEnabled);
 
 		/* Bluetoothのサポート状況チェック 未サポート端末なら起動しない */
 		if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
@@ -91,10 +104,8 @@ public class MainActivity extends AppCompatActivity {
 		@Override
 		public void onServiceConnected(ComponentName name, IBinder service) {
 			int ret = mViewModel.onServiceConnected(IBleClientService.Stub.asInterface(service));
-			if(ret == UWS_NG_AIDL_CALLBACK_FAILED)
-				ErrPopUp.create(MainActivity.this).setErrMsg("システム異常!! Callback登録失敗!!\nシステム異常なので、終了します。").Show(MainActivity.this);
-			else if(ret == UWS_NG_AIDL_INIT_BLE_FAILED)
-				ErrPopUp.create(MainActivity.this).setErrMsg("システム異常!! BT初期化で失敗!!\nシステム異常なので、終了します。").Show(MainActivity.this);
+			if(ret == UWS_NG_AIDL_REMOTE_ERROR)
+				ErrPopUp.create(MainActivity.this).setErrMsg("システム異常!! サービスとの接続に異常が発生しました。!\nシステム異常なので、終了します。").Show(MainActivity.this);
 			else if(ret == UWS_NG_PERMISSION_DENIED)
 				ErrPopUp.create(MainActivity.this).setErrMsg("このアプリに権限がありません!!\n終了します。").Show(MainActivity.this);
 			else if(ret == UWS_NG_SERVICE_NOTFOUND)
@@ -129,13 +140,19 @@ public class MainActivity extends AppCompatActivity {
 	 * onCreate()で実行すると、初期化が完了してない状態で、動き始めるてエラーになるので、初期化完了語に実行する。
 	 ** **************************************************************************************/
 	private void setObserve() {
+		/* Lock ON/OFF */
 		mViewModel.UnLock().observe(this, new Observer<Boolean>() {
 			@Override
 			public void onChanged(Boolean isUnLock) {
 				TLog.d("UnLock isLock={0}", isUnLock);
-				if( !isUnLock)
+				if(isUnLock) {
+					mViewModel.AdvertisingFlg().postValue(false);
+					mViewModel.Priodic1sNotifyFlg().postValue(false);
+				}
+				else {
 					/* アドバタイズ開始 */
 					mViewModel.AdvertisingFlg().setValue(true);
+				}
 			}
 		});
 		/* アドバタイズON/OFF */
@@ -158,7 +175,22 @@ public class MainActivity extends AppCompatActivity {
 		mViewModel.Priodic1sNotifyFlg().observe(this, new Observer<Boolean>() {
 			@Override
 			public void onChanged(Boolean priodic1sNotifyFlg) {
-				/* TODO TODO TODO TODO */
+				if(priodic1sNotifyFlg) {
+					/* 位置情報管理オブジェクト */
+					LocationRequest locreq = LocationRequest.create().setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY).setInterval(1000);
+					m1sflpc = LocationServices.getFusedLocationProviderClient(MainActivity.this);
+					if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+					 && ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+						return;	/* ここで、パーミッション不正はあり得ない */
+					m1sflpc.requestLocationUpdates(locreq, m1sLocationCallback, Looper.getMainLooper());
+				}
+				else {
+					if(m1sflpc != null) {
+						TLog.d("1秒定期 終了");
+						m1sflpc.removeLocationUpdates(m1sLocationCallback);
+					}
+					m1sflpc = null;
+				}
 			}
 		});
 		/* Snackbar表示要求 */
@@ -172,4 +204,18 @@ public class MainActivity extends AppCompatActivity {
 			ErrPopUp.create(MainActivity.this).setErrMsg(showMsg).Show(MainActivity.this);
 		});
 	}
+
+	private Random mRandom = new Random(new Date().getTime());
+	private FusedLocationProviderClient m1sflpc;
+	private final LocationCallback m1sLocationCallback = new LocationCallback() {
+		@Override
+		public void onLocationResult(@NonNull LocationResult locationResult) {
+			super.onLocationResult(locationResult);
+			TLog.d("1秒定期 (経度:{0} 緯度:{1})", locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude());
+			mViewModel.Longitude().setValue(locationResult.getLastLocation().getLongitude());
+			mViewModel.Latitude().setValue(locationResult.getLastLocation().getLatitude());
+			mViewModel.HearBeat().setValue(mRandom.nextInt(40)+30);
+			mViewModel.notifyOneShot();
+		}
+	};
 }

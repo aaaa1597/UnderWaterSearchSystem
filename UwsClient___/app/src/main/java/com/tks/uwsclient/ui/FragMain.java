@@ -52,15 +52,15 @@ public class FragMain extends Fragment {
 				if(isUnLock) {
 					rvw.removeOnItemTouchListener(mOnItemTouchListener);
 					getActivity().findViewById(R.id.swhAdvertise).setEnabled(false);
+					((SwitchCompat)getActivity().findViewById(R.id.swhAdvertise)).setChecked(false);
 					getActivity().findViewById(R.id.swhPriodic1sNotify).setEnabled(false);
-					getActivity().findViewById(R.id.swhInit).setEnabled(false);
+					((SwitchCompat)getActivity().findViewById(R.id.swhPriodic1sNotify)).setChecked(false);
 					getActivity().findViewById(R.id.glyOnOff).setBackgroundColor(getResources().getColor(R.color.disable_gray, getActivity().getTheme()));
 				}
 				else {
 					rvw.addOnItemTouchListener(mOnItemTouchListener);
 					getActivity().findViewById(R.id.swhAdvertise).setEnabled(true);
 					getActivity().findViewById(R.id.swhPriodic1sNotify).setEnabled(true);
-					getActivity().findViewById(R.id.swhInit).setEnabled(true);
 					getActivity().findViewById(R.id.glyOnOff).setBackgroundColor(getResources().getColor(R.color.white, getActivity().getTheme()));
 				}
 			}
@@ -84,21 +84,10 @@ public class FragMain extends Fragment {
 			TLog.d("アドバタイズSwh 切替 isChecked={0}", isChecked);
 			mViewModel.AdvertisingFlg().setValue(isChecked);
 		});
-		/* 1s定期周期通知 切替え */
-		/* TODO 不要なはず */
-		/* 初期化ボタン */
-		((SwitchCompat)view.findViewById(R.id.swhInit)).setOnCheckedChangeListener((buttonView, isChecked) -> {
-			TLog.d("初期化On isChecked={0}", isChecked);
-			/* ロック解除 */
-			((SwitchCompat)view.findViewById(R.id.swhUnLock)).setChecked(true);
-			/* アドバタイズ停止 */
-			((SwitchCompat)view.findViewById(R.id.swhAdvertise)).setChecked(false);
-			/* 周期通知停止 */
-			((SwitchCompat)view.findViewById(R.id.swhPriodic1sNotify)).setChecked(false);
-			try { Thread.sleep(500); }
-			catch (InterruptedException ignored) {}
-			/* 初期化OFF */
-			((SwitchCompat)view.findViewById(R.id.swhInit)).setChecked(false);
+		/* 定期通知ON/OFF切替え */
+		((SwitchCompat)view.findViewById(R.id.swhPriodic1sNotify)).setOnCheckedChangeListener((buttonView, isChecked) -> {
+			TLog.d("定期通知 切替 isChecked={0}", isChecked);
+			mViewModel.Priodic1sNotifyFlg().setValue(isChecked);
 		});
 		/* 情報表示(アドレス) */
 		mViewModel.DeviceAddress().observe(getActivity(), new Observer<String>() {

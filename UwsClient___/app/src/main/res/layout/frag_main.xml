@@ -62,7 +62,7 @@
             android:background="@color/disable_gray"
             app:layout_constraintTop_toBottomOf="@+id/ll_base"
             app:layout_constraintEnd_toEndOf="parent"
-            android:columnCount="3">
+            android:columnCount="2">
 
             <androidx.appcompat.widget.SwitchCompat
                 android:layout_column="0"
@@ -86,15 +86,6 @@
                 android:text="定期通知"
                 tools:ignore="HardcodedText" />
 
-            <androidx.appcompat.widget.SwitchCompat
-                android:layout_column="2"
-                android:layout_row="0"
-                android:id="@+id/swhInit"
-                android:checked="false"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="初期化"
-                tools:ignore="HardcodedText" />
         </GridLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 

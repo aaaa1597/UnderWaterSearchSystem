@@ -75,7 +75,12 @@ public class BleClientService extends Service {
 
 		@Override
 		public void stopAdvertising() throws RemoteException {
-			BctStopAdvertising();;
+			BctStopAdvertising();
+		}
+
+		@Override
+		public void notifyOneShot() throws RemoteException {
+			BctNotifyOneShot();
 		}
 	};
 
@@ -116,7 +121,7 @@ public class BleClientService extends Service {
 			return UWS_NG_GATTSERVER_NOTFOUND;
 
 		/* 自分自身のペリフェラル特性を定義 */
-		mUwsCharacteristic = defineOwnCharacteristic();
+		mUwsCharacteristic = createOwnCharacteristic();
 
 		return UWS_NG_SUCCESS;
 	}
@@ -136,6 +141,23 @@ public class BleClientService extends Service {
 		if (mBluetoothLeAdvertiser != null) {
 			mBluetoothLeAdvertiser.startAdvertising(settings, data, mAdvertiseCallback);
 		}
+	}
+
+	private AdvertiseData buildAdvertiseData(int seekerid) {
+		AdvertiseData.Builder dataBuilder = new AdvertiseData.Builder();
+		dataBuilder.addServiceUuid(ParcelUuid.fromString(Constants.createServiceUuid(seekerid)));
+		dataBuilder.setIncludeDeviceName(true);
+//        dataBuilder.addManufacturerData(0xffff, new byte[]{'F','I','R','E','_','F','I','G','H','T','E','R'});
+		/* ↑これを載っけるとscanで引っかからなくなる。 */
+		return dataBuilder.build();
+	}
+
+	private AdvertiseSettings buildAdvertiseSettings() {
+		AdvertiseSettings.Builder settingsBuilder = new AdvertiseSettings.Builder();
+		settingsBuilder.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY);
+		settingsBuilder.setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
+		settingsBuilder.setTimeout(0);  /* タイムアウトは自前で管理する。 */
+		return settingsBuilder.build();
 	}
 
 	private final AdvertiseCallback mAdvertiseCallback = new AdvertiseCallback() {
@@ -167,23 +189,6 @@ public class BleClientService extends Service {
 		}
 	}
 
-	private AdvertiseData buildAdvertiseData(int seekerid) {
-		AdvertiseData.Builder dataBuilder = new AdvertiseData.Builder();
-		dataBuilder.addServiceUuid(ParcelUuid.fromString(Constants.createServiceUuid(seekerid)));
-		dataBuilder.setIncludeDeviceName(true);
-//        dataBuilder.addManufacturerData(0xffff, new byte[]{'F','I','R','E','_','F','I','G','H','T','E','R'});
-		/* ↑これを載っけるとscanで引っかからなくなる。 */
-		return dataBuilder.build();
-	}
-
-	private AdvertiseSettings buildAdvertiseSettings() {
-		AdvertiseSettings.Builder settingsBuilder = new AdvertiseSettings.Builder();
-		settingsBuilder.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY);
-		settingsBuilder.setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
-		settingsBuilder.setTimeout(0);  /* タイムアウトは自前で管理する。 */
-		return settingsBuilder.build();
-	}
-
 	/** **********************************************************************
 	 * Gattサーバ処理
 	 ** **********************************************************************/
@@ -195,7 +200,7 @@ public class BleClientService extends Service {
 	/** **********************
 	 * 自身のペリフェラル特性を定義
 	 * ***********************/
-	private BluetoothGattCharacteristic defineOwnCharacteristic() {
+	private BluetoothGattCharacteristic createOwnCharacteristic() {
 		/* 自身が提供するサービスを定義 */
 		BluetoothGattService ownService = new BluetoothGattService(UWS_SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY);
 
@@ -213,6 +218,44 @@ public class BleClientService extends Service {
 		mGattManager.addService(ownService);
 
 		return charac;
+	}
+
+	/** ************
+	 * 1秒定義 通知
+	 * ************/
+	short mMsgIdCounter = 0;
+	private void BctNotifyOneShot() {
+		boolean indicate = (mUwsCharacteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_INDICATE) == BluetoothGattCharacteristic.PROPERTY_INDICATE;
+		/* 通知データ取得 */
+		double longitude = 0;
+		double latitude = 0;
+		int heartbeat  = 0;
+		try {
+			longitude = mCb.getLongitude();	/* 経度 */
+			latitude = mCb.getLatitude();	/* 緯度 */
+			heartbeat  = mCb.getHeartbeat();/* 脈拍 */
+		}
+		catch (RemoteException e) {
+			e.printStackTrace();
+		}
+		double finalLongitude = longitude;
+		double finalLatitude = latitude;
+		int finalHeartbeat = heartbeat;
+
+		/* 通知データ(先行分(msgid,seqno,日付,経度)) */
+		mNotifySender.add(() -> {
+			set1stValuetoCharacteristic(mUwsCharacteristic, mMsgIdCounter, new Date(), finalLongitude);
+			TLog.d("1st送信");
+			mGattManager.notifyCharacteristicChanged(mServerDevice, mUwsCharacteristic, indicate);
+		});
+		/* 通知データ(後発分(msgid,seqno,緯度,脈拍)) */
+		mNotifySender.add(() -> {
+			set2ndValuetoCharacteristic(mUwsCharacteristic, mMsgIdCounter++, finalLatitude, finalHeartbeat);
+			TLog.d("2nd送信");
+			mGattManager.notifyCharacteristicChanged(mServerDevice, mUwsCharacteristic, indicate);
+		});
+		/* 生成した通知データを1件処理(後は、onNotificationSent()で送信する) */
+		mNotifySender.poll().run();
 	}
 
 	/** *****************
@@ -360,6 +403,50 @@ public class BleClientService extends Service {
 		}
 	};
 
+	private void set1stValuetoCharacteristic(BluetoothGattCharacteristic charac, short msgid, Date datetime, double longitude/*経度*/) {
+		TLog.d("1st送信データ生成");
+		byte[] ret = new byte[20];
+		int spos = 0;
+		/* メッセージID(2byte) */
+		byte[] bmsgid = s2bs(msgid);
+		System.arraycopy(bmsgid, 0, ret, spos, bmsgid.length);
+		spos += bmsgid.length;
+		/* Seq番号(2byte) */
+		byte[] bseqno = s2bs((short)0);
+		System.arraycopy(bseqno, 0, ret, spos, bseqno.length);
+		spos += bseqno.length;
+		/* 日付(8byte) */
+		byte[] bdatetime = l2bs(datetime.getTime());
+		System.arraycopy(bdatetime, 0, ret, spos, bdatetime.length);
+		spos += bdatetime.length;
+		/* 経度(8byte) */
+		byte[] blongitude = d2bs(longitude);
+		System.arraycopy(blongitude, 0, ret, spos, blongitude.length);
+		/* 値 設定 */
+		charac.setValue(ret);
+	}
+	private void set2ndValuetoCharacteristic(BluetoothGattCharacteristic charac, short msgid, double latitude/*緯度*/, int heartbeat) {
+		TLog.d("2nd送信データ生成");
+		byte[] ret = new byte[16];
+		int spos = 0;
+		/* メッセージID(2byte) */
+		byte[] bmsgid = s2bs(msgid);
+		System.arraycopy(bmsgid, 0, ret, spos, bmsgid.length);
+		spos += bmsgid.length;
+		/* Seq番号(2byte) */
+		byte[] bseqno = s2bs((short)1);
+		System.arraycopy(bseqno, 0, ret, spos, bseqno.length);
+		spos += bseqno.length;
+		/* 緯度(8byte) */
+		byte[] blatitude = d2bs(latitude);
+		System.arraycopy(blatitude, 0, ret, spos, blatitude.length);
+		spos += blatitude.length;
+		/* 脈拍(4byte) */
+		byte[] bheartbeat = i2bs(heartbeat);
+		System.arraycopy(bheartbeat, 0, ret, spos, bheartbeat.length);
+		/* 値 設定 */
+		charac.setValue(ret);
+	}
 	private void setValuetoCharacteristic(BluetoothGattCharacteristic charac, Date datetime, double longitude/*経度*/, double latitude/*緯度*/, int heartbeat) {
 		byte[] ret = new byte[28];
 		int spos = 0;
