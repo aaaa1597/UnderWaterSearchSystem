@@ -9,8 +9,6 @@ import androidx.lifecycle.ViewModelProvider;
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattServer;
 import android.bluetooth.BluetoothManager;
 import android.content.ComponentName;
 import android.content.Context;
@@ -24,16 +22,18 @@ import android.os.IBinder;
 
 import com.google.android.material.snackbar.Snackbar;
 import com.tks.uwsclient.ui.FragMainViewModel;
+
 import static com.tks.uwsclient.Constants.UWS_NG_SUCCESS;
 import static com.tks.uwsclient.Constants.UWS_NG_AIDL_CALLBACK_FAILED;
 import static com.tks.uwsclient.Constants.UWS_NG_AIDL_INIT_BLE_FAILED;
 import static com.tks.uwsclient.Constants.UWS_NG_ADAPTER_NOTFOUND;
 import static com.tks.uwsclient.Constants.UWS_NG_PERMISSION_DENIED;
 import static com.tks.uwsclient.Constants.UWS_NG_SERVICE_NOTFOUND;
+import static com.tks.uwsclient.Constants.UWS_NG_GATTSERVER_NOTFOUND;
 
 public class MainActivity extends AppCompatActivity {
-	private	FragMainViewModel			mViewModel;
-	private final static int  REQUEST_PERMISSIONS	= 0x2222;
+	private	FragMainViewModel	mViewModel;
+	private final static int	REQUEST_PERMISSIONS	= 0x2222;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -101,6 +101,8 @@ public class MainActivity extends AppCompatActivity {
 				ErrPopUp.create(MainActivity.this).setErrMsg("この端末はBluetoothに対応していません!!\n終了します。").Show(MainActivity.this);
 			else if(ret == UWS_NG_ADAPTER_NOTFOUND)
 				ErrPopUp.create(MainActivity.this).setErrMsg("この端末はBluetoothに対応していません!!\n終了します。").Show(MainActivity.this);
+			else if(ret == UWS_NG_GATTSERVER_NOTFOUND)
+				ErrPopUp.create(MainActivity.this).setErrMsg("Ble初期化に失敗!!\n終了します。再起動で直る可能性があります。").Show(MainActivity.this);
 			else if(ret != UWS_NG_SUCCESS)
 				ErrPopUp.create(MainActivity.this).setErrMsg("原因不明のエラーが発生しました!!\n終了します。").Show(MainActivity.this);
 

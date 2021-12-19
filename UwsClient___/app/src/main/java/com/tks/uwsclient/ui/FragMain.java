@@ -139,6 +139,8 @@ public class FragMain extends Fragment {
 					case START_ADVERTISE:	txtStatus.setText("アドバタイズ開始");			break;
 					case ADVERTISING:		txtStatus.setText("アドバタイズ中... 接続待ち");break;
 					case CONNECTED:			txtStatus.setText("接続確立");				break;
+					case DISCONNECTED:		txtStatus.setText("接続断");					break;
+					case ERROR:				txtStatus.setText("エラーが発生しました。");	break;
 				}
 			}
 		});

@@ -24,6 +24,7 @@ public class Constants {
 	public final static int UWS_NG_AIDL_START_ADVERTISING= -13;	/* AIDL-アドバタイズ開始で失敗 */
 	public final static int UWS_NG_AIDL_STOP_ADVERTISING= -14;	/* AIDL-アドバタイズ停止で失敗 */
 	public final static int UWS_NG_AIDL_STARTSCAN_FAILED= -15;	/* AIDL-Scan開始失敗 */
+	public final static int UWS_NG_GATTSERVER_NOTFOUND	= -16;	/* Gattサーバがない */
 
 	/* ServiceUUIDは0000xxxx-0000-1000-8000-00805f9b34fbの形を守る必要がある。CharacteristicUUIDはなんでもOK.*/
 	public static final UUID UWS_SERVICE_UUID							= UUID.fromString("00002c00-0000-1000-8000-00805f9b34fb");

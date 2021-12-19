@@ -2,9 +2,6 @@ package com.tks.uwsclient.ui;
 
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattServer;
-import android.bluetooth.BluetoothGattServerCallback;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.Intent;
@@ -14,13 +11,9 @@ import android.os.RemoteException;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
-
 import com.tks.uwsclient.BleClientService;
-import com.tks.uwsclient.Constants;
-import com.tks.uwsclient.ErrPopUp;
 import com.tks.uwsclient.IBleClientService;
 import com.tks.uwsclient.IBleClientServiceCallback;
-import com.tks.uwsclient.MainActivity;
 import com.tks.uwsclient.TLog;
 
 import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_ALREADY_STARTED;
@@ -54,6 +47,8 @@ public class FragMainViewModel extends ViewModel {
 		START_ADVERTISE,/* アドバタイズ開始 */
 		ADVERTISING,	/* アドバタイズ中... 接続開始 */
 		CONNECTED,		/* 接続確立 */
+		DISCONNECTED,	/* 接続断 */
+		ERROR,			/* エラー発生!! */
 	}
 
 	private final MutableLiveData<Boolean>			mAdvertisingFlg	= new MutableLiveData<>(false);
@@ -165,35 +160,78 @@ public class FragMainViewModel extends ViewModel {
 		@Override
 		public void notifyAdvertising(int ret) throws RemoteException {
 			TLog.d("アドバタイズ開始結果 ret={0}", ret);
-			if(ret == UWS_NG_SUCCESS)
+			if(ret == UWS_NG_SUCCESS) {
+				ConnectStatus().postValue(ConnectStatus.ADVERTISING);
 				return;
+			}
 
 			if(ret == ADVERTISE_FAILED_ALREADY_STARTED) {
+				ConnectStatus().postValue(ConnectStatus.ADVERTISING);
 				String errstr = "すでにアドバタイズ開始済。続行します。";
 				TLog.d(errstr);
 				showSnacbar(errstr);
 			}
 			else if(ret == ADVERTISE_FAILED_DATA_TOO_LARGE) {
+				ConnectStatus().postValue(ConnectStatus.ADVERTISING);
 				String errstr = "アドバタイズのデータサイズがデカすぎ!!\n送れない!!";
 				TLog.d(errstr);
 				showSnacbar(errstr);
 			}
 			else if(ret == ADVERTISE_FAILED_FEATURE_UNSUPPORTED) {
+				ConnectStatus().postValue(ConnectStatus.ERROR);
 				String errstr = "Bluetooth未サポート!!\n動作しない端末です。終了します。";
 				TLog.d(errstr);
-				showSnacbar(errstr);
+				showErrMsg(errstr);
 			}
 			else if(ret == ADVERTISE_FAILED_INTERNAL_ERROR) {
+				ConnectStatus().postValue(ConnectStatus.ERROR);
 				String errstr = "Android内部エラー!!\nどうしようもないので、終了します。";
 				TLog.d(errstr);
-				showSnacbar(errstr);
+				showErrMsg(errstr);
 			}
 			else if(ret == ADVERTISE_FAILED_TOO_MANY_ADVERTISERS) {
+				ConnectStatus().postValue(ConnectStatus.ERROR);
 				String errstr = "他のアプリでもアドバタイズを実行しているため、実行できません。再起動で直ることがあります。\n終了します。";
 				TLog.d(errstr);
-				showSnacbar(errstr);
+				showErrMsg(errstr);
 			}
 			return;
+		}
+
+		@Override
+		public void notifyConnect() throws RemoteException {
+			TLog.d("接続確立");
+			ConnectStatus().postValue(ConnectStatus.CONNECTED);
+		}
+
+		@Override
+		public void notifyDisConnect() throws RemoteException {
+			TLog.d("切断");
+			ConnectStatus().postValue(ConnectStatus.NONE);
+		}
+
+		@Override
+		public void notifyErrorConnect(int status) throws RemoteException {
+			TLog.d("接続失敗!!");
+			ConnectStatus().postValue(ConnectStatus.ERROR);
+			String errstr = "アドバタイズに失敗。再度、実施してみてください。code="+status;
+			TLog.d(errstr);
+			showErrMsg(errstr);
+		}
+
+		@Override
+		public double getLongitude() throws RemoteException {
+			return Longitude().getValue();
+		}
+
+		@Override
+		public double getLatitude() throws RemoteException {
+			return Latitude().getValue();
+		}
+
+		@Override
+		public int getHeartbeat() throws RemoteException {
+			return HearBeat().getValue();
 		}
 	};
 }
