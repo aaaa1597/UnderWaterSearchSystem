@@ -49,7 +49,7 @@ public class ErrPopUp extends PopupWindow {
 	}
 
 	public void Show(Activity activity) {
-		Log.d("aaaaa", "aaaaa Show()");
+		new Throwable().printStackTrace();	/* エラー判定用に残しておく */
 		View anchor = ((ViewGroup)activity.findViewById(android.R.id.content)).getChildAt(0);
 		this.showAtLocation(anchor, Gravity.CENTER,0, 0);
 	}
