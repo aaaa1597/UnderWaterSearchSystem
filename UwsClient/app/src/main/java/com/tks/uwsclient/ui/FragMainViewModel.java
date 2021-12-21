@@ -63,6 +63,11 @@ public class FragMainViewModel extends ViewModel {
 	public LiveData<String>					ShowErrMsg()			{ return mShowErrMsg; }
 	public void								showErrMsg(String showmMsg) { mShowErrMsg.postValue(showmMsg);}
 
+	/** ********
+	 *  Location
+	 *  ********/
+	public boolean	mIsSettingLocationON = false;
+
 	/** **********
 	 * Service接続
 	 ** *********/
@@ -118,7 +123,7 @@ public class FragMainViewModel extends ViewModel {
 		}
 
 		/* 権限が許可されていない */
-		if(context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+		if(context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 			TLog.d("Bluetooth権限なし.何もしない.");
 			return;
 		}
@@ -140,6 +145,12 @@ public class FragMainViewModel extends ViewModel {
 		/* Bluetooth ON/OFF判定 */
 		if( !bluetoothAdapter.isEnabled()) {
 			TLog.d("Bluetooth OFF.何もしない.");
+			return;
+		}
+
+		/* 設定の位置情報ON/OFF判定 */
+		if( !mIsSettingLocationON) {
+			TLog.d("設定の位置情報がOFFのまま.何もしない.");
 			return;
 		}
 
