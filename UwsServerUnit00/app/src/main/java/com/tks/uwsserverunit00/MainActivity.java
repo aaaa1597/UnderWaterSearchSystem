@@ -13,11 +13,19 @@ import android.bluetooth.BluetoothManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentSender;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.common.api.ResolvableApiException;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsStatusCodes;
+import com.google.android.gms.location.SettingsClient;
 import com.google.android.material.snackbar.Snackbar;
 import com.tks.uwsserverunit00.ui.FragBleViewModel;
 import com.tks.uwsserverunit00.ui.FragMapViewModel;
@@ -27,7 +35,9 @@ import java.util.Arrays;
 public class MainActivity extends FragmentActivity {
 	private FragBleViewModel	mBleViewModel;
 	private FragMapViewModel	mMapViewModel;
-	private final static int	REQUEST_PERMISSIONS = 1111;
+	private boolean				mIsSettingLocationON		= false;
+	private final static int	REQUEST_PERMISSIONS			= 1111;
+	private final static int	REQUEST_LOCATION_SETTINGS	= 2222;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -52,6 +62,32 @@ public class MainActivity extends FragmentActivity {
 			else
 				requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_PERMISSIONS);
 		}
+
+		/* 設定の位置情報ON/OFFチェック */
+		LocationSettingsRequest locationSettingsRequest = new LocationSettingsRequest.Builder().addLocationRequest(mMapViewModel.getLocationRequest()).build();
+		SettingsClient settingsClient = LocationServices.getSettingsClient(this);
+		settingsClient.checkLocationSettings(locationSettingsRequest)
+			.addOnSuccessListener(this, locationSettingsResponse -> {
+				mIsSettingLocationON = true;
+				bindBleService(mCon);
+			})
+			.addOnFailureListener(this, exception -> {
+				int statusCode = ((ApiException)exception).getStatusCode();
+				switch (statusCode) {
+					case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
+						try {
+							ResolvableApiException rae = (ResolvableApiException)exception;
+							rae.startResolutionForResult(MainActivity.this, REQUEST_LOCATION_SETTINGS);
+						}
+						catch (IntentSender.SendIntentException sie) {
+							TLog.d("PendingIntent unable to execute request.");
+						}
+						break;
+					case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
+						ErrPopUp.create(MainActivity.this).setErrMsg("このアプリでは位置情報をOnにする必要があります。\nアプリを終了します。").Show(MainActivity.this);
+						break;
+				}
+			});
 
 		/* Bluetooth ON/OFF判定 */
 		final BluetoothManager bluetoothManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
@@ -97,6 +133,21 @@ public class MainActivity extends FragmentActivity {
 	}
 
 	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+		if (requestCode != REQUEST_LOCATION_SETTINGS) return;	/* 対象外 */
+		switch (resultCode) {
+			case Activity.RESULT_OK:
+				mIsSettingLocationON = true;
+				bindBleService(mCon);
+				break;
+			case Activity.RESULT_CANCELED:
+				ErrPopUp.create(MainActivity.this).setErrMsg("このアプリには位置情報をOnにする必要があります。\n再起動後にOnにしてください。\n終了します。").Show(MainActivity.this);
+				break;
+		}
+	}
+
+	@Override
 	protected void onDestroy() {
 		super.onDestroy();
 		TLog.d("onDestroy()");
@@ -114,7 +165,7 @@ public class MainActivity extends FragmentActivity {
 		}
 
 		/* 権限が許可されていない */
-		if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+		if(checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 			TLog.d("Bluetooth権限なし.何もしない.");
 			return;
 		}
@@ -136,6 +187,11 @@ public class MainActivity extends FragmentActivity {
 		/* Bluetooth ON/OFF判定 */
 		if( !bluetoothAdapter.isEnabled()) {
 			TLog.d("Bluetooth OFF.何もしない.");
+			return;
+		}
+
+		if( !mIsSettingLocationON) {
+			TLog.d("位置情報がOFF.何もしない.");
 			return;
 		}
 
