@@ -6,11 +6,11 @@ import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CheckBox;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +18,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.tks.uwsserverunit00.DeviceInfo;
 import com.tks.uwsserverunit00.R;
+import com.tks.uwsserverunit00.TLog;
+
 import static com.tks.uwsserverunit00.Constants.UWS_NG_DEVICE_NOTFOUND;
 
 /**
@@ -39,7 +41,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		ImageView	mImvConnectStatus;
 		TextView	mTxtConnectStatus;
 		TextView	mTxtHertBeat;
-		CheckBox	mCkbConnect;
+		SwitchCompat mSwhConnect;
 		ImageButton	mBtnBuoy;
 		TextView	mTxtLongitude;
 		TextView	mTxtLatitude;
@@ -54,7 +56,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			mImvConnectStatus		= view.findViewById(R.id.imvConnectStatus);
 			mTxtConnectStatus		= view.findViewById(R.id.txtConnectStatus);
 			mTxtHertBeat			= view.findViewById(R.id.txtHertBeat);
-			mCkbConnect				= view.findViewById(R.id.ckbConnect);
+			mSwhConnect				= view.findViewById(R.id.swhConnect);
 			mBtnBuoy				= view.findViewById(R.id.btnBuoy);
 			mTxtLongitude			= view.findViewById(R.id.txtLongitude);
 			mTxtLatitude			= view.findViewById(R.id.txtLatitude);
@@ -126,8 +128,8 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		holder.mTxtConnectStatus.setTextColor(statusinfo.second);
 		holder.mImvRssi.setImageResource(rssiresid);
 		holder.mTxtHertBeat.setText(model.mHertBeat == 0 ? "-" : ""+model.mHertBeat);
-		holder.mCkbConnect.setChecked(model.mIsReading);
-		holder.mCkbConnect.setOnCheckedChangeListener((view, isChecked) -> {
+		holder.mSwhConnect.setChecked(model.mIsReading);
+		holder.mSwhConnect.setOnCheckedChangeListener((view, isChecked) -> {
 			model.mIsReading = isChecked;
 			mClickListener.OnConnectBtnClick(view, isChecked, deviceName, deviceAddress);
 		});

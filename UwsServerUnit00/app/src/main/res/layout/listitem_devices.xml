@@ -91,11 +91,10 @@
                 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <CheckBox
-                android:id="@+id/ckbConnect"
-                android:layout_width="40dp"
-                android:layout_height="match_parent"
-                android:layout_gravity="center"/>
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/swhConnect"
+                android:layout_width="60dp"
+                android:layout_height="20dp"/>
 
             <ImageButton
                 android:id="@+id/btnBuoy"
