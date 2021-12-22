@@ -1,30 +1,27 @@
 package com.tks.uwsserverunit00.ui;
 
+import android.os.Handler;
 import android.os.RemoteException;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
-import java.text.MessageFormat;
-import java.util.Date;
-import java.util.List;
 import com.tks.uwsserverunit00.DeviceInfo;
 import com.tks.uwsserverunit00.IBleServerService;
 import com.tks.uwsserverunit00.IBleServerServiceCallback;
 import com.tks.uwsserverunit00.TLog;
+import java.text.MessageFormat;
+import java.util.Date;
+import java.util.List;
+
 import static com.tks.uwsserverunit00.Constants.UWS_NG_SUCCESS;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_GATT_SUCCESS;
-import static com.tks.uwsserverunit00.Constants.UWS_NG_ALREADY_SCANNED;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_DEVICE_NOTFOUND;
-import static com.tks.uwsserverunit00.Constants.UWS_NG_AIDL_STARTSCAN_FAILED;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_AIDL_CALLBACK_FAILED;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_AIDL_INIT_BLE_FAILED;
+import static com.tks.uwsserverunit00.Constants.UWS_NG_AIDL_STARTSCAN_FAILED;
 
 public class FragBleViewModel extends ViewModel {
 	private IBleServerService				mBleServiceIf;
-	/* ---------------- */
-	private final MutableLiveData<BtnStatus>mScanStatus				= new MutableLiveData<>(BtnStatus.STOPSCAN);
-	public MutableLiveData<BtnStatus>		ScanStatus()			{ return mScanStatus; }
-	enum BtnStatus {STARTSCAN, STOPSCAN}
 	/* ---------------- */
 	private final MutableLiveData<Boolean>	mNotifyDataSetChanged	= new MutableLiveData<>(false);
 	public MutableLiveData<Boolean>			NotifyDataSetChanged()	{ return mNotifyDataSetChanged; }
@@ -36,21 +33,9 @@ public class FragBleViewModel extends ViewModel {
 	public LiveData<String>					ShowSnacbar()			{ return mShowSnacbar; }
 	public void								showSnacbar(String showmMsg) { mShowSnacbar.postValue(showmMsg);}
 	/* ---------------- */
+	public void								setDeviceListAdapter(DeviceListAdapter adapter)	{ mDeviceListAdapter = adapter; }
 	public DeviceListAdapter				getDeviceListAdapter()	{ return mDeviceListAdapter; }
-	private final DeviceListAdapter			mDeviceListAdapter		= new DeviceListAdapter((view, deviceName, deviceAddress) -> {
-		/* 接続ボタン押下 */
-		int ret = 0;
-		try { ret = mBleServiceIf.connectDevice(deviceAddress);}
-		catch (RemoteException e) { e.printStackTrace();}
-		if( ret < 0) {
-			TLog.d("BLE初期化/接続失敗!!");
-			if(ret == UWS_NG_DEVICE_NOTFOUND)
-				showSnacbar("デバイスアドレスなし!!\n前画面で、別のデバイスを選択して下さい。");
-		}
-		else {
-			TLog.d("BLE初期化/接続成功.");
-		}
-	});
+	private DeviceListAdapter				mDeviceListAdapter;
 	/* ---------------- */
 
 	/** *****************
@@ -85,43 +70,62 @@ public class FragBleViewModel extends ViewModel {
 		mBleServiceIf = null;
 	}
 
+	public void addDevice(DeviceInfo result) {
+		mDeviceListAdapter.addDevice(result);
+		mNotifyDataSetChanged.postValue(true);
+	}
+
 	/** **********
 	 * Scan開始
 	 * **********/
 	public int startScan() {
-		/* 既にScan中の時は、開始しない */
-		if(mScanStatus.getValue() == BtnStatus.STARTSCAN)
-			return UWS_NG_ALREADY_SCANNED;
-
 		TLog.d("Scan開始.");
 		int ret = 0;
 		try { ret = mBleServiceIf.startScan();}
-		catch (RemoteException e) { e.printStackTrace();}
+		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_STARTSCAN_FAILED;}
 		TLog.d("ret={0}", ret);
 
 		if(ret != UWS_NG_SUCCESS)
 			return ret;
 
-		try { mBleServiceIf.clearDevice();}
-		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_STARTSCAN_FAILED;}
-
-		mScanStatus.postValue(BtnStatus.STARTSCAN);
 		mDeviceListAdapter.clearDevice();
 		mNotifyDataSetChanged.postValue(true);
 
 		return UWS_NG_SUCCESS;
 	}
 
-
 	/** **********
 	 * Scan終了
 	 * **********/
 	public void stopScan() {
-		int ret;
-		try { ret = mBleServiceIf.stopScan();}
-		catch (RemoteException e) { e.printStackTrace(); return;}
-		TLog.d("scan停止 ret={0}", ret);
-		mScanStatus.postValue(BtnStatus.STOPSCAN);
+//		int ret;
+//		try { ret = mBleServiceIf.stopScan();}
+//		catch (RemoteException e) { e.printStackTrace(); return;}
+//		TLog.d("scan停止 ret={0}", ret);
+	}
+
+	/** ******
+	 * 接続開始
+	 * ******/
+	public void connectDevice(String deviceAddress) {
+		/* 接続チェックBOX押下 */
+		int ret = 0;
+		try { ret = mBleServiceIf.connectDevice(deviceAddress);}
+		catch (RemoteException e) { e.printStackTrace();}
+		if( ret < 0) {
+			TLog.d("BLE初期化/接続失敗!! DEVICE NOT FOUND.");
+			if(ret == UWS_NG_DEVICE_NOTFOUND)
+				showSnacbar("デバイスアドレスなし!!\n前画面で、別のデバイスを選択して下さい。");
+		}
+		else {
+			TLog.d("BLE初期化/接続成功.");
+		}
+	}
+
+	/** ******
+	 * 接続終了
+	 * ******/
+	public void disconnectDevice(String deviceAddress) {
 	}
 
 	/** *****************
@@ -129,24 +133,22 @@ public class FragBleViewModel extends ViewModel {
 	 * *****************/
 	private IBleServerServiceCallback mCb = new IBleServerServiceCallback.Stub() {
 		@Override
-		public void notifyDeviceInfolist() throws RemoteException {
-			List<DeviceInfo> result = mBleServiceIf.getDeviceInfolist();
-			mDeviceListAdapter.addDevice(result);
+		public void notifyDeviceInfolist(List<DeviceInfo> devices) throws RemoteException {
+			mDeviceListAdapter.addDevice(devices);
 			mNotifyDataSetChanged.postValue(true);
 		}
 
 		@Override
-		public void notifyDeviceInfo() throws RemoteException {
-			DeviceInfo result = mBleServiceIf.getDeviceInfo();
-			mDeviceListAdapter.addDevice(result);
+		public void notifyDeviceInfo(DeviceInfo device) throws RemoteException {
+			mDeviceListAdapter.addDevice(device);
 			mNotifyDataSetChanged.postValue(true);
-			TLog.d("発見!! No:{0}, {1}({2}):Rssi({3})", result.getId(), result.getDeviceAddress(), result.getDeviceName(), result.getDeviceRssi());
+			TLog.d("発見!! No:{0}, {1}({2}):Rssi({3})", device.getSeekerId(), device.getDeviceAddress(), device.getDeviceName(), device.getDeviceRssi());
 		}
 
-		@Override
-		public void notifyScanEnd() throws RemoteException {
-			TLog.d("scan終了");
-		}
+//		@Override
+//		public void notifyScanEnd() throws RemoteException {
+//			TLog.d("scan終了");
+//		}
 
 		@Override
 		public void notifyGattConnected(String Address) throws RemoteException {
@@ -161,7 +163,7 @@ public class FragBleViewModel extends ViewModel {
 			String logstr = MessageFormat.format("Gatt接続断!! Address={0}", Address);
 			TLog.d(logstr);
 			showSnacbar(logstr);
-			int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE);
+			int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.DISCONNECTED);
 			mNotifyItemChanged.postValue(pos);
 		}
 
@@ -176,7 +178,7 @@ public class FragBleViewModel extends ViewModel {
 				String logstr = MessageFormat.format("Services探索失敗!! 処理終了 ret={0}", status);
 				TLog.d(logstr);
 				showSnacbar(logstr);
-				int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE);
+				int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.FAILURE);
 				mNotifyItemChanged.postValue(pos);
 			}
 		}
@@ -184,56 +186,76 @@ public class FragBleViewModel extends ViewModel {
 		@Override
 		public void notifyApplicable(String Address, boolean status) throws RemoteException {
 			if(status) {
-				TLog.d("対象Chk-OK. -> 通信準備中 Address={0}", Address);
+				TLog.d("対象Chk-OK. -> 通信中 Address={0}", Address);
 				int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.TOBEPREPARED);
 				mNotifyItemChanged.postValue(pos);
 			}
 			else {
 				String logstr = MessageFormat.format("対象外デバイス.　処理終了. Address={0}", Address);
 				TLog.d(logstr);
-				int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE);
+				int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.OUTOFSERVICE);
 				mNotifyItemChanged.postValue(pos);
 				showSnacbar(logstr);
 			}
 		}
 
 		@Override
-		public void notifyReady2DeviceCommunication(String Address, boolean status) throws RemoteException {
+		public void notifyWaitforRead(String Address, boolean status) throws RemoteException {
 			if(status) {
-				String logstr = MessageFormat.format("BLEデバイス通信 準備完了. Address={0}", Address);
+				String logstr = MessageFormat.format("BLEデバイス通信 読込み中. Address={0}", Address);
 				TLog.d(logstr);
 				showSnacbar(logstr);
-				int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.READY);
+				int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.WAITFORREAD);
 				mNotifyItemChanged.postValue(pos);
 			}
 			else {
-				String logstr = MessageFormat.format("BLEデバイス通信 準備失敗!! Address={0}", Address);
+				String logstr = MessageFormat.format("BLEデバイス通信 読込み失敗!! Address={0}", Address);
 				TLog.d(logstr);
 				showSnacbar(logstr);
-				int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE);
+				int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.FAILURE);
 				mNotifyItemChanged.postValue(pos);
 			}
 		}
 
 		@Override
 		public void notifyResRead(String Address, long ldatetime, double longitude, double latitude, int heartbeat, int status) throws RemoteException {
-			/* TODO */
-			String logstr = MessageFormat.format("デバイス読込成功 {0}=({1} 経度:{2} 緯度:{3} 脈拍:{4}) status={5}", Address, new Date(ldatetime), longitude, latitude, heartbeat, status);
-			TLog.d(logstr);
+			if(status == UWS_NG_SUCCESS) {
+				TLog.d("読込成功. {0}=({1} 経度:{2} 緯度:{3} 脈拍:{4}) status={5}", Address, new Date(ldatetime), longitude, latitude, heartbeat, status);
+				int pos = mDeviceListAdapter.setStatusAndReadData(Address, DeviceListAdapter.ConnectStatus.READSUCCEED, longitude, latitude, heartbeat);
+				mNotifyItemChanged.postValue(pos);
+
+				/* 読込み完了 -> Gatt切断 */
+				try { mBleServiceIf.disconnectDevice(Address);}
+				catch (RemoteException e) { e.printStackTrace();}
+				new Handler().postDelayed(() -> {
+					int pos2 = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE);
+					mNotifyItemChanged.postValue(pos2);
+				}, 200);
+			}
+			else {
+				TLog.d("読込失敗. {0}=({1} 経度:{2} 緯度:{3} 脈拍:{4}) status={5}", Address, new Date(ldatetime), longitude, latitude, heartbeat, status);
+				int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.FAILURE);
+				mNotifyItemChanged.postValue(pos);
+
+				/* 読込み完了 -> Gatt切断 */
+				try { mBleServiceIf.disconnectDevice(Address);}
+				catch (RemoteException e) { e.printStackTrace();}
+				new Handler().postDelayed(() -> {
+					int pos2 = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE);
+					mNotifyItemChanged.postValue(pos2);
+				}, 200);
+			}
 		}
 
-		@Override
-		public void notifyFromPeripheral(String Address, long ldatetime, double longitude, double latitude, int heartbeat) throws RemoteException {
-			/* TODO */
-			String logstr = MessageFormat.format("デバイス通知 {0}=({1} 経度:{2} 緯度:{3} 脈拍:{4})", Address, new Date(ldatetime), longitude, latitude, heartbeat);
-			TLog.d(logstr);
-		}
-
-		@Override
-		public void notifyError(int errcode, String errmsg) throws RemoteException {
-			String logstr = MessageFormat.format("ERROR!! errcode={0} : {1}", errcode, errmsg);
-			TLog.d(logstr);
-//TODO			Snackbar.make(findViewById(R.id.root_view), logstr, Snackbar.LENGTH_LONG).show();
-		}
+//		@Override
+//		public void notifyFromPeripheral(String Address, long ldatetime, double longitude, double latitude, int heartbeat) throws RemoteException {
+//			String logstr = MessageFormat.format("デバイス通知 {0}=({1} 経度:{2} 緯度:{3} 脈拍:{4})", Address, new Date(ldatetime), longitude, latitude, heartbeat);
+//			TLog.d(logstr);
+//		}
+//
+//		@Override
+//		public void notifyError(int errcode, String errmsg) throws RemoteException {
+//			String logstr = MessageFormat.format("ERROR!! errcode={0} : {1}", errcode, errmsg);
+//			TLog.d(logstr);
 	};
 }

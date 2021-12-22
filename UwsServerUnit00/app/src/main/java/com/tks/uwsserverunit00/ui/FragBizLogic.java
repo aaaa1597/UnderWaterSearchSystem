@@ -15,10 +15,6 @@ import com.tks.uwsserverunit00.R;
 public class FragBizLogic extends Fragment {
 //	private FragBizLogicViewModel	mViewModel;
 
-	public static FragBizLogic newInstance() {
-		return new FragBizLogic();
-	}
-
 	@Override
 	public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
 		return inflater.inflate(R.layout.frag_bizlogic, container, false);

@@ -1,10 +1,12 @@
 package com.tks.uwsserverunit00.ui;
 
+import android.graphics.Color;
 import android.text.TextUtils;
+import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -12,9 +14,11 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.tks.uwsserverunit00.DeviceInfo;
 import com.tks.uwsserverunit00.R;
+import static com.tks.uwsserverunit00.Constants.UWS_NG_DEVICE_NOTFOUND;
 
 /**
  * -30 dBm	素晴らしい	達成可能な最大信号強度。クライアントは、これを実現するには、APから僅か数フィートである必要があります。現実的には一般的ではなく、望ましいものでもありません	N/A
@@ -26,30 +30,40 @@ import com.tks.uwsserverunit00.R;
 
 public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.ViewHolder> {
 	static class ViewHolder extends RecyclerView.ViewHolder {
+//		TextView	mTxtShortUuid;		サービスUUIDは内部保持の変数なので見せない
+//		TextView	mTxtPrevShortUuid;	サービスUUIDは内部保持の変数なので見せない
+		TextView	mTxtSeekerId;
 		TextView	mTxtDeviceName;
 		TextView	mTxtDeviceNameAddress;
 		ImageView	mImvRssi;
 		ImageView	mImvConnectStatus;
-		TextView	mTxtId;
+		TextView	mTxtConnectStatus;
 		TextView	mTxtHertBeat;
-		Button		mBtnConnect;
+		CheckBox	mCkbConnect;
 		ImageButton	mBtnBuoy;
+		TextView	mTxtLongitude;
+		TextView	mTxtLatitude;
 		ViewHolder(View view) {
 			super(view);
-			mTxtDeviceName			= view.findViewById(R.id.device_name);
-			mTxtDeviceNameAddress	= view.findViewById(R.id.device_address);
+//			mTxtShortUuid			= view.findViewById(R.id.txtShortUuid);		サービスUUIDは内部保持の変数なので見せない
+//			mTxtPrevShortUuid		= view.findViewById(R.id.txtPrevShortUuid);	サービスUUIDは内部保持の変数なので見せない
+			mTxtSeekerId			= view.findViewById(R.id.txtSeekerId);
+			mTxtDeviceName			= view.findViewById(R.id.txtDeeviceName);
+			mTxtDeviceNameAddress	= view.findViewById(R.id.txtDeviceAddress);
 			mImvRssi				= view.findViewById(R.id.imvRssi);
 			mImvConnectStatus		= view.findViewById(R.id.imvConnectStatus);
-			mTxtId					= view.findViewById(R.id.txtId);
+			mTxtConnectStatus		= view.findViewById(R.id.txtConnectStatus);
 			mTxtHertBeat			= view.findViewById(R.id.txtHertBeat);
-			mBtnConnect				= view.findViewById(R.id.btnConnect);
+			mCkbConnect				= view.findViewById(R.id.ckbConnect);
 			mBtnBuoy				= view.findViewById(R.id.btnBuoy);
+			mTxtLongitude			= view.findViewById(R.id.txtLongitude);
+			mTxtLatitude			= view.findViewById(R.id.txtLatitude);
 		}
 	}
 
 	/* インターフェース : OnConnectBtnClickListener */
 	public interface OnConnectBtnClickListener {
-		void OnConnectBtnClick(View view, String deviceName, String deviceAddress);
+		void OnConnectBtnClick(View view, boolean isChecked, String deviceName, String deviceAddress);
 	}
 	private OnConnectBtnClickListener mClickListener;
 	/* コンストラクタ */
@@ -58,37 +72,32 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	}
 
 	/* メンバ変数 */
-	private ArrayList<DevicveInfoModel>	mDeviceList = new ArrayList<>();
-
-	public enum ConnectStatus { NONE, CONNECTING, EXPLORING, CHECKAPPLI, TOBEPREPARED, READY}
+	private ArrayList<DevicveInfoModel> mDeviceList = new ArrayList<>();
+	public enum ConnectStatus { NONE, CONNECTING, EXPLORING, CHECKAPPLI, TOBEPREPARED, WAITFORREAD, READSUCCEED, DISCONNECTED, FAILURE, OUTOFSERVICE}
 	private static class DevicveInfoModel {
+		public String			mShortUuid;
+		public String			mPrevShortUuid;
+		public int				mSeekerId;
 		public String			mDeviceName;
 		public String			mDeviceAddress;
 		public int				mDeviceRssi;
 		public ConnectStatus	mConnectStatus;
-		public int				mId;
 		public int				mHertBeat;
-		public  boolean			mIsApplicable;
-		public DevicveInfoModel(String devicename, String deviceaddress, int devicerssi, ConnectStatus status, int hertbeat, boolean isApplicable, int id) {
-			mDeviceName		= devicename;
-			mDeviceAddress	= deviceaddress;
-			mDeviceRssi		= devicerssi;
-			mConnectStatus	= status;
-			mId				= id;
-			mHertBeat		= hertbeat;
-			mIsApplicable	= isApplicable;
-		}
+		public boolean			mIsApplicable;
+		public boolean			mIsReading;
+		public double			mLongitude;
+		public double			mLatitude;
 	}
 
 	@NonNull
 	@Override
-	public DeviceListAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+	public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
 		View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.listitem_devices, parent, false);
 		return new ViewHolder(view);
 	}
 
 	@Override
-	public void onBindViewHolder(@NonNull DeviceListAdapter. ViewHolder holder, int position) {
+	public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
 		DevicveInfoModel model = mDeviceList.get(position);
 		final String deviceName		= model.mDeviceName;
 		final String deviceAddress	= model.mDeviceAddress;
@@ -96,25 +105,37 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 								model.mDeviceRssi > -70 ? R.drawable.wifi_level_2 :
 								model.mDeviceRssi > -80 ? R.drawable.wifi_level_1 : R.drawable.wifi_level_0;
 		final int constsresid =	!model.mIsApplicable								? R.drawable.statusx_na :
-								model.mConnectStatus == ConnectStatus.NONE			? R.drawable.status0_none :
-								model.mConnectStatus == ConnectStatus.CONNECTING	? R.drawable.status1_connectiong :
-								model.mConnectStatus == ConnectStatus.EXPLORING		? R.drawable.status2_exploring :
-								model.mConnectStatus == ConnectStatus.CHECKAPPLI	? R.drawable.status3_chkappli :
-								model.mConnectStatus == ConnectStatus.TOBEPREPARED	? R.drawable.status4_tobeprepared :
-								model.mConnectStatus == ConnectStatus.READY			? R.drawable.status5_ready : R.drawable.status0_none;
+								model.mConnectStatus == ConnectStatus.TOBEPREPARED	? R.drawable.status5_ready :
+																					  R.drawable.status0_none;
+		final Pair<String, Integer> statusinfo =
+								model.mConnectStatus == ConnectStatus.NONE			? Pair.create("", Color.BLACK) :
+								model.mConnectStatus == ConnectStatus.CONNECTING	? Pair.create("接続中", Color.rgb(0xf0, 0xe6, 0x8c)) :
+								model.mConnectStatus == ConnectStatus.EXPLORING		? Pair.create("探索中", Color.YELLOW) :
+								model.mConnectStatus == ConnectStatus.CHECKAPPLI	? Pair.create("対象確認中", Color.rgb(0xff, 0xd7, 0x00)) :
+								model.mConnectStatus == ConnectStatus.TOBEPREPARED	? Pair.create("通信中", Color.BLUE) :
+								model.mConnectStatus == ConnectStatus.WAITFORREAD	? Pair.create("読込中", Color.BLUE) :
+								model.mConnectStatus == ConnectStatus.READSUCCEED	? Pair.create("読込成功.", Color.BLUE) :
+								model.mConnectStatus == ConnectStatus.DISCONNECTED	? Pair.create("切断!!", Color.RED) :
+								model.mConnectStatus == ConnectStatus.FAILURE		? Pair.create("失敗!!", Color.RED) :
+								model.mConnectStatus == ConnectStatus.OUTOFSERVICE	? Pair.create("対象外!!", Color.rgb(0xff,0x8c,00)) : Pair.create("", Color.BLACK);
 		holder.mTxtDeviceName.setText(TextUtils.isEmpty(deviceName) ? "" : deviceName);
 		holder.mTxtDeviceNameAddress.setText(TextUtils.isEmpty(deviceAddress) ? "" : deviceAddress);
+		holder.mTxtSeekerId.setText((model.mSeekerId ==-1) ? " - " : String.valueOf(model.mSeekerId));
 		holder.mImvConnectStatus.setImageResource(constsresid);
-		holder.mTxtId.setText((model.mId==-1) ? " - " : String.valueOf(model.mId));
+		holder.mTxtConnectStatus.setText(statusinfo.first);
+		holder.mTxtConnectStatus.setTextColor(statusinfo.second);
 		holder.mImvRssi.setImageResource(rssiresid);
 		holder.mTxtHertBeat.setText(model.mHertBeat == 0 ? "-" : ""+model.mHertBeat);
-		holder.mBtnConnect.setOnClickListener(view -> {
-			/* 接続ボタン押下 */
-			mClickListener.OnConnectBtnClick(view, deviceName, deviceAddress);
+		holder.mCkbConnect.setChecked(model.mIsReading);
+		holder.mCkbConnect.setOnCheckedChangeListener((view, isChecked) -> {
+			model.mIsReading = isChecked;
+			mClickListener.OnConnectBtnClick(view, isChecked, deviceName, deviceAddress);
 		});
 		holder.mBtnBuoy.setOnClickListener(v -> {
 			/* 浮標ボタン押下 */
 		});
+		holder.mTxtLongitude.setText(String.valueOf(model.mLongitude));
+		holder.mTxtLatitude .setText(String.valueOf(model.mLatitude));
 	}
 
 	@Override
@@ -139,19 +160,46 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		if (deviceInfo == null)
 			return;
 
-		int existingPosition = getPosition(deviceInfo.getDeviceAddress());
-
-		if (existingPosition >= 0) {
-			/* 追加済 更新する */
-			DevicveInfoModel model = mDeviceList.get(existingPosition);
-			mDeviceList.set(existingPosition, new DevicveInfoModel(deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getDeviceRssi(), model.mConnectStatus, model.mHertBeat, model.mIsApplicable, deviceInfo.getId()));
+		DevicveInfoModel model = mDeviceList.stream().filter(item -> item.mShortUuid.equals(deviceInfo.getShortUuid())).findFirst().orElse(null);
+		if(model == null) {
+			/* 新規追加 */
+			mDeviceList.add(
+					new DevicveInfoModel() {{
+						mShortUuid		= deviceInfo.getShortUuid();
+						mPrevShortUuid	= deviceInfo.getShortUuid();
+						mSeekerId		= deviceInfo.getSeekerId();
+						mDeviceName		= deviceInfo.getDeviceName();
+						mDeviceAddress	= deviceInfo.getDeviceAddress();
+						mDeviceRssi		= deviceInfo.getDeviceRssi();
+						mConnectStatus	= ConnectStatus.NONE;
+						mHertBeat		= 0;
+						mIsApplicable	= deviceInfo.isApplicable();
+						mIsReading		= false;
+						mLongitude		= 0.0;
+						mLatitude		= 0.0;
+					}});
 		}
 		else {
-			/* 新規追加 */
-			mDeviceList.add(new DevicveInfoModel(deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getDeviceRssi(), ConnectStatus.NONE, 0, deviceInfo.isApplicable(), deviceInfo.getId()));
+			model.mPrevShortUuid= model.mShortUuid;
+			model.mShortUuid	= deviceInfo.getShortUuid();
+//			model.mPrevShortUuid= model.mShortUuid;
+			model.mSeekerId		= deviceInfo.getSeekerId();
+			model.mDeviceName	= deviceInfo.getDeviceName();
+			model.mDeviceAddress= deviceInfo.getDeviceAddress();
+			model.mDeviceRssi	= deviceInfo.getDeviceRssi();
+//			model.mConnectStatus= model.mConnectStatus;	更新しない
+//			model.mHertBeat		= model.mHertBeat;		更新しない
+			model.mIsApplicable	= deviceInfo.isApplicable();
+			model.mIsReading	= deviceInfo.isReading();
+			model.mLongitude	= deviceInfo.getLongitude();
+			model.mLatitude		= deviceInfo.getLatitude();
+			/* 並び替え。 */
 			mDeviceList.sort((o1, o2) -> {
+				/* SeekerIdの昇順 */
+				if(o1.mIsApplicable && o2.mIsApplicable)
+					return Integer.compare(o1.mSeekerId, o2.mSeekerId);
 				/* 対象のデバイス優先 */
-				if(o1.mIsApplicable && !o2.mIsApplicable)
+				else if(o1.mIsApplicable && !o2.mIsApplicable)
 					return -1;
 				else if(!o1.mIsApplicable && o2.mIsApplicable)
 					return 1;
@@ -169,28 +217,27 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	}
 
 	public int setStatus(String address, ConnectStatus status) {
-		int pos = getPosition(address);
-		mDeviceList.get(pos).mConnectStatus = status;
+		AtomicInteger index = new AtomicInteger(-1);
+		DevicveInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item -> item.mDeviceAddress.equals(address)).findFirst().orElse(null);
+		if(device == null)
+			return UWS_NG_DEVICE_NOTFOUND;
+		device.mConnectStatus = status;
 //		notifyItemChanged(pos);
-		return pos;
+		return index.get();
 	}
 
-	public int setHertBeat(String address, int rcvval) {
-		int pos = getPosition(address);
-		mDeviceList.get(pos).mHertBeat = rcvval;
-//		notifyItemChanged(pos);
-		return pos;
-	}
+	public int setStatusAndReadData(String address, ConnectStatus status, double longitude, double latitude, int heartbeat) {
+		AtomicInteger index = new AtomicInteger(-1);
+		DevicveInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item -> item.mDeviceAddress.equals(address)).findFirst().orElse(null);
+		if(device == null)
+			return UWS_NG_DEVICE_NOTFOUND;
 
-	private int getPosition(String address) {
-		int position = -1;
-		for (int i = 0; i < mDeviceList.size(); i++) {
-			if (mDeviceList.get(i).mDeviceAddress.equals(address)) {
-				position = i;
-				break;
-			}
-		}
-		return position;
+		device.mConnectStatus= status;
+		device.mLongitude	= longitude;
+		device.mLatitude	= latitude;
+		device.mHertBeat	= heartbeat;
+//		notifyItemChanged(pos);
+		return index.get();
 	}
 
 	public void clearDevice() {

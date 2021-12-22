@@ -10,110 +10,153 @@
 
     <LinearLayout
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:layout_height="80dp"
+        android:orientation="vertical">
 
         <LinearLayout
-            android:orientation="vertical"
-            android:layout_gravity="center"
-            android:layout_weight="1.25"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content">
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
 
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="fill_horizontal">
+            <TextView
+                android:id="@+id/txtSeekerId"
+                android:layout_width="40dp"
+                android:layout_height="match_parent"
+                android:textSize="36sp"
+                android:gravity="center"
+                android:layout_gravity="center"
+                android:text=" - " />
 
-                <androidx.constraintlayout.widget.ConstraintLayout
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="80dp"
+                android:layout_height="match_parent">
+
+                <TextView
+                    android:id="@+id/txtConnectStatus"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="0.7"
-                    android:scaleType="fitStart"
-                    android:layout_gravity="center_vertical"
-                    android:layout_width="0dp">
-                    <TextView
-                        android:id="@+id/txtId"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="18sp"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        android:text=" - " />
-                    <ImageView
-                        android:id="@+id/imvConnectStatus"
-                        android:layout_height="wrap_content"
-                        android:layout_width="wrap_content"
-                        android:adjustViewBounds="true"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        android:src="@drawable/status0_none" />
-                </androidx.constraintlayout.widget.ConstraintLayout>
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintRight_toRightOf="parent"
+                    android:textSize="8sp"
+                    android:ems="5"
+                    android:gravity="end"
+                    android:text="- NONE -" />
 
                 <ImageView
-                    android:id="@+id/imvRssi"
-                    android:layout_gravity="center"
-                    android:layout_margin="10dp"
-                    android:layout_weight="0.3"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:id="@+id/imvConnectStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
                     android:adjustViewBounds="true"
-                    android:scaleType="centerInside"
-                    android:src="@drawable/wifi_level_3"/>
+                    android:layout_gravity="center"
+                    android:src="@drawable/status0_none" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <ImageView
+                android:id="@+id/imvRssi"
+                android:layout_width="36dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="center"
+                android:adjustViewBounds="true"
+                android:padding="4dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/wifi_level_3"/>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="40dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="center">
+
+                <ImageView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@drawable/heartbeat"
+                    android:padding="5dp"
+                    app:layout_constraintLeft_toLeftOf="parent"
+                    app:layout_constraintRight_toRightOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"/>
 
                 <TextView
                     android:id="@+id/txtHertBeat"
-                    android:layout_gravity="center"
-                    android:layout_weight="0.3"
-                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/heartbeat"
+                    android:layout_width="40dp"
+                    android:textSize="24sp"
                     android:gravity="center"
-                    android:textSize="36sp"
-                    android:text="-" />
+                    app:layout_constraintLeft_toLeftOf="parent"
+                    app:layout_constraintRight_toRightOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    android:text="11" />
+                
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
-                <Button
-                    android:id="@+id/btnConnect"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:layout_weight="0.6"
-                    android:text="接続"
-                    android:textAllCaps="true"
-                    android:clickable="false"
-                    android:focusable="false"/>
+            <CheckBox
+                android:id="@+id/ckbConnect"
+                android:layout_width="40dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="center"/>
 
-                <ImageButton
-                    android:id="@+id/btnBuoy"
-                    android:layout_gravity="center"
-                    android:layout_height="wrap_content"
-                    android:layout_width="0dp"
-                    android:layout_weight="0.6"
-                    android:src="@drawable/buoy_diagonal"
-                    />
-            </LinearLayout>
+            <ImageButton
+                android:id="@+id/btnBuoy"
+                android:layout_height="40dp"
+                android:layout_width="40dp"
+                android:layout_gravity="center"
+                android:src="@drawable/buoy_diagonal"
+                android:scaleType="centerCrop"
+                />
+        </LinearLayout>
 
-            <LinearLayout
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="fill_horizontal">
+                android:textSize="8dp"
+                android:text="緯度 : "/>
 
-                <TextView
-                    android:id="@+id/device_address"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:autoSizeTextType="uniform"
-                    android:text="bbbbbbbbb"/>
-                <TextView
-                    android:id="@+id/device_name"
-                    android:layout_marginStart="10dp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="aaaaaaaaa"/>
+            <TextView
+                android:id="@+id/txtLatitude"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="8dp"
+                android:text="cccccccc"/>
 
-            </LinearLayout>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:textSize="8dp"
+                android:text="経度 : "/>
+
+            <TextView
+                android:id="@+id/txtLongitude"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="8dp"
+                android:text="dddddddddd"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/txtDeviceAddress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="bbbbbbbbb"/>
+
+            <TextView
+                android:id="@+id/txtDeeviceName"
+                android:layout_marginStart="10dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="aaaaaaaaa"/>
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

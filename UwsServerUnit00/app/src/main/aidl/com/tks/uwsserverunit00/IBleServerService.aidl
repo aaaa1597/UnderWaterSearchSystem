@@ -1,18 +1,14 @@
 // IBleServerService.aidl
 package com.tks.uwsserverunit00;
 import com.tks.uwsserverunit00.IBleServerServiceCallback;
-import com.tks.uwsserverunit00.DeviceInfo;
 
 interface IBleServerService {
     void setCallback(IBleServerServiceCallback callback);	/* 常に後勝ち */
     int initBle();
-    /* Scan */
+    /* Scan処理 */
     int startScan();
-    List<DeviceInfo> getDeviceInfolist();
-    DeviceInfo getDeviceInfo();
     int stopScan();
-    void clearDevice();
-    /* Communication */
+    /* 接続処理 */
     int connectDevice(String deviceAddress);
-//    void disconnectDevice(String deviceAddress); まだ不要
+    void disconnectDevice(String deviceAddress);
 }

@@ -1,22 +1,17 @@
 package com.tks.uwsserverunit00.ui;
 
 import androidx.core.app.ActivityCompat;
-
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
-
 import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -33,7 +28,6 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.tks.uwsserverunit00.R;
 import com.tks.uwsserverunit00.TLog;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -47,13 +41,9 @@ public class FragMap extends SupportMapFragment {
 
 	/* 検索情報 */
 	static class SerchInfo {
-		public Marker maker;        /* GoogleMapの Marker */
-		public Polyline polyline;    /* GoogleMapの polyline */
+		public Marker maker;		/* GoogleMapの Marker */
+		public Polyline polyline;	/* GoogleMapの polyline */
 	};
-
-//	public static FragMap newInstance() {
-//		return new FragMap();
-//	}
 
 	@NonNull
 	@Override

@@ -4,26 +4,38 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 public class DeviceInfo implements Parcelable {
+	private final String	mShortUuid;
+	private final int		mSeekerId;
 	private final String	mDeviceName;
 	private final String	mDeviceAddress;
 	private final int		mDeviceRssi;
 	private final boolean	mIsApplicable;
-	private final int		mId;
+	private final boolean	mIsReading;
+	private final double	mLongitude;
+	private final double	mLatitude;
 
-	public DeviceInfo(String devicename, String deviceaddress, int devicerssi, boolean isApplicable, int id) {
+	public DeviceInfo(String shortuuid, int seekerid, String devicename, String deviceaddress, int devicerssi, boolean isApplicable, boolean isReading, double longitude, double latitude) {
+		mShortUuid		= shortuuid;
+		mSeekerId		= seekerid;
 		mDeviceName		= devicename;
 		mDeviceAddress	= deviceaddress;
 		mDeviceRssi		= devicerssi;
 		mIsApplicable	= isApplicable;
-		mId				= id;
+		mIsReading		= isReading;
+		mLongitude		= longitude;
+		mLatitude		= latitude;
 	}
 
 	protected DeviceInfo(Parcel in) {
+		mShortUuid		= in.readString();
+		mSeekerId		= in.readInt();
 		mDeviceName		= in.readString();
 		mDeviceAddress	= in.readString();
 		mDeviceRssi		= in.readInt();
 		mIsApplicable	= in.readByte() != 0x00;
-		mId				= in.readInt();
+		mIsReading		= in.readByte() != 0x00;
+		mLongitude		= in.readDouble();
+		mLatitude		= in.readDouble();
 	}
 
 	public static final Creator<DeviceInfo> CREATOR = new Creator<DeviceInfo>() {
@@ -45,16 +57,24 @@ public class DeviceInfo implements Parcelable {
 
 	@Override
 	public void writeToParcel(Parcel dest, int flags) {
+		dest.writeString(mShortUuid);
+		dest.writeInt(mSeekerId);
 		dest.writeString(mDeviceName);
 		dest.writeString(mDeviceAddress);
 		dest.writeInt(mDeviceRssi);
 		dest.writeByte((byte)(mIsApplicable?0x01:0x00));
-		dest.writeInt(mId);
+		dest.writeByte((byte)(mIsReading?0x01:0x00));
+		dest.writeDouble(mLongitude);
+		dest.writeDouble(mLatitude);
 	}
 
+	public String	getShortUuid()		{ return mShortUuid;}
+	public int		getSeekerId()		{ return mSeekerId;}
 	public String	getDeviceName()		{ return mDeviceName;}
 	public String	getDeviceAddress()	{ return mDeviceAddress;}
 	public int		getDeviceRssi()		{ return mDeviceRssi;}
 	public boolean	isApplicable()		{ return mIsApplicable;}
-	public int		getId()				{ return mId;}
+	public boolean	isReading()			{ return mIsReading;}
+	public double	getLongitude()		{ return mLongitude;}
+	public double	getLatitude()		{ return mLatitude;}
 }

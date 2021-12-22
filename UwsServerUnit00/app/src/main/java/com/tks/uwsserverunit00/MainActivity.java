@@ -3,8 +3,7 @@ package com.tks.uwsserverunit00;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.fragment.app.FragmentActivity;
-import androidx.lifecycle.Observer;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import android.Manifest;
 import android.app.Activity;
@@ -19,7 +18,6 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
-
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.LocationServices;
@@ -29,10 +27,9 @@ import com.google.android.gms.location.SettingsClient;
 import com.google.android.material.snackbar.Snackbar;
 import com.tks.uwsserverunit00.ui.FragBleViewModel;
 import com.tks.uwsserverunit00.ui.FragMapViewModel;
-
 import java.util.Arrays;
 
-public class MainActivity extends FragmentActivity {
+public class MainActivity extends AppCompatActivity {
 	private FragBleViewModel	mBleViewModel;
 	private FragMapViewModel	mMapViewModel;
 	private boolean				mIsSettingLocationON		= false;
@@ -43,6 +40,7 @@ public class MainActivity extends FragmentActivity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+
 		TLog.d("");
 		mMapViewModel = new ViewModelProvider(this).get(FragMapViewModel.class);
 		mBleViewModel = new ViewModelProvider(this).get(FragBleViewModel.class);
@@ -150,7 +148,7 @@ public class MainActivity extends FragmentActivity {
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		TLog.d("onDestroy()");
+		TLog.d("");
 		unbindService(mCon);
 	}
 
