@@ -70,11 +70,6 @@ public class FragBleViewModel extends ViewModel {
 		mBleServiceIf = null;
 	}
 
-	public void addDevice(DeviceInfo result) {
-		mDeviceListAdapter.addDevice(result);
-		mNotifyDataSetChanged.postValue(true);
-	}
-
 	/** **********
 	 * Scan開始
 	 * **********/
@@ -107,10 +102,10 @@ public class FragBleViewModel extends ViewModel {
 	/** ******
 	 * 接続開始
 	 * ******/
-	public void connectDevice(String deviceAddress) {
+	public void connectDevice(String sUuid, String address) {
 		/* 接続チェックBOX押下 */
 		int ret = 0;
-		try { ret = mBleServiceIf.connectDevice(deviceAddress);}
+		try { ret = mBleServiceIf.connectDevice(address);}
 		catch (RemoteException e) { e.printStackTrace();}
 		if( ret < 0) {
 			TLog.d("BLE初期化/接続失敗!! DEVICE NOT FOUND.");
@@ -125,7 +120,7 @@ public class FragBleViewModel extends ViewModel {
 	/** ******
 	 * 接続終了
 	 * ******/
-	public void disconnectDevice(String deviceAddress) {
+	public void disconnectDevice(String sUuid, String address) {
 	}
 
 	/** *****************
@@ -151,99 +146,91 @@ public class FragBleViewModel extends ViewModel {
 //		}
 
 		@Override
-		public void notifyGattConnected(String Address) throws RemoteException {
+		public void notifyGattConnected(String shortUuid, String address) throws RemoteException {
 			/* Gatt接続完了 */
-			TLog.d("Gatt接続OK!! -> Services探索中. Address={0}", Address);
-			int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.EXPLORING);
+			TLog.d("Gatt接続OK!! -> Services探索中. sUuid={0} Address={1}", shortUuid, address);
+			int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.EXPLORING);
 			mNotifyItemChanged.postValue(pos);
 		}
 
 		@Override
-		public void notifyGattDisConnected(String Address) throws RemoteException {
-			String logstr = MessageFormat.format("Gatt接続断!! Address={0}", Address);
+		public void notifyGattDisConnected(String shortUuid, String address) throws RemoteException {
+			String logstr = MessageFormat.format("Gatt接続断!! sUuid={0} address={1}", shortUuid, address);
 			TLog.d(logstr);
 			showSnacbar(logstr);
-			int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.DISCONNECTED);
+			int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.DISCONNECTED);
 			mNotifyItemChanged.postValue(pos);
 		}
 
 		@Override
-		public void notifyServicesDiscovered(String Address, int status) throws RemoteException {
+		public void notifyServicesDiscovered(String shortUuid, String address, int status) throws RemoteException {
 			if(status == UWS_NG_GATT_SUCCESS) {
-				TLog.d("Services発見. -> 対象Serviceかチェック ret={0}", status);
-				int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.CHECKAPPLI);
+				TLog.d("Services発見. -> 対象Serviceかチェック sUuid={0} address={1} ret={2}", shortUuid, address, status);
+				int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.CHECKAPPLI);
 				mNotifyItemChanged.postValue(pos);
 			}
 			else {
-				String logstr = MessageFormat.format("Services探索失敗!! 処理終了 ret={0}", status);
+				String logstr = MessageFormat.format("Services探索失敗!! 処理終了 sUuid={0} address={1} ret={2}", shortUuid, address, status);
 				TLog.d(logstr);
 				showSnacbar(logstr);
-				int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.FAILURE);
+				int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.FAILURE);
 				mNotifyItemChanged.postValue(pos);
 			}
 		}
 
 		@Override
-		public void notifyApplicable(String Address, boolean status) throws RemoteException {
+		public void notifyApplicable(String shortUuid, String address, boolean status) throws RemoteException {
 			if(status) {
-				TLog.d("対象Chk-OK. -> 通信中 Address={0}", Address);
-				int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.TOBEPREPARED);
+				TLog.d("対象Chk-OK. -> 通信中 sUuid={0} address={1}", shortUuid, address);
+				int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.TOBEPREPARED);
 				mNotifyItemChanged.postValue(pos);
 			}
 			else {
-				String logstr = MessageFormat.format("対象外デバイス.　処理終了. Address={0}", Address);
+				String logstr = MessageFormat.format("対象外デバイス.　処理終了. sUuid={0} address={1}", shortUuid, address);
 				TLog.d(logstr);
-				int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.OUTOFSERVICE);
+				int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.OUTOFSERVICE);
 				mNotifyItemChanged.postValue(pos);
 				showSnacbar(logstr);
 			}
 		}
 
 		@Override
-		public void notifyWaitforRead(String Address, boolean status) throws RemoteException {
+		public void notifyWaitforRead(String shortUuid, String address, boolean status) throws RemoteException {
 			if(status) {
-				String logstr = MessageFormat.format("BLEデバイス通信 読込み中. Address={0}", Address);
+				String logstr = MessageFormat.format("BLEデバイス通信 読込み中. sUuid={0} address={1}", shortUuid, address);
 				TLog.d(logstr);
 				showSnacbar(logstr);
-				int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.WAITFORREAD);
+				int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.WAITFORREAD);
 				mNotifyItemChanged.postValue(pos);
 			}
 			else {
-				String logstr = MessageFormat.format("BLEデバイス通信 読込み失敗!! Address={0}", Address);
+				String logstr = MessageFormat.format("BLEデバイス通信 読込み失敗!! sUuid={0} address={1}", shortUuid, address);
 				TLog.d(logstr);
 				showSnacbar(logstr);
-				int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.FAILURE);
+				int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.FAILURE);
 				mNotifyItemChanged.postValue(pos);
 			}
 		}
 
 		@Override
-		public void notifyResRead(String Address, long ldatetime, double longitude, double latitude, int heartbeat, int status) throws RemoteException {
+		public void notifyResRead(String shortUuid, String address, long ldatetime, double longitude, double latitude, int heartbeat, int status) throws RemoteException {
 			if(status == UWS_NG_SUCCESS) {
-				TLog.d("読込成功. {0}=({1} 経度:{2} 緯度:{3} 脈拍:{4}) status={5}", Address, new Date(ldatetime), longitude, latitude, heartbeat, status);
-				int pos = mDeviceListAdapter.setStatusAndReadData(Address, DeviceListAdapter.ConnectStatus.READSUCCEED, longitude, latitude, heartbeat);
+				TLog.d("読込成功. {0}({1})=({2} 経度:{3} 緯度:{4} 脈拍:{5}) status={6}", shortUuid, address, new Date(ldatetime), longitude, latitude, heartbeat, status);
+				int pos = mDeviceListAdapter.setStatusAndReadData(shortUuid, address, DeviceListAdapter.ConnectStatus.READSUCCEED, longitude, latitude, heartbeat);
 				mNotifyItemChanged.postValue(pos);
 
 				/* 読込み完了 -> Gatt切断 */
-				try { mBleServiceIf.disconnectDevice(Address);}
+				try { mBleServiceIf.disconnectDevice(address);}
 				catch (RemoteException e) { e.printStackTrace();}
-				new Handler().postDelayed(() -> {
-					int pos2 = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE);
-					mNotifyItemChanged.postValue(pos2);
-				}, 200);
 			}
 			else {
-				TLog.d("読込失敗. {0}=({1} 経度:{2} 緯度:{3} 脈拍:{4}) status={5}", Address, new Date(ldatetime), longitude, latitude, heartbeat, status);
-				int pos = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.FAILURE);
+				TLog.d("読込失敗!! {0}({1})=({2} 経度:{3} 緯度:{4} 脈拍:{5}) status={6}", shortUuid, address, new Date(ldatetime), longitude, latitude, heartbeat, status);
+				int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.FAILURE);
 				mNotifyItemChanged.postValue(pos);
 
 				/* 読込み完了 -> Gatt切断 */
-				try { mBleServiceIf.disconnectDevice(Address);}
+				try { mBleServiceIf.disconnectDevice(address);}
 				catch (RemoteException e) { e.printStackTrace();}
-				new Handler().postDelayed(() -> {
-					int pos2 = mDeviceListAdapter.setStatus(Address, DeviceListAdapter.ConnectStatus.NONE);
-					mNotifyItemChanged.postValue(pos2);
-				}, 200);
 			}
 		}
 

@@ -32,20 +32,29 @@ public class FragBle extends Fragment {
 		super.onViewCreated(view, savedInstanceState);
 		mViewModel = new ViewModelProvider(requireActivity()).get(FragBleViewModel.class);
 		mViewModel.NotifyDataSetChanged().observe(getViewLifecycleOwner(), upd -> {
-			TLog.d("item更新");
+			TLog.d("item全表示");
 			mViewModel.getDeviceListAdapter().notifyDataSetChanged();
 //			int maxidx = mViewModel.getDeviceListAdapter().getItemCount() - 1;
 //			mViewModel.getDeviceListAdapter().notifyItemRangeInserted(maxidx ,1);
 		});
 		mViewModel.NotifyItemChanged().observe(getViewLifecycleOwner(), pos -> {
 			TLog.d("Item変更 DeviceListAdapter::notifyItemChanged(pos＝{0})", pos);
+			if(pos ==-1 )
+				TLog.d("Item変更 最初はposが-1になるらしい.)");
+			else if(pos < 0|| pos >= mViewModel.getDeviceListAdapter().getItemCount()) {
+				TLog.w("idx is index out of range. pos={0} adapter.size()={1}", pos, mViewModel.getDeviceListAdapter().getItemCount());
+				return;
+			}
 			mViewModel.getDeviceListAdapter().notifyItemChanged(pos);
 		});
-		mViewModel.setDeviceListAdapter(new DeviceListAdapter((viw, isChecked, deviceName, deviceAddress) -> {
+		mViewModel.setDeviceListAdapter(new DeviceListAdapter(getActivity().getApplicationContext(), (view1, sUuid, address, isChecked) -> {
+			int pos = mViewModel.getDeviceListAdapter().setChecked(sUuid, address, isChecked);
+			mViewModel.NotifyItemChanged().postValue(pos);
+
 			if(isChecked)
-				mViewModel.connectDevice(deviceAddress);
+				mViewModel.connectDevice(sUuid, address);
 			else
-				mViewModel.disconnectDevice(deviceAddress);
+				mViewModel.disconnectDevice(sUuid, address);
 		}));
 
 		/* BLEデバイスリストの初期化 */

@@ -33,4 +33,11 @@ public class Constants {
 		long value = i & 0xFFFFFFFF;
 		return new UUID(MSB | (value << 32), LSB);
 	}
+//	public static String getShortUuid(String uuid) {
+//		return uuid.substring(4,8);
+//	}
+//
+//	public static String getShortUuid(UUID uuid) {
+//		return uuid.toString().substring(4,8);
+//	}
 }

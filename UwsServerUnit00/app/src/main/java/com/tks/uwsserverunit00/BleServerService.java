@@ -354,11 +354,13 @@ public class BleServerService extends Service {
 	private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
 		@Override
 		public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-			TLog.d("BluetoothGattCallback::onConnectionStateChange() {0} -> {1}", status, newState);
+			String suuid= getShortUuid(gatt, UWS_UUID_SERVICE);
+			String addr = gatt.getDevice().getAddress();
+			TLog.d("BluetoothGattCallback::onConnectionStateChange() {0}:{1} {2} -> {3}", suuid, addr, status, newState);
 			TLog.d("BluetoothProfile.STATE_CONNECTING({0}) STATE_CONNECTED({1}) STATE_DISCONNECTING({2}) STATE_DISCONNECTED({3})", BluetoothProfile.STATE_CONNECTING, BluetoothProfile.STATE_CONNECTED, BluetoothProfile.STATE_DISCONNECTING, BluetoothProfile.STATE_DISCONNECTED);
 			/* Gatt接続完了 */
 			if(newState == BluetoothProfile.STATE_CONNECTED) {
-				try { mCb.notifyGattConnected(gatt.getDevice().getAddress()); }
+				try { mCb.notifyGattConnected(suuid, addr); }
 				catch (RemoteException e) { e.printStackTrace(); }
 				TLog.d("Gatt接続OK. address={0}", gatt.getDevice().getAddress());
 				gatt.discoverServices();
@@ -367,7 +369,7 @@ public class BleServerService extends Service {
 			/* Gattサーバ断 */
 			else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
 				TLog.d("Gatt断.");
-				try { mCb.notifyGattDisConnected(gatt.getDevice().getAddress()); }
+				try { mCb.notifyGattDisConnected(suuid, addr); }
 				catch (RemoteException e) { e.printStackTrace(); }
 
 				TLog.d("GATT 再接続");
@@ -379,40 +381,41 @@ public class BleServerService extends Service {
 
 		@Override
 		public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-			String address = gatt.getDevice().getAddress();
-			TLog.d("Services発見!! address={0} ret={1}", address, status);
+			String suuid= getShortUuid(gatt, UWS_UUID_SERVICE);
+			String addr = gatt.getDevice().getAddress();
+			TLog.d("Services発見!! suuid={0} address={1} ret={2}", suuid, addr, status);
 
-			try { mCb.notifyServicesDiscovered(gatt.getDevice().getAddress(), status); }
+			try { mCb.notifyServicesDiscovered(suuid, addr, status); }
 			catch (RemoteException e) { e.printStackTrace(); }
 
 			if (status == BluetoothGatt.GATT_SUCCESS) {
 				BluetoothGattCharacteristic charac = findTerget(gatt, UWS_UUID_SERVICE, UWS_UUID_CHARACTERISTIC_HRATBEAT);
 				if (charac != null) {
-					try { mCb.notifyApplicable(address, true); }
+					try { mCb.notifyApplicable(suuid, addr, true); }
 					catch (RemoteException e) { e.printStackTrace(); }
 
 					TLog.d("find it. Services and Characteristic.");
 					boolean ret = gatt.readCharacteristic(charac);	/* 初回読み出し */
 					if(ret) {
-						TLog.d("読込み中. address={0}", address);
-						try { mCb.notifyWaitforRead(address, true); }
+						TLog.d("読込み中. suuid={0} address={1}", suuid, gatt.getDevice().getAddress());
+						try { mCb.notifyWaitforRead(suuid, addr, true); }
 						catch (RemoteException e) { e.printStackTrace(); }
-						mConnectedPeripherals.put(address, gatt);
+						mConnectedPeripherals.put(gatt.getDevice().getAddress(), gatt);
 					}
 					else {
-						TLog.d("読込失敗!! address={0}", address);
-						try { mCb.notifyWaitforRead(address, false); }
+						TLog.d("読込失敗!! suuid={0} address={1}", suuid, gatt.getDevice().getAddress());
+						try { mCb.notifyWaitforRead(suuid, addr, false); }
 						catch (RemoteException e) { e.printStackTrace(); }
-						mConnectedPeripherals.remove(address);
+						mConnectedPeripherals.remove(gatt.getDevice().getAddress());
 						gatt.disconnect();
 						gatt.close();
 					}
 				}
 				else {
-					TLog.d("対象外デバイス!! address={0}", address);
-					try { mCb.notifyApplicable(address, false); }
+					TLog.d("対象外デバイス!! suuid={0} address={1}", suuid, gatt.getDevice().getAddress());
+					try { mCb.notifyApplicable(suuid, addr, false); }
 					catch (RemoteException e) { e.printStackTrace(); }
-					mConnectedPeripherals.remove(address);
+					mConnectedPeripherals.remove(gatt.getDevice().getAddress());
 					gatt.disconnect();
 					gatt.close();
 				}
@@ -422,16 +425,18 @@ public class BleServerService extends Service {
 		/* 読込み要求の応答 */
 		@Override
 		public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+			String suuid= getShortUuid(gatt, UWS_UUID_SERVICE);
+			String addr = gatt.getDevice().getAddress();
 			TLog.d("読込み要求の応答 status={0}", status);
 			if (status == BluetoothGatt.GATT_SUCCESS) {
 				Object[] rcvval = parseRcvData(characteristic);
-				try { mCb.notifyResRead(gatt.getDevice().getAddress(), (long)rcvval[0], (double)rcvval[1], (double)rcvval[2], (int)rcvval[3], UWS_NG_SUCCESS); }
+				try { mCb.notifyResRead(suuid, addr, (long)rcvval[0], (double)rcvval[1], (double)rcvval[2], (int)rcvval[3], UWS_NG_SUCCESS); }
 				catch (RemoteException e) { e.printStackTrace(); }
 				TLog.d("読込み要求の応答 rcvval=({0},{1},{2},{3}) status={4} BluetoothGatt.GATT_SUCCESS({5}) BluetoothGatt.GATT_FAILURE({6})", new Date((long)rcvval[0]), (double)rcvval[1], (double)rcvval[2], (int)rcvval[3], status, BluetoothGatt.GATT_SUCCESS, BluetoothGatt.GATT_FAILURE);
 			}
 			else {
 				TLog.d("GATT_FAILURE");
-				try { mCb.notifyResRead(gatt.getDevice().getAddress(), new Date().getTime(), 0, 0, 0, status); }
+				try { mCb.notifyResRead(suuid, addr, new Date().getTime(), 0, 0, 0, status); }
 				catch (RemoteException e) { e.printStackTrace(); }
 				TLog.d("読込み要求の応答 status={1} BluetoothGatt.GATT_SUCCESS({2}) BluetoothGatt.GATT_FAILURE({3})", status, BluetoothGatt.GATT_SUCCESS, BluetoothGatt.GATT_FAILURE);
 			}
@@ -516,5 +521,15 @@ public class BleServerService extends Service {
 			}
 		}
 		return new Object[] {new Date().getTime(),0,0,0};
+	}
+
+	/** ******************************************
+	 * GattからShortUuidを取得(対象外デバイスの時はnull)
+	 ** ******************************************/
+	private String getShortUuid(BluetoothGatt gatt, UUID TergetUuid) {
+		/* サービスUUIDを持たない場合もある */
+		if(gatt.getServices().size() == 0) return null;
+		/* 最後に定義されているサービスUUIDが有効 */
+		return gatt.getServices().get(gatt.getServices().size()-1).getUuid().toString().substring(4,8);
 	}
 }

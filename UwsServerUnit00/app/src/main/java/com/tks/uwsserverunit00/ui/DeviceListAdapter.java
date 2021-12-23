@@ -1,17 +1,20 @@
 package com.tks.uwsserverunit00.ui;
 
+import android.content.Context;
 import android.graphics.Color;
 import android.text.TextUtils;
 import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CompoundButton;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.recyclerview.widget.RecyclerView;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -65,16 +68,18 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 
 	/* インターフェース : OnConnectBtnClickListener */
 	public interface OnConnectBtnClickListener {
-		void OnConnectBtnClick(View view, boolean isChecked, String deviceName, String deviceAddress);
+		void OnConnectBtnClick(View view, @NonNull String sUuid, @NonNull String deviceAddress, boolean isChecked);
 	}
-	private OnConnectBtnClickListener mClickListener;
+	private final Context					mContext;
+	private final OnConnectBtnClickListener	mClickListener;
 	/* コンストラクタ */
-	public DeviceListAdapter(OnConnectBtnClickListener clickListener) {
-		mClickListener = clickListener;
+	public DeviceListAdapter(Context context, OnConnectBtnClickListener clickListener) {
+		mContext		= context;
+		mClickListener	= clickListener;
 	}
 
 	/* メンバ変数 */
-	private ArrayList<DevicveInfoModel> mDeviceList = new ArrayList<>();
+	private final ArrayList<DevicveInfoModel> mDeviceList = new ArrayList<>();
 	public enum ConnectStatus { NONE, CONNECTING, EXPLORING, CHECKAPPLI, TOBEPREPARED, WAITFORREAD, READSUCCEED, DISCONNECTED, FAILURE, OUTOFSERVICE}
 	private static class DevicveInfoModel {
 		public String			mShortUuid;
@@ -110,16 +115,16 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 								model.mConnectStatus == ConnectStatus.TOBEPREPARED	? R.drawable.status5_ready :
 																					  R.drawable.status0_none;
 		final Pair<String, Integer> statusinfo =
-								model.mConnectStatus == ConnectStatus.NONE			? Pair.create("", Color.BLACK) :
-								model.mConnectStatus == ConnectStatus.CONNECTING	? Pair.create("接続中", Color.rgb(0xf0, 0xe6, 0x8c)) :
-								model.mConnectStatus == ConnectStatus.EXPLORING		? Pair.create("探索中", Color.YELLOW) :
-								model.mConnectStatus == ConnectStatus.CHECKAPPLI	? Pair.create("対象確認中", Color.rgb(0xff, 0xd7, 0x00)) :
-								model.mConnectStatus == ConnectStatus.TOBEPREPARED	? Pair.create("通信中", Color.BLUE) :
-								model.mConnectStatus == ConnectStatus.WAITFORREAD	? Pair.create("読込中", Color.BLUE) :
-								model.mConnectStatus == ConnectStatus.READSUCCEED	? Pair.create("読込成功.", Color.BLUE) :
-								model.mConnectStatus == ConnectStatus.DISCONNECTED	? Pair.create("切断!!", Color.RED) :
-								model.mConnectStatus == ConnectStatus.FAILURE		? Pair.create("失敗!!", Color.RED) :
-								model.mConnectStatus == ConnectStatus.OUTOFSERVICE	? Pair.create("対象外!!", Color.rgb(0xff,0x8c,00)) : Pair.create("", Color.BLACK);
+								model.mConnectStatus == ConnectStatus.NONE			? Pair.create(""			, Color.BLACK) :
+								model.mConnectStatus == ConnectStatus.CONNECTING	? Pair.create("接続中"	, mContext.getColor(R.color.orange)) :
+								model.mConnectStatus == ConnectStatus.EXPLORING		? Pair.create("探索中"	, mContext.getColor(R.color.orange)) :
+								model.mConnectStatus == ConnectStatus.CHECKAPPLI	? Pair.create("対象確認中"	, mContext.getColor(R.color.orange)) :
+								model.mConnectStatus == ConnectStatus.TOBEPREPARED	? Pair.create("通信中"	, Color.BLUE) :
+								model.mConnectStatus == ConnectStatus.WAITFORREAD	? Pair.create("読込中"	, Color.BLUE) :
+								model.mConnectStatus == ConnectStatus.READSUCCEED	? Pair.create("読込成功."	, Color.BLUE) :
+								model.mConnectStatus == ConnectStatus.DISCONNECTED	? Pair.create("切断!!"	, Color.RED) :
+								model.mConnectStatus == ConnectStatus.FAILURE		? Pair.create("失敗!!"	, Color.RED) :
+								model.mConnectStatus == ConnectStatus.OUTOFSERVICE	? Pair.create("対象外!!"	, Color.RED) : Pair.create("", Color.BLACK);
 		holder.mTxtDeviceName.setText(TextUtils.isEmpty(deviceName) ? "" : deviceName);
 		holder.mTxtDeviceNameAddress.setText(TextUtils.isEmpty(deviceAddress) ? "" : deviceAddress);
 		holder.mTxtSeekerId.setText((model.mSeekerId ==-1) ? " - " : String.valueOf(model.mSeekerId));
@@ -128,10 +133,18 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		holder.mTxtConnectStatus.setTextColor(statusinfo.second);
 		holder.mImvRssi.setImageResource(rssiresid);
 		holder.mTxtHertBeat.setText(model.mHertBeat == 0 ? "-" : ""+model.mHertBeat);
+		holder.mSwhConnect.setOnCheckedChangeListener(null);
 		holder.mSwhConnect.setChecked(model.mIsReading);
+		final String shortuuid = model.mShortUuid;
 		holder.mSwhConnect.setOnCheckedChangeListener((view, isChecked) -> {
-			model.mIsReading = isChecked;
-			mClickListener.OnConnectBtnClick(view, isChecked, deviceName, deviceAddress);
+			DevicveInfoModel device = mDeviceList.stream().filter(item -> item.mShortUuid.equals(shortuuid)).findFirst().orElse(null);
+			/* UUIDで検索できない場合は、adressから検索する */
+			if(device == null)
+				device = mDeviceList.stream().filter(item -> item.mDeviceAddress.equals(deviceAddress)).findFirst().orElse(null);
+			/* UUIDも、adressからも検索出来ない時は、処理しない */
+			if(device == null)
+				return;
+			mClickListener.OnConnectBtnClick(view, device.mShortUuid, device.mDeviceAddress, isChecked);
 		});
 		holder.mBtnBuoy.setOnClickListener(v -> {
 			/* 浮標ボタン押下 */
@@ -158,12 +171,14 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		addDevice(deviceInfo, true);
 	}
 
-	public void addDevice(DeviceInfo deviceInfo, boolean notify) {
+	private void addDevice(DeviceInfo deviceInfo, boolean notify) {
 		if (deviceInfo == null)
 			return;
 
-		DevicveInfoModel model = mDeviceList.stream().filter(item -> item.mShortUuid.equals(deviceInfo.getShortUuid())).findFirst().orElse(null);
-		if(model == null) {
+		DevicveInfoModel device = mDeviceList.stream().filter(item -> item.mShortUuid.equals(deviceInfo.getShortUuid())).findFirst().orElse(null);
+		if(device == null)
+			device = mDeviceList.stream().filter(item -> item.mDeviceAddress.equals(deviceInfo.getDeviceAddress())).findFirst().orElse(null);
+		if(device == null) {
 			/* 新規追加 */
 			mDeviceList.add(
 					new DevicveInfoModel() {{
@@ -182,68 +197,96 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 					}});
 		}
 		else {
-			model.mPrevShortUuid= model.mShortUuid;
-			model.mShortUuid	= deviceInfo.getShortUuid();
-//			model.mPrevShortUuid= model.mShortUuid;
-			model.mSeekerId		= deviceInfo.getSeekerId();
-			model.mDeviceName	= deviceInfo.getDeviceName();
-			model.mDeviceAddress= deviceInfo.getDeviceAddress();
-			model.mDeviceRssi	= deviceInfo.getDeviceRssi();
-//			model.mConnectStatus= model.mConnectStatus;	更新しない
-//			model.mHertBeat		= model.mHertBeat;		更新しない
-			model.mIsApplicable	= deviceInfo.isApplicable();
-			model.mIsReading	= deviceInfo.isReading();
-			model.mLongitude	= deviceInfo.getLongitude();
-			model.mLatitude		= deviceInfo.getLatitude();
-			/* 並び替え。 */
-			mDeviceList.sort((o1, o2) -> {
-				/* SeekerIdの昇順 */
-				if(o1.mIsApplicable && o2.mIsApplicable)
-					return Integer.compare(o1.mSeekerId, o2.mSeekerId);
-				/* 対象のデバイス優先 */
-				else if(o1.mIsApplicable && !o2.mIsApplicable)
-					return -1;
-				else if(!o1.mIsApplicable && o2.mIsApplicable)
-					return 1;
-
-				/* 次にアドレス名で並び替え */
-				int compare = o1.mDeviceAddress.compareTo(o2.mDeviceAddress);
-				if(compare == 0) return 0;
-				return compare < 0 ? -1 : 1;
-			});
+			device.mPrevShortUuid	= device.mShortUuid;
+			device.mShortUuid		= deviceInfo.getShortUuid();
+//			device.mPrevShortUuid	= device.mShortUuid;
+			device.mSeekerId		= deviceInfo.getSeekerId();
+			device.mDeviceName		= deviceInfo.getDeviceName();
+			device.mDeviceAddress	= deviceInfo.getDeviceAddress();
+			device.mDeviceRssi		= deviceInfo.getDeviceRssi();
+//			device.mConnectStatus	= model.mConnectStatus;	更新しない
+//			device.mHertBeat		= model.mHertBeat;		更新しない
+			device.mIsApplicable	= deviceInfo.isApplicable();
+//			device.mIsReading		= device.mIsReading;	更新してはいけない
+			device.mLongitude		= deviceInfo.getLongitude();
+			device.mLatitude		= deviceInfo.getLatitude();
 		}
+
+		/* 並び替え。 */
+		mDeviceList.sort((o1, o2) -> {
+			/* SeekerIdの昇順 */
+			if(o1.mIsApplicable && o2.mIsApplicable)
+				return Integer.compare(o1.mSeekerId, o2.mSeekerId);
+				/* 対象のデバイス優先 */
+			else if(o1.mIsApplicable && !o2.mIsApplicable)
+				return -1;
+			else if(!o1.mIsApplicable && o2.mIsApplicable)
+				return 1;
+
+			/* 次にアドレス名で並び替え */
+			int compare = o1.mDeviceAddress.compareTo(o2.mDeviceAddress);
+			if(compare == 0) return 0;
+			return compare < 0 ? -1 : 1;
+		});
 
 //		if (notify) {
 //			notifyDataSetChanged();
 //		}
 	}
 
-	public int setStatus(String address, ConnectStatus status) {
+	public int setChecked(@NonNull String suuid, @NonNull String address, boolean isChecked) {
 		AtomicInteger index = new AtomicInteger(-1);
-		DevicveInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item -> item.mDeviceAddress.equals(address)).findFirst().orElse(null);
-		if(device == null)
-			return UWS_NG_DEVICE_NOTFOUND;
-		device.mConnectStatus = status;
-//		notifyItemChanged(pos);
+		DevicveInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item -> item.mShortUuid.equals(suuid)).findFirst().orElse(null);
+		if(device == null) {
+			/* UUIDで検索できない場合は、adressから検索する */
+			index.set(-1);
+			device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item -> item.mDeviceAddress.equals(address)).findFirst().orElse(null);
+		}
+		/* 見つからない時は、デバイスなし */
+		if(device == null) return UWS_NG_DEVICE_NOTFOUND;
+		/* チェックフラグ設定 */
+		device.mIsReading = isChecked;
+//		notifyItemChanged(pos); UIスレッドで実行する必要がある。
 		return index.get();
 	}
 
-	public int setStatusAndReadData(String address, ConnectStatus status, double longitude, double latitude, int heartbeat) {
+	public int setStatus(@NonNull String suuid, @NonNull String address, ConnectStatus status) {
 		AtomicInteger index = new AtomicInteger(-1);
-		DevicveInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item -> item.mDeviceAddress.equals(address)).findFirst().orElse(null);
-		if(device == null)
-			return UWS_NG_DEVICE_NOTFOUND;
+		DevicveInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item -> item.mShortUuid.equals(suuid)).findFirst().orElse(null);
+		if(device == null) {
+			/* UUIDで検索できない場合は、adressから検索する */
+			index.set(-1);
+			device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item -> item.mDeviceAddress.equals(address)).findFirst().orElse(null);
+		}
+		/* 見つからない時は、デバイスなし */
+		if(device == null) return UWS_NG_DEVICE_NOTFOUND;
+		/* ステータス更新 */
+		device.mConnectStatus = status;
+//		notifyItemChanged(pos); UIスレッドで実行する必要がある。
+		return index.get();
+	}
+
+	public int setStatusAndReadData(@NonNull String suuid, @NonNull String address, ConnectStatus status, double longitude, double latitude, int heartbeat) {
+		AtomicInteger index = new AtomicInteger(-1);
+		DevicveInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item -> item.mShortUuid.equals(suuid)).findFirst().orElse(null);
+		if(device == null) {
+			/* UUIDで検索できない場合は、adressから検索する */
+			index.set(-1);
+			device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item -> item.mDeviceAddress.equals(address)).findFirst().orElse(null);
+		}
+		/* 見つからない時は、デバイスなし */
+		if(device == null) return UWS_NG_DEVICE_NOTFOUND;
 
 		device.mConnectStatus= status;
 		device.mLongitude	= longitude;
 		device.mLatitude	= latitude;
 		device.mHertBeat	= heartbeat;
-//		notifyItemChanged(pos);
+//		notifyItemChanged(pos); UIスレッドで実行する必要がある。
 		return index.get();
 	}
 
 	public void clearDevice() {
 		mDeviceList.clear();
-//		notifyDataSetChanged();
+//		notifyDataSetChanged(); UIスレッドで実行する必要がある。
 	}
 }
