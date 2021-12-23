@@ -62,6 +62,12 @@
                 android:scaleType="centerInside"
                 android:src="@drawable/wifi_level_3"/>
 
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/swhConnect"
+                android:layout_width="60dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"/>
+
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="40dp"
                 android:layout_height="match_parent"
@@ -90,11 +96,6 @@
                     android:text="11" />
                 
             </androidx.constraintlayout.widget.ConstraintLayout>
-
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/swhConnect"
-                android:layout_width="60dp"
-                android:layout_height="20dp"/>
 
             <ImageButton
                 android:id="@+id/btnBuoy"
