@@ -146,6 +146,8 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 				return;
 			mClickListener.OnConnectBtnClick(view, device.mShortUuid, device.mDeviceAddress, isChecked);
 		});
+//		holder.mBtnBuoy.setOnClickListener(null);
+//		holder.mBtnBuoy.setValue(true);
 		holder.mBtnBuoy.setOnClickListener(v -> {
 			/* 浮標ボタン押下 */
 		});
