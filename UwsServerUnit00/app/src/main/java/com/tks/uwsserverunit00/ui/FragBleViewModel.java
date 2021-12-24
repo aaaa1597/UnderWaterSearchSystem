@@ -2,6 +2,7 @@ package com.tks.uwsserverunit00.ui;
 
 import android.os.Handler;
 import android.os.RemoteException;
+import android.util.Pair;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -12,7 +13,9 @@ import com.tks.uwsserverunit00.IBleServerServiceCallback;
 import com.tks.uwsserverunit00.TLog;
 import java.text.MessageFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static com.tks.uwsserverunit00.Constants.UWS_NG_SUCCESS;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_GATT_SUCCESS;
@@ -106,14 +109,20 @@ public class FragBleViewModel extends ViewModel {
 	 * 定期読込開始
 	 * *********/
 	private final Handler mHandler = new Handler();
-	private Runnable mPeriodicReader = null;
+	private final Map<Pair<String, String>, Runnable> mPeriodicRunners = new HashMap<>();
 	public void startPeriodicRead(@NonNull String sUuid, @NonNull String address) {
-		mPeriodicReader = () -> {
+		Runnable runnable = mPeriodicRunners.get(Pair.create(sUuid, address));
+		if(runnable != null) {
+			TLog.d("すでに定期実行中。sUuid={0} adress={1}", sUuid, address);
+			return;
+		}
+
+		/* 定期実行処理生成 */
+		Runnable oneshotReader = () -> {
 			String laddress = mDeviceListAdapter.getAddress(sUuid, address);
 			if(laddress == null) {
 				/* 今回はデバイスが見つからない、計測実行。 */
 				TLog.d("今回はデバイスが見つからない -> 継続実行。sUuid={0} adress={1}", sUuid, address);
-				mHandler.postDelayed(mPeriodicReader, PERIODIC_INTERVAL_TIME);
 			}
 
 			int ret = 0;
@@ -127,10 +136,12 @@ public class FragBleViewModel extends ViewModel {
 					mNotifyItemChanged.postValue(idx);
 				}
 			}
-			/* 2秒定期で実行 */
-			mHandler.postDelayed(mPeriodicReader, PERIODIC_INTERVAL_TIME);
 		};
-		mHandler.post(mPeriodicReader);
+
+		/* 定期実行処理push */
+		mPeriodicRunners.put(Pair.create(sUuid, address), oneshotReader);
+
+		mHandler.post(oneshotReader);
 		showSnacbar("定期読込み 開始しました。");
 	}
 
@@ -138,16 +149,16 @@ public class FragBleViewModel extends ViewModel {
 	 * 定期読込開始終了
 	 * ************/
 	public void stopPeriodicRead(String sUuid, String address) {
-		TLog.d("aaaaaaaaaaa  期待通り、停止が動く. suuid={2} address={1}", sUuid, address);
-
-		mHandler.removeCallbacks(mPeriodicReader);
-		mPeriodicReader = null;
+		Runnable runnable = mPeriodicRunners.remove(Pair.create(sUuid, address));
+		if(runnable != null)
+			mHandler.removeCallbacks(runnable);
 		showSnacbar("定期読込み 終了しました。");
 	}
 
 	/** *****************
 	 * AIDLコールバック
 	 * *****************/
+	private final Map<Pair<String, String>, Boolean> mMsg = new HashMap<>();
 	private final IBleServerServiceCallback mCb = new IBleServerServiceCallback.Stub() {
 		@Override
 		public void notifyDeviceInfolist(List<DeviceInfo> devices) {
@@ -179,8 +190,18 @@ public class FragBleViewModel extends ViewModel {
 		public void notifyGattDisConnected(String shortUuid, String address) {
 			String logstr = MessageFormat.format("Gatt接続断!! sUuid={0} address={1}", shortUuid, address);
 			TLog.d(logstr);
-			int idx = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.DISCONNECTED);
-			mNotifyItemChanged.postValue(idx);
+
+			/* 正常終了による説損断なら、表示はそのまま */
+			Boolean msg = mMsg.remove(Pair.create(shortUuid, address));
+			if(msg == null || !msg) {
+				int idx = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.DISCONNECTED);
+				mNotifyItemChanged.postValue(idx);
+			}
+
+//			ここで定期読込みの再実行はしない。無限Loopになる。
+//			Runnable oneshotReader = mPeriodicRunners.get(Pair.create(shortUuid, address));
+//			if(oneshotReader != null)
+//				mHandler.postDelayed(oneshotReader, PERIODIC_INTERVAL_TIME);
 		}
 
 		@Override
@@ -195,6 +216,11 @@ public class FragBleViewModel extends ViewModel {
 				TLog.d(logstr);
 				int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.FAILURE);
 				mNotifyItemChanged.postValue(pos);
+
+				/* 定期読込み実行中なら、継続実行 */
+				Runnable oneshotReader = mPeriodicRunners.get(Pair.create(shortUuid, address));
+				if(oneshotReader != null)
+					mHandler.postDelayed(oneshotReader, PERIODIC_INTERVAL_TIME);
 			}
 		}
 
@@ -211,6 +237,8 @@ public class FragBleViewModel extends ViewModel {
 				int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.OUTOFSERVICE);
 						  mDeviceListAdapter.setChecked(shortUuid, address,false);
 				mNotifyItemChanged.postValue(pos);
+				/* 定期読込み実行停止 */
+				stopPeriodicRead(shortUuid, address);
 			}
 		}
 
@@ -227,6 +255,11 @@ public class FragBleViewModel extends ViewModel {
 				TLog.d(logstr);
 				int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.FAILURE);
 				mNotifyItemChanged.postValue(pos);
+
+				/* 定期読込み実行中なら、継続実行 */
+				Runnable oneshotReader = mPeriodicRunners.get(Pair.create(shortUuid, address));
+				if(oneshotReader != null)
+					mHandler.postDelayed(oneshotReader, PERIODIC_INTERVAL_TIME);
 			}
 		}
 
@@ -236,31 +269,18 @@ public class FragBleViewModel extends ViewModel {
 				TLog.d("読込成功. {0}({1})=({2} 経度:{3} 緯度:{4} 脈拍:{5}) status={6}", shortUuid, address, new Date(ldatetime), longitude, latitude, heartbeat, status);
 				int pos = mDeviceListAdapter.setStatusAndReadData(shortUuid, address, DeviceListAdapter.ConnectStatus.READSUCCEED, longitude, latitude, heartbeat);
 				mNotifyItemChanged.postValue(pos);
-
-//				/* 読込み完了 -> Gatt切断(ここではやらない) */
-//				try { mBleServiceIf.disconnectDevice(address);}
-//				catch (RemoteException e) { e.printStackTrace();}
+				mMsg.put(Pair.create(shortUuid, address), true);
 			}
 			else {
 				TLog.d("読込失敗!! {0}({1})=({2} 経度:{3} 緯度:{4} 脈拍:{5}) status={6}", shortUuid, address, new Date(ldatetime), longitude, latitude, heartbeat, status);
 				int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.FAILURE);
 				mNotifyItemChanged.postValue(pos);
-
-//				/* 読込み完了 -> Gatt切断(ここではやらない) */
-//				try { mBleServiceIf.disconnectDevice(address);}
-//				catch (RemoteException e) { e.printStackTrace();}
 			}
-		}
 
-//		@Override
-//		public void notifyFromPeripheral(String Address, long ldatetime, double longitude, double latitude, int heartbeat) throws RemoteException {
-//			String logstr = MessageFormat.format("デバイス通知 {0}=({1} 経度:{2} 緯度:{3} 脈拍:{4})", Address, new Date(ldatetime), longitude, latitude, heartbeat);
-//			TLog.d(logstr);
-//		}
-//
-//		@Override
-//		public void notifyError(int errcode, String errmsg) throws RemoteException {
-//			String logstr = MessageFormat.format("ERROR!! errcode={0} : {1}", errcode, errmsg);
-//			TLog.d(logstr);
+			/* 定期読込み実行中なら、継続実行 */
+			Runnable oneshotReader = mPeriodicRunners.get(Pair.create(shortUuid, address));
+			if(oneshotReader != null)
+				mHandler.postDelayed(oneshotReader, PERIODIC_INTERVAL_TIME);
+		}
 	};
 }

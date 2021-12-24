@@ -9,5 +9,5 @@ interface IBleServerService {
     int startScan();
     int stopScan();
     /* 接続処理 */
-    int readData(String deviceAddress);
+    int readData(String address);
 }

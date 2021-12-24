@@ -128,11 +128,6 @@ public class BleServerService extends Service {
 	 * BLEクリア
 	 * ********/
 	private void BsvClearDevice() {
-		mConnectedPeripherals.forEach((addr, gat) -> {
-			gat.disconnect();
-			gat.close();
-		});
-		mConnectedPeripherals.clear();
 	}
 
 	/* ********************************************************************************
@@ -296,7 +291,6 @@ public class BleServerService extends Service {
 	/** *************
 	 * BLEデバイス接続
 	 ** *************/
-	private final Map<String, BluetoothGatt> mConnectedPeripherals = new HashMap<>();
 	private int BsvReadData(final String address) {
 		if(address == null || address.equals("")) {
 			TLog.d("デバイスアドレスなし");
@@ -383,13 +377,11 @@ public class BleServerService extends Service {
 						TLog.d("読込み中. suuid={0} address={1}", suuid, gatt.getDevice().getAddress());
 						try { mCb.notifyWaitforRead(suuid, addr, true); }
 						catch (RemoteException e) { e.printStackTrace(); }
-						mConnectedPeripherals.put(gatt.getDevice().getAddress(), gatt);
 					}
 					else {
 						TLog.d("読込失敗!! suuid={0} address={1}", suuid, gatt.getDevice().getAddress());
 						try { mCb.notifyWaitforRead(suuid, addr, false); }
 						catch (RemoteException e) { e.printStackTrace(); }
-						mConnectedPeripherals.remove(gatt.getDevice().getAddress());
 						gatt.disconnect();
 						gatt.close();
 					}
@@ -398,7 +390,6 @@ public class BleServerService extends Service {
 					TLog.d("対象外デバイス!! suuid={0} address={1}", suuid, gatt.getDevice().getAddress());
 					try { mCb.notifyApplicable(suuid, addr, false); }
 					catch (RemoteException e) { e.printStackTrace(); }
-					mConnectedPeripherals.remove(gatt.getDevice().getAddress());
 					gatt.disconnect();
 					gatt.close();
 				}
@@ -423,8 +414,9 @@ public class BleServerService extends Service {
 				catch (RemoteException e) { e.printStackTrace(); }
 				TLog.d("読込み要求の応答 status={1} BluetoothGatt.GATT_SUCCESS({2}) BluetoothGatt.GATT_FAILURE({3})", status, BluetoothGatt.GATT_SUCCESS, BluetoothGatt.GATT_FAILURE);
 			}
-//			/* gatt切断(ここではやらない) */
-//			gatt.disconnect();
+
+			/* gatt切断 */
+			gatt.disconnect();
 		}
 
 		@Override
@@ -440,10 +432,6 @@ public class BleServerService extends Service {
 	 * BLEデバイス切断
 	 ** *************/
 	private void BsvDisConnectDevice(String deviceAddress) {
-		BluetoothGatt gatt = mConnectedPeripherals.remove(deviceAddress);
-		if(gatt == null) return;
-		gatt.disconnect();
-		gatt.close();
 	}
 
 	/** *************************
@@ -464,7 +452,14 @@ public class BleServerService extends Service {
 			}).collect(Collectors.toList());
 			/* 見つかった最後の分が有効なので、上書きする */
 			ret = findc.get(0);
+			/* TODO */
+			if(ret!=null)
+				TLog.d("get it. serviceUUID = {0} address={1}", service.getUuid(), gatt.getDevice().getAddress());
 		}
+
+		/* TODO */
+		if(ret!=null)
+			TLog.d("return charc-UUID = {0} address={1}", ret.getUuid(), gatt.getDevice().getAddress());
 		return ret;
 	}
 
@@ -514,7 +509,15 @@ public class BleServerService extends Service {
 	private String getShortUuid(BluetoothGatt gatt, UUID TergetUuid) {
 		/* サービスUUIDを持たない場合もある */
 		if(gatt.getServices().size() == 0) return null;
+
+		/* TODO */
+		for(BluetoothGattService service : gatt.getServices()) {
+			TLog.d("serviceUUID={0} address={1}", service.getUuid(), gatt.getDevice().getAddress());
+		}
+
 		/* 最後に定義されているサービスUUIDが有効 */
+		/* TODO */
+		TLog.d("return serviceUUID={0} address={1}", gatt.getServices().get(gatt.getServices().size()-1).getUuid(), gatt.getDevice().getAddress());
 		return gatt.getServices().get(gatt.getServices().size()-1).getUuid().toString().substring(4,8);
 	}
 }

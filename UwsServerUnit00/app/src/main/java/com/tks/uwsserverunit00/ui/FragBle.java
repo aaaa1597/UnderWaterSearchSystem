@@ -50,9 +50,6 @@ public class FragBle extends Fragment {
 			int pos = mViewModel.getDeviceListAdapter().setChecked(sUuid, address, isChecked);
 			mViewModel.NotifyItemChanged().postValue(pos);
 
-			if( !isChecked)
-				TLog.d("aaaaaaaaaaa  期待通りこっちが動く. isChecked={0}. suuid={1} address={2}", isChecked, sUuid, address);
-
 			if(isChecked)
 				mViewModel.startPeriodicRead(sUuid, address);
 			else
