@@ -29,6 +29,7 @@ import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Queue;
+import java.util.UUID;
 
 import static com.tks.uwsclient.Constants.UWS_CHARACTERISTIC_SAMLE_UUID;
 import static com.tks.uwsclient.Constants.UWS_NG_SUCCESS;
@@ -36,7 +37,6 @@ import static com.tks.uwsclient.Constants.UWS_NG_ADAPTER_NOTFOUND;
 import static com.tks.uwsclient.Constants.UWS_NG_PERMISSION_DENIED;
 import static com.tks.uwsclient.Constants.UWS_NG_SERVICE_NOTFOUND;
 import static com.tks.uwsclient.Constants.UWS_NG_GATTSERVER_NOTFOUND;
-import static com.tks.uwsclient.Constants.UWS_SERVICE_UUID;
 
 public class BleClientService extends Service {
 	private IBleClientServiceCallback	mCb;	/* 常に後発優先 */
@@ -64,22 +64,22 @@ public class BleClientService extends Service {
 		}
 
 		@Override
-		public int initBle() throws RemoteException {
+		public int initBle() {
 			return BctInit();
 		}
 
 		@Override
-		public void startAdvertising(int seekerid) throws RemoteException {
+		public void startAdvertising(int seekerid) {
 			BctStartAdvertising(seekerid);
 		}
 
 		@Override
-		public void stopAdvertising() throws RemoteException {
+		public void stopAdvertising() {
 			BctStopAdvertising();
 		}
 
 		@Override
-		public void notifyOneShot() throws RemoteException {
+		public void notifyOneShot() {
 			BctNotifyOneShot();
 		}
 	};
@@ -120,9 +120,6 @@ public class BleClientService extends Service {
 		if(mGattManager == null)
 			return UWS_NG_GATTSERVER_NOTFOUND;
 
-		/* 自分自身のペリフェラル特性を定義 */
-		mUwsCharacteristic = createOwnCharacteristic();
-
 		return UWS_NG_SUCCESS;
 	}
 
@@ -135,7 +132,10 @@ public class BleClientService extends Service {
 	 * アドバタイズ開始
 	 * ************/
 	private void BctStartAdvertising(int seekerid) {
-		TLog.d("アドバタイズ開始");
+		TLog.d("アドバタイズ開始 mSeekerid={0}", seekerid);
+		/* Advertiseのタイミングで、自分自身のペリフェラル特性定義も実施しておく(gatt接続に備えておく) */
+		mUwsCharacteristic = createOwnCharacteristic(seekerid);
+
 		AdvertiseSettings	settings	= buildAdvertiseSettings();
 		AdvertiseData		data		= buildAdvertiseData(seekerid);
 		if (mBluetoothLeAdvertiser != null) {
@@ -200,9 +200,9 @@ public class BleClientService extends Service {
 	/** **********************
 	 * 自身のペリフェラル特性を定義
 	 * ***********************/
-	private BluetoothGattCharacteristic createOwnCharacteristic() {
+	private BluetoothGattCharacteristic createOwnCharacteristic(int seekerid) {
 		/* 自身が提供するサービスを定義 */
-		BluetoothGattService ownService = new BluetoothGattService(UWS_SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY);
+		BluetoothGattService ownService = new BluetoothGattService(UUID.fromString(Constants.createServiceUuid(seekerid)), BluetoothGattService.SERVICE_TYPE_PRIMARY);
 
 		/* 自身が提供するCharacteristic(特性)を定義 : 通知と読込みに対し、読込み許可 */
 		BluetoothGattCharacteristic charac = new BluetoothGattCharacteristic(/*UUID*/UWS_CHARACTERISTIC_SAMLE_UUID,

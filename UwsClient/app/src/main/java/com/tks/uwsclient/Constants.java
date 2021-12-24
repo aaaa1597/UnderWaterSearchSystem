@@ -23,7 +23,7 @@ public class Constants {
 	public final static int UWS_NG_GATTSERVER_NOTFOUND	= -16;	/* Gattサーバがない */
 
 	/* ServiceUUIDは0000xxxx-0000-1000-8000-00805f9b34fbの形を守る必要がある。CharacteristicUUIDはなんでもOK.*/
-	public static final UUID UWS_SERVICE_UUID							= UUID.fromString("00002c00-0000-1000-8000-00805f9b34fb");
+//	public static final UUID UWS_SERVICE_UUID							= UUID.fromString("00002c00-0000-1000-8000-00805f9b34fb");
 	public static final UUID UWS_CHARACTERISTIC_SAMLE_UUID				= UUID.fromString("29292c2c-728c-4a2b-81cb-7b4d884adb04");
 
 	public static String createServiceUuid(int seqno) {

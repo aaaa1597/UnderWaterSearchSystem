@@ -258,7 +258,6 @@ public class MainActivity extends AppCompatActivity {
 		});
 		/* Snackbar表示要求 */
 		mViewModel.ShowSnacbar().observe(this, showMsg -> {
-			new Throwable().printStackTrace();
 			Snackbar.make(findViewById(R.id.root_view), showMsg, Snackbar.LENGTH_LONG).show();
 		});
 		/* エラーメッセージ表示要求 */
