@@ -270,6 +270,8 @@ public class FragBleViewModel extends ViewModel {
 				int pos = mDeviceListAdapter.setStatusAndReadData(shortUuid, address, DeviceListAdapter.ConnectStatus.READSUCCEED, longitude, latitude, heartbeat);
 				mNotifyItemChanged.postValue(pos);
 				mMsg.put(Pair.create(shortUuid, address), true);
+				TLog.d("aaaaaaaaaa mMsg.size()={0}", mMsg.size());
+				if(mMsg.size() > 1) throw new RuntimeException("aaaaaaaaaaaa");
 			}
 			else {
 				TLog.d("読込失敗!! {0}({1})=({2} 経度:{3} 緯度:{4} 脈拍:{5}) status={6}", shortUuid, address, new Date(ldatetime), longitude, latitude, heartbeat, status);

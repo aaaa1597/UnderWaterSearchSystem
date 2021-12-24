@@ -247,8 +247,6 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		if(device == null) return UWS_NG_DEVICE_NOTFOUND;
 		/* チェックフラグ設定 */
 		device.mIsReading = isChecked;
-		if( !isChecked)
-			TLog.d("aaaaaaaaaaa set false. suuid={0} address={1}", suuid, address);
 //		notifyItemChanged(pos); UIスレッドで実行する必要がある。
 		return index.get();
 	}
