@@ -14,7 +14,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CheckBox;
 
 import com.tks.uwsserverunit00.R;
 import com.tks.uwsserverunit00.TLog;
@@ -42,7 +41,7 @@ public class FragBle extends Fragment {
 			if(pos ==-1 )
 				TLog.d("Item変更 最初はposが-1になるらしい.)");
 			else if(pos < 0|| pos >= mViewModel.getDeviceListAdapter().getItemCount()) {
-				TLog.w("idx is index out of range. pos={0} adapter.size()={1}", pos, mViewModel.getDeviceListAdapter().getItemCount());
+				TLog.w("idx is out of range. pos={0} adapter.size()={1}", pos, mViewModel.getDeviceListAdapter().getItemCount());
 				return;
 			}
 			mViewModel.getDeviceListAdapter().notifyItemChanged(pos);
@@ -51,10 +50,13 @@ public class FragBle extends Fragment {
 			int pos = mViewModel.getDeviceListAdapter().setChecked(sUuid, address, isChecked);
 			mViewModel.NotifyItemChanged().postValue(pos);
 
+			if( !isChecked)
+				TLog.d("aaaaaaaaaaa  期待通りこっちが動く. isChecked={0}. suuid={1} address={2}", isChecked, sUuid, address);
+
 			if(isChecked)
-				mViewModel.connectDevice(sUuid, address);
+				mViewModel.startPeriodicRead(sUuid, address);
 			else
-				mViewModel.disconnectDevice(sUuid, address);
+				mViewModel.stopPeriodicRead(sUuid, address);
 		}));
 
 		/* BLEデバイスリストの初期化 */

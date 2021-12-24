@@ -2,6 +2,7 @@ package com.tks.uwsserverunit00.ui;
 
 import android.os.Handler;
 import android.os.RemoteException;
+import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
@@ -21,6 +22,8 @@ import static com.tks.uwsserverunit00.Constants.UWS_NG_AIDL_INIT_BLE_FAILED;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_AIDL_STARTSCAN_FAILED;
 
 public class FragBleViewModel extends ViewModel {
+	final int PERIODIC_INTERVAL_TIME = 3000;
+
 	private IBleServerService				mBleServiceIf;
 	/* ---------------- */
 	private final MutableLiveData<Boolean>	mNotifyDataSetChanged	= new MutableLiveData<>(false);
@@ -33,9 +36,9 @@ public class FragBleViewModel extends ViewModel {
 	public LiveData<String>					ShowSnacbar()			{ return mShowSnacbar; }
 	public void								showSnacbar(String showmMsg) { mShowSnacbar.postValue(showmMsg);}
 	/* ---------------- */
+	private DeviceListAdapter				mDeviceListAdapter;
 	public void								setDeviceListAdapter(DeviceListAdapter adapter)	{ mDeviceListAdapter = adapter; }
 	public DeviceListAdapter				getDeviceListAdapter()	{ return mDeviceListAdapter; }
-	private DeviceListAdapter				mDeviceListAdapter;
 	/* ---------------- */
 
 	/** *****************
@@ -49,7 +52,7 @@ public class FragBleViewModel extends ViewModel {
 		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_CALLBACK_FAILED;}
 
 		/* BLE初期化 */
-		int ret = 0;
+		int ret;
 		try { ret = mBleServiceIf.initBle(); }
 		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_INIT_BLE_FAILED;}
 
@@ -75,7 +78,7 @@ public class FragBleViewModel extends ViewModel {
 	 * **********/
 	public int startScan() {
 		TLog.d("Scan開始.");
-		int ret = 0;
+		int ret;
 		try { ret = mBleServiceIf.startScan();}
 		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_STARTSCAN_FAILED;}
 		TLog.d("ret={0}", ret);
@@ -93,48 +96,67 @@ public class FragBleViewModel extends ViewModel {
 	 * Scan終了
 	 * **********/
 	public void stopScan() {
-//		int ret;
-//		try { ret = mBleServiceIf.stopScan();}
-//		catch (RemoteException e) { e.printStackTrace(); return;}
-//		TLog.d("scan停止 ret={0}", ret);
+		int ret;
+		try { ret = mBleServiceIf.stopScan();}
+		catch (RemoteException e) { e.printStackTrace(); return;}
+		TLog.d("scan停止 ret={0}", ret);
 	}
 
-	/** ******
-	 * 接続開始
-	 * ******/
-	public void connectDevice(String sUuid, String address) {
-		/* 接続チェックBOX押下 */
-		int ret = 0;
-		try { ret = mBleServiceIf.connectDevice(address);}
-		catch (RemoteException e) { e.printStackTrace();}
-		if( ret < 0) {
-			TLog.d("BLE初期化/接続失敗!! DEVICE NOT FOUND.");
-			if(ret == UWS_NG_DEVICE_NOTFOUND)
-				showSnacbar("デバイスアドレスなし!!\n前画面で、別のデバイスを選択して下さい。");
-		}
-		else {
-			TLog.d("BLE初期化/接続成功.");
-		}
+	/** *********
+	 * 定期読込開始
+	 * *********/
+	private final Handler mHandler = new Handler();
+	private Runnable mPeriodicReader = null;
+	public void startPeriodicRead(@NonNull String sUuid, @NonNull String address) {
+		mPeriodicReader = () -> {
+			String laddress = mDeviceListAdapter.getAddress(sUuid, address);
+			if(laddress == null) {
+				/* 今回はデバイスが見つからない、計測実行。 */
+				TLog.d("今回はデバイスが見つからない -> 継続実行。sUuid={0} adress={1}", sUuid, address);
+				mHandler.postDelayed(mPeriodicReader, PERIODIC_INTERVAL_TIME);
+			}
+
+			int ret = 0;
+			try { ret = mBleServiceIf.readData(address);}
+			catch (RemoteException e) { e.printStackTrace();}
+			if( ret < 0) {
+				TLog.d("BLE読込み失敗!! DEVICE NOT FOUND.");
+				if(ret == UWS_NG_DEVICE_NOTFOUND) {
+					showSnacbar("デバイスなし!!\n別のデバイスを選択して下さい。");
+					int idx = mDeviceListAdapter.setChecked(sUuid, address,false);
+					mNotifyItemChanged.postValue(idx);
+				}
+			}
+			/* 2秒定期で実行 */
+			mHandler.postDelayed(mPeriodicReader, PERIODIC_INTERVAL_TIME);
+		};
+		mHandler.post(mPeriodicReader);
+		showSnacbar("定期読込み 開始しました。");
 	}
 
-	/** ******
-	 * 接続終了
-	 * ******/
-	public void disconnectDevice(String sUuid, String address) {
+	/** ************
+	 * 定期読込開始終了
+	 * ************/
+	public void stopPeriodicRead(String sUuid, String address) {
+		TLog.d("aaaaaaaaaaa  期待通り、停止が動く. suuid={2} address={1}", sUuid, address);
+
+		mHandler.removeCallbacks(mPeriodicReader);
+		mPeriodicReader = null;
+		showSnacbar("定期読込み 終了しました。");
 	}
 
 	/** *****************
 	 * AIDLコールバック
 	 * *****************/
-	private IBleServerServiceCallback mCb = new IBleServerServiceCallback.Stub() {
+	private final IBleServerServiceCallback mCb = new IBleServerServiceCallback.Stub() {
 		@Override
-		public void notifyDeviceInfolist(List<DeviceInfo> devices) throws RemoteException {
+		public void notifyDeviceInfolist(List<DeviceInfo> devices) {
 			mDeviceListAdapter.addDevice(devices);
 			mNotifyDataSetChanged.postValue(true);
 		}
 
 		@Override
-		public void notifyDeviceInfo(DeviceInfo device) throws RemoteException {
+		public void notifyDeviceInfo(DeviceInfo device) {
 			mDeviceListAdapter.addDevice(device);
 			mNotifyDataSetChanged.postValue(true);
 			TLog.d("発見!! No:{0}, {1}({2}):Rssi({3})", device.getSeekerId(), device.getDeviceAddress(), device.getDeviceName(), device.getDeviceRssi());
@@ -146,7 +168,7 @@ public class FragBleViewModel extends ViewModel {
 //		}
 
 		@Override
-		public void notifyGattConnected(String shortUuid, String address) throws RemoteException {
+		public void notifyGattConnected(String shortUuid, String address) {
 			/* Gatt接続完了 */
 			TLog.d("Gatt接続OK!! -> Services探索中. sUuid={0} Address={1}", shortUuid, address);
 			int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.EXPLORING);
@@ -154,16 +176,15 @@ public class FragBleViewModel extends ViewModel {
 		}
 
 		@Override
-		public void notifyGattDisConnected(String shortUuid, String address) throws RemoteException {
+		public void notifyGattDisConnected(String shortUuid, String address) {
 			String logstr = MessageFormat.format("Gatt接続断!! sUuid={0} address={1}", shortUuid, address);
 			TLog.d(logstr);
-			showSnacbar(logstr);
-			int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.DISCONNECTED);
-			mNotifyItemChanged.postValue(pos);
+			int idx = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.DISCONNECTED);
+			mNotifyItemChanged.postValue(idx);
 		}
 
 		@Override
-		public void notifyServicesDiscovered(String shortUuid, String address, int status) throws RemoteException {
+		public void notifyServicesDiscovered(String shortUuid, String address, int status) {
 			if(status == UWS_NG_GATT_SUCCESS) {
 				TLog.d("Services発見. -> 対象Serviceかチェック sUuid={0} address={1} ret={2}", shortUuid, address, status);
 				int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.CHECKAPPLI);
@@ -172,14 +193,13 @@ public class FragBleViewModel extends ViewModel {
 			else {
 				String logstr = MessageFormat.format("Services探索失敗!! 処理終了 sUuid={0} address={1} ret={2}", shortUuid, address, status);
 				TLog.d(logstr);
-				showSnacbar(logstr);
 				int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.FAILURE);
 				mNotifyItemChanged.postValue(pos);
 			}
 		}
 
 		@Override
-		public void notifyApplicable(String shortUuid, String address, boolean status) throws RemoteException {
+		public void notifyApplicable(String shortUuid, String address, boolean status) {
 			if(status) {
 				TLog.d("対象Chk-OK. -> 通信中 sUuid={0} address={1}", shortUuid, address);
 				int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.TOBEPREPARED);
@@ -189,48 +209,46 @@ public class FragBleViewModel extends ViewModel {
 				String logstr = MessageFormat.format("対象外デバイス.　処理終了. sUuid={0} address={1}", shortUuid, address);
 				TLog.d(logstr);
 				int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.OUTOFSERVICE);
+						  mDeviceListAdapter.setChecked(shortUuid, address,false);
 				mNotifyItemChanged.postValue(pos);
-				showSnacbar(logstr);
 			}
 		}
 
 		@Override
-		public void notifyWaitforRead(String shortUuid, String address, boolean status) throws RemoteException {
+		public void notifyWaitforRead(String shortUuid, String address, boolean status) {
 			if(status) {
 				String logstr = MessageFormat.format("BLEデバイス通信 読込み中. sUuid={0} address={1}", shortUuid, address);
 				TLog.d(logstr);
-				showSnacbar(logstr);
 				int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.WAITFORREAD);
 				mNotifyItemChanged.postValue(pos);
 			}
 			else {
 				String logstr = MessageFormat.format("BLEデバイス通信 読込み失敗!! sUuid={0} address={1}", shortUuid, address);
 				TLog.d(logstr);
-				showSnacbar(logstr);
 				int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.FAILURE);
 				mNotifyItemChanged.postValue(pos);
 			}
 		}
 
 		@Override
-		public void notifyResRead(String shortUuid, String address, long ldatetime, double longitude, double latitude, int heartbeat, int status) throws RemoteException {
+		public void notifyResRead(String shortUuid, String address, long ldatetime, double longitude, double latitude, int heartbeat, int status) {
 			if(status == UWS_NG_SUCCESS) {
 				TLog.d("読込成功. {0}({1})=({2} 経度:{3} 緯度:{4} 脈拍:{5}) status={6}", shortUuid, address, new Date(ldatetime), longitude, latitude, heartbeat, status);
 				int pos = mDeviceListAdapter.setStatusAndReadData(shortUuid, address, DeviceListAdapter.ConnectStatus.READSUCCEED, longitude, latitude, heartbeat);
 				mNotifyItemChanged.postValue(pos);
 
-				/* 読込み完了 -> Gatt切断 */
-				try { mBleServiceIf.disconnectDevice(address);}
-				catch (RemoteException e) { e.printStackTrace();}
+//				/* 読込み完了 -> Gatt切断(ここではやらない) */
+//				try { mBleServiceIf.disconnectDevice(address);}
+//				catch (RemoteException e) { e.printStackTrace();}
 			}
 			else {
 				TLog.d("読込失敗!! {0}({1})=({2} 経度:{3} 緯度:{4} 脈拍:{5}) status={6}", shortUuid, address, new Date(ldatetime), longitude, latitude, heartbeat, status);
 				int pos = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.FAILURE);
 				mNotifyItemChanged.postValue(pos);
 
-				/* 読込み完了 -> Gatt切断 */
-				try { mBleServiceIf.disconnectDevice(address);}
-				catch (RemoteException e) { e.printStackTrace();}
+//				/* 読込み完了 -> Gatt切断(ここではやらない) */
+//				try { mBleServiceIf.disconnectDevice(address);}
+//				catch (RemoteException e) { e.printStackTrace();}
 			}
 		}
 

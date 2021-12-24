@@ -91,19 +91,9 @@ public class BleServerService extends Service {
 		}
 
 		@Override
-		public int connectDevice(String deviceAddress) throws RemoteException {
-			return BsvConnectDevice(deviceAddress);
+		public int readData(String deviceAddress) throws RemoteException {
+			return BsvReadData(deviceAddress);
 		}
-
-		@Override
-		public void disconnectDevice(String deviceAddress) throws RemoteException {
-			BsvDisConnectDevice(deviceAddress);
-		}
-
-//		@Override
-//		public void clearDevice() throws RemoteException {
-//			BsvClearDevice();
-//		}
 	};
 
 	/** *******
@@ -307,7 +297,7 @@ public class BleServerService extends Service {
 	 * BLEデバイス接続
 	 ** *************/
 	private final Map<String, BluetoothGatt> mConnectedPeripherals = new HashMap<>();
-	private int BsvConnectDevice(final String address) {
+	private int BsvReadData(final String address) {
 		if(address == null || address.equals("")) {
 			TLog.d("デバイスアドレスなし");
 			return UWS_NG_DEVICE_NOTFOUND;
@@ -356,8 +346,6 @@ public class BleServerService extends Service {
 		public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
 			String suuid= getShortUuid(gatt, UWS_UUID_SERVICE);
 			String addr = gatt.getDevice().getAddress();
-			TLog.d("BluetoothGattCallback::onConnectionStateChange() {0}:{1} {2} -> {3}", suuid, addr, status, newState);
-			TLog.d("BluetoothProfile.STATE_CONNECTING({0}) STATE_CONNECTED({1}) STATE_DISCONNECTING({2}) STATE_DISCONNECTED({3})", BluetoothProfile.STATE_CONNECTING, BluetoothProfile.STATE_CONNECTED, BluetoothProfile.STATE_DISCONNECTING, BluetoothProfile.STATE_DISCONNECTED);
 			/* Gatt接続完了 */
 			if(newState == BluetoothProfile.STATE_CONNECTED) {
 				try { mCb.notifyGattConnected(suuid, addr); }
@@ -371,11 +359,6 @@ public class BleServerService extends Service {
 				TLog.d("Gatt断.");
 				try { mCb.notifyGattDisConnected(suuid, addr); }
 				catch (RemoteException e) { e.printStackTrace(); }
-
-				TLog.d("GATT 再接続");
-				gatt.disconnect();
-				gatt.close();
-				mBleGatt = gatt.getDevice().connectGatt(getApplicationContext(), false, mGattCallback);
 			}
 		}
 
@@ -440,6 +423,8 @@ public class BleServerService extends Service {
 				catch (RemoteException e) { e.printStackTrace(); }
 				TLog.d("読込み要求の応答 status={1} BluetoothGatt.GATT_SUCCESS({2}) BluetoothGatt.GATT_FAILURE({3})", status, BluetoothGatt.GATT_SUCCESS, BluetoothGatt.GATT_FAILURE);
 			}
+//			/* gatt切断(ここではやらない) */
+//			gatt.disconnect();
 		}
 
 		@Override

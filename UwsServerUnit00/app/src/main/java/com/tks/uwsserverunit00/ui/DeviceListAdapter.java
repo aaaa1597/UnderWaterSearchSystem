@@ -111,9 +111,8 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		final int rssiresid	=	model.mDeviceRssi > -60 ? R.drawable.wifi_level_3 :
 								model.mDeviceRssi > -70 ? R.drawable.wifi_level_2 :
 								model.mDeviceRssi > -80 ? R.drawable.wifi_level_1 : R.drawable.wifi_level_0;
-		final int constsresid =	!model.mIsApplicable								? R.drawable.statusx_na :
-								model.mConnectStatus == ConnectStatus.TOBEPREPARED	? R.drawable.status5_ready :
-																					  R.drawable.status0_none;
+		final int constsresid =	!model.mIsApplicable? R.drawable.statusx_na :
+								model.mIsReading	? R.drawable.status5_ready : R.drawable.status0_none;
 		final Pair<String, Integer> statusinfo =
 								model.mConnectStatus == ConnectStatus.NONE			? Pair.create(""			, Color.BLACK) :
 								model.mConnectStatus == ConnectStatus.CONNECTING	? Pair.create("接続中"	, mContext.getColor(R.color.orange)) :
@@ -220,9 +219,9 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			if(o1.mIsApplicable && o2.mIsApplicable)
 				return Integer.compare(o1.mSeekerId, o2.mSeekerId);
 				/* 対象のデバイス優先 */
-			else if(o1.mIsApplicable && !o2.mIsApplicable)
+			else if(o1.mIsApplicable/* && !o2.mIsApplicable*/)
 				return -1;
-			else if(!o1.mIsApplicable && o2.mIsApplicable)
+			else if(/*!o1.mIsApplicable &&*/ o2.mIsApplicable)
 				return 1;
 
 			/* 次にアドレス名で並び替え */
@@ -248,6 +247,8 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		if(device == null) return UWS_NG_DEVICE_NOTFOUND;
 		/* チェックフラグ設定 */
 		device.mIsReading = isChecked;
+		if( !isChecked)
+			TLog.d("aaaaaaaaaaa set false. suuid={0} address={1}", suuid, address);
 //		notifyItemChanged(pos); UIスレッドで実行する必要がある。
 		return index.get();
 	}
@@ -290,5 +291,17 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	public void clearDevice() {
 		mDeviceList.clear();
 //		notifyDataSetChanged(); UIスレッドで実行する必要がある。
+	}
+
+	public String getAddress(@NonNull String sUuid, @NonNull String address) {
+		DevicveInfoModel device = mDeviceList.stream().filter(item -> item.mShortUuid.equals(sUuid)).findFirst().orElse(null);
+		if(device != null)
+			return device.mDeviceAddress;
+
+		device = mDeviceList.stream().filter(item -> item.mDeviceAddress.equals(address)).findFirst().orElse(null);
+		if(device != null)
+			return device.mDeviceAddress;
+
+		return null;
 	}
 }
