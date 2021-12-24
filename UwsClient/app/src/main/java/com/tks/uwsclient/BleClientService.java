@@ -456,6 +456,7 @@ public class BleClientService extends Service {
 		/* 経度(8byte) */
 		byte[] blongitude = d2bs(longitude);
 		System.arraycopy(blongitude, 0, ret, spos, blongitude.length);
+		spos += blongitude.length;
 		/* 緯度(8byte) */
 		byte[] blatitude = d2bs(latitude);
 		System.arraycopy(blatitude, 0, ret, spos, blatitude.length);
