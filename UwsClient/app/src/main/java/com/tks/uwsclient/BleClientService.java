@@ -25,6 +25,7 @@ import android.os.RemoteException;
 import androidx.annotation.Nullable;
 
 import java.nio.ByteBuffer;
+import java.text.MessageFormat;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Date;
@@ -77,11 +78,6 @@ public class BleClientService extends Service {
 		public void stopAdvertising() {
 			BctStopAdvertising();
 		}
-
-//		@Override
-//		public void notifyOneShot() {
-//			BctNotifyOneShot();
-//		}
 	};
 
 	/** *******
@@ -110,6 +106,7 @@ public class BleClientService extends Service {
 			return UWS_NG_ADAPTER_NOTFOUND;
 		}
 
+		TLog.d( "アドバタイズの最大サイズ={0}", bluetoothAdapter.getLeMaximumAdvertisingDataLength());
 		mBluetoothLeAdvertiser = bluetoothAdapter.getBluetoothLeAdvertiser();
 		if (mBluetoothLeAdvertiser == null) {
 			TLog.d( "Bluetooth未サポートです3");
@@ -136,10 +133,20 @@ public class BleClientService extends Service {
 		/* Advertiseのタイミングで、自分自身のペリフェラル特性定義も実施しておく(gatt接続に備えておく) */
 		mUwsCharacteristic = createOwnCharacteristic(seekerid);
 
+		boolean ret = BluetoothAdapter.getDefaultAdapter().setName(MessageFormat.format("消防士{0}", seekerid));
+		TLog.d("デバイス名変更 ret={0}", ret);
 		AdvertiseSettings	settings	= buildAdvertiseSettings();
 		AdvertiseData		data		= buildAdvertiseData(seekerid);
 		if (mBluetoothLeAdvertiser != null)
 			mBluetoothLeAdvertiser.startAdvertising(settings, data, mAdvertiseCallback);
+	}
+
+	private AdvertiseSettings buildAdvertiseSettings() {
+		AdvertiseSettings.Builder settingsBuilder = new AdvertiseSettings.Builder();
+		settingsBuilder.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY);
+		settingsBuilder.setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
+		settingsBuilder.setTimeout(0);  /* タイムアウトは自前で管理する。 */
+		return settingsBuilder.build();
 	}
 
 	private AdvertiseData buildAdvertiseData(int seekerid) {
@@ -149,14 +156,6 @@ public class BleClientService extends Service {
 //        dataBuilder.addManufacturerData(0xffff, new byte[]{'F','I','R','E','_','F','I','G','H','T','E','R'});
 		/* ↑これを載っけるとscanで引っかからなくなる。 */
 		return dataBuilder.build();
-	}
-
-	private AdvertiseSettings buildAdvertiseSettings() {
-		AdvertiseSettings.Builder settingsBuilder = new AdvertiseSettings.Builder();
-		settingsBuilder.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY);
-		settingsBuilder.setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
-		settingsBuilder.setTimeout(0);  /* タイムアウトは自前で管理する。 */
-		return settingsBuilder.build();
 	}
 
 	private final AdvertiseCallback mAdvertiseCallback = new AdvertiseCallback() {
