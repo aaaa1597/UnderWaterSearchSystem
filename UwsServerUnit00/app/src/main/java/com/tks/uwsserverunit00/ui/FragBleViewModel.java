@@ -170,7 +170,7 @@ public class FragBleViewModel extends ViewModel {
 		public void notifyDeviceInfo(DeviceInfo device) {
 			mDeviceListAdapter.addDevice(device);
 			mNotifyDataSetChanged.postValue(true);
-			TLog.d("発見!! No:{0}, {1}({2}):Rssi({3})", device.getSeekerId(), device.getDeviceAddress(), device.getDeviceName(), device.getDeviceRssi());
+//			TLog.d("発見!! No:{0}, {1}({2}):Rssi({3})", device.getSeekerId(), device.getDeviceAddress(), device.getDeviceName(), device.getDeviceRssi());
 		}
 
 //		@Override
@@ -193,15 +193,65 @@ public class FragBleViewModel extends ViewModel {
 
 			/* 正常終了による説損断なら、表示はそのまま */
 			Boolean msg = mMsg.remove(Pair.create(shortUuid, address));
+			/* TODO 削除予定 */TLog.d("aaaaaaaaaa mMsg.remove() size={0} ({1}, {2})", mMsg.size(), shortUuid, address);
 			if(msg == null || !msg) {
 				int idx = mDeviceListAdapter.setStatus(shortUuid, address, DeviceListAdapter.ConnectStatus.DISCONNECTED);
 				mNotifyItemChanged.postValue(idx);
 			}
 
-//			ここで定期読込みの再実行はしない。無限Loopになる。
-//			Runnable oneshotReader = mPeriodicRunners.get(Pair.create(shortUuid, address));
-//			if(oneshotReader != null)
-//				mHandler.postDelayed(oneshotReader, PERIODIC_INTERVAL_TIME);
+			/* address変更による切断なら、古い情報を削除して定期読込みの再実行する。他の条件ではしない。無限Loopになる。 */
+			Pair<String, String> oldReader = mMsg.keySet().stream().filter(item->item.second.equals(address)).findAny().orElse(null);
+			if(oldReader != null) {
+				/* TODO 削除予定 */TLog.i("address変更による切断と判断!! sUuid={0} address={1} mMsg(size:{2} items:{3})", shortUuid, address, mMsg.size(), mMsg);
+				mMsg.remove(oldReader);
+				/* TODO 削除予定 */TLog.i("address変更による切断と判断!!2...古いPairを削除{0}", mMsg.size());
+				Pair<String, String> oldRunnable = mPeriodicRunners.keySet().stream().filter(item->item.second.equals(address)).findAny().orElse(null);
+				/* TODO 削除予定 */TLog.i("address変更による切断と判断!!3...古いRunnableを削除(前) size={0} oldRunnable={1}", mPeriodicRunners.size(), oldRunnable);
+				mPeriodicRunners.remove(oldRunnable);
+				/* TODO 削除予定 */TLog.i("address変更による切断と判断!!3...古いRunnableを削除(後) size={0}", mPeriodicRunners.size());
+
+				mHandler.post(new Runnable() {
+					@Override
+					public void run() {
+						String newAddress = mDeviceListAdapter.getAddress(oldReader.first, "");
+						/* TODO 削除予定 */if(newAddress == null) {
+						/* TODO 削除予定 */	TLog.e("address変更による切断と判断!!4...新Addressを取得. Address is null.");
+						/* TODO 削除予定 */	throw new RuntimeException(MessageFormat.format("Addressがとれんってどういうこと？古いデータでも取れるはず。oldReader=({0}:{1})", oldReader.first, oldReader.second));
+						/* TODO 削除予定 */}
+						else if(newAddress.equals(oldReader.second)) {
+							/* TODO 削除予定 */TLog.i("address変更による切断と判断!!5... まだ新Addressは未取得 古いaddress={0]", oldReader.second);
+							mHandler.postDelayed(this, 500);	/* 新アドレスがまだ不明なので、一旦終了。再実行する。 */
+							return;
+						}
+						/* 新アドレスが取得できたから、定期読出しの再実行 */
+						else {
+							/* TODO 削除予定 */TLog.i("address変更による切断と判断!!6... 新Addressが取得できたので、定期再実行. newAddress={0}", newAddress);
+							/* 定期実行処理生成 */
+							Runnable oneshotReader = () -> {
+								int ret = 0;
+								try { ret = mBleServiceIf.readData(newAddress);}
+								catch (RemoteException e) { e.printStackTrace();}
+								if( ret < 0) {
+									TLog.d("BLE読込み失敗!! DEVICE NOT FOUND.");
+									if(ret == UWS_NG_DEVICE_NOTFOUND) {
+										showSnacbar("デバイスなし!!\n別のデバイスを選択して下さい。");
+										int idx = mDeviceListAdapter.setChecked(oldReader.first, newAddress,false);
+										mNotifyItemChanged.postValue(idx);
+									}
+								}
+							};
+
+							/* 定期実行処理push */
+							mPeriodicRunners.put(Pair.create(oldReader.first, newAddress), oneshotReader);
+							/* TODO 削除予定 */TLog.i("address変更による切断と判断!!7... mPeriodicRunners.put() size={0} item{1}", mPeriodicRunners.size(), mPeriodicRunners);
+
+							/* 実行 */
+							mHandler.post(oneshotReader);
+							return;
+						}
+					}
+				});
+			}
 		}
 
 		@Override
@@ -270,8 +320,15 @@ public class FragBleViewModel extends ViewModel {
 				int pos = mDeviceListAdapter.setStatusAndReadData(shortUuid, address, DeviceListAdapter.ConnectStatus.READSUCCEED, longitude, latitude, heartbeat);
 				mNotifyItemChanged.postValue(pos);
 				mMsg.put(Pair.create(shortUuid, address), true);
-				TLog.d("aaaaaaaaaa mMsg.size()={0}", mMsg.size());
-				if(mMsg.size() > 1) throw new RuntimeException("aaaaaaaaaaaa");
+				/* TODO 削除予定 */TLog.d("aaaaaaaaaa mMsg.put() size={0} ({1}, {2})", mMsg.size(), shortUuid, address);
+				/* TODO 削除予定 */if(mMsg.size() > 1) {
+				/* TODO 削除予定 */	int lpct = 0;
+				/* TODO 削除予定 */	for(Map.Entry<Pair<String, String>, Boolean> aaa : mMsg.entrySet() ) {
+				/* TODO 削除予定 */		TLog.d("mMsg[{0}].suuid={1} address={2}", lpct, aaa.getKey().first, aaa.getKey().second);
+				/* TODO 削除予定 */		lpct++;
+				/* TODO 削除予定 */	}
+				/* TODO 削除予定 */	throw new RuntimeException("aaaaaaaaaaaa");
+				/* TODO 削除予定 */}
 			}
 			else {
 				TLog.d("読込失敗!! {0}({1})=({2} 経度:{3} 緯度:{4} 脈拍:{5}) status={6}", shortUuid, address, new Date(ldatetime), longitude, latitude, heartbeat, status);
@@ -280,6 +337,7 @@ public class FragBleViewModel extends ViewModel {
 			}
 
 			/* 定期読込み実行中なら、継続実行 */
+			/* TODO 削除予定 */TLog.i("address変更による切断と判断!!8... mPeriodicRunners.put() size={0} item{1}", mPeriodicRunners.size(), mPeriodicRunners);
 			Runnable oneshotReader = mPeriodicRunners.get(Pair.create(shortUuid, address));
 			if(oneshotReader != null)
 				mHandler.postDelayed(oneshotReader, PERIODIC_INTERVAL_TIME);

@@ -183,7 +183,6 @@ public class BleServerService extends Service {
 			String	retUuisStr = null;
 			if(result.getScanRecord()!=null && result.getScanRecord().getServiceUuids()!=null) {
 				retUuisStr = result.getScanRecord().getServiceUuids().get(0).toString();
-				TLog.d("retUuisStr={0}", retUuisStr);
 				if(retUuisStr.startsWith(UWS_UUID_SERVICE.toString().substring(0,5))) {
 					isApplicable = true;
 					seekerid = Integer.decode("0x"+retUuisStr.substring(6,8));
@@ -195,7 +194,7 @@ public class BleServerService extends Service {
 			}
 			String shortuuid = retUuisStr.substring(4,8);
 			DeviceInfo deviceInfo = new DeviceInfo(shortuuid, seekerid, result.getDevice().getName(), result.getDevice().getAddress(), result.getRssi(), isApplicable, false, 0, 0);
-			TLog.d("発見!! {0}({1}):Rssi({2}) ScanRecord={3}", result.getDevice().getAddress(), result.getDevice().getName(), result.getRssi(), result.getScanRecord());
+//			TLog.d("発見!! {0}({1}):Rssi({2}) ScanRecord={3}", result.getDevice().getAddress(), result.getDevice().getName(), result.getRssi(), result.getScanRecord());
 			try { mCb.notifyDeviceInfo(deviceInfo);}
 			catch (RemoteException e) {e.printStackTrace();}
 //				if(result !=null && result.getDevice() != null) {
@@ -417,6 +416,7 @@ public class BleServerService extends Service {
 
 			/* gatt切断 */
 			gatt.disconnect();
+			gatt.close();
 		}
 
 		@Override
