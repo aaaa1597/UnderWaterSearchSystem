@@ -127,6 +127,7 @@ public class MainActivity extends AppCompatActivity {
 		}
 
 		mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+		mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
 
 		/* Bleサーバへの接続処理開始 */
 		mViewModel.bindBleService(getApplicationContext(), mCon);
@@ -199,6 +200,7 @@ public class MainActivity extends AppCompatActivity {
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
+		mFusedLocationClient.removeLocationUpdates(mLocationCallback);
 		unbindService(mCon);
 	}
 
@@ -214,7 +216,6 @@ public class MainActivity extends AppCompatActivity {
 				TLog.d("UnLock isLock={0}", isUnLock);
 				if(isUnLock) {
 					mViewModel.AdvertisingFlg().postValue(false);
-					mViewModel.Priodic1sNotifyFlg().postValue(false);
 				}
 				else {
 					/* アドバタイズ開始 */
@@ -235,24 +236,6 @@ public class MainActivity extends AppCompatActivity {
 					int ret = mViewModel.stopAdvertising();
 					if(ret != UWS_NG_SUCCESS)
 						ErrPopUp.create(MainActivity.this).setErrMsg("システム異常!! アドバタイズ開始に失敗!!\nシステム異常なので、終了します。").Show(MainActivity.this);
-				}
-			}
-		});
-		/* 1s定期周期通知 切替え */
-		mViewModel.Priodic1sNotifyFlg().observe(this, new Observer<Boolean>() {
-			@Override
-			public void onChanged(Boolean priodic1sNotifyFlg) {
-				if(priodic1sNotifyFlg) {
-					/* ↓Androidでエラーになるから追加するコード。実際はここでエラーにはならない */
-					if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-					 && ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
-						return;
-					/* ↑Androidでエラーになるから追加するコード。実際はここでエラーにはならない */
-					mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
-				}
-				else {
-					TLog.d("1秒定期 終了");
-					mFusedLocationClient.removeLocationUpdates(mLocationCallback);
 				}
 			}
 		});
@@ -282,7 +265,7 @@ public class MainActivity extends AppCompatActivity {
 			mViewModel.Longitude().setValue(location.getLongitude());
 			mViewModel.Latitude().setValue(location.getLatitude());
 			mViewModel.HearBeat().setValue(mRandom.nextInt(40)+30);
-			mViewModel.notifyOneShot();
+//			mViewModel.notifyOneShot();
 		}
 	};
 }

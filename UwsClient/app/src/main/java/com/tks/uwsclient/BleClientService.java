@@ -78,10 +78,10 @@ public class BleClientService extends Service {
 			BctStopAdvertising();
 		}
 
-		@Override
-		public void notifyOneShot() {
-			BctNotifyOneShot();
-		}
+//		@Override
+//		public void notifyOneShot() {
+//			BctNotifyOneShot();
+//		}
 	};
 
 	/** *******
@@ -138,9 +138,8 @@ public class BleClientService extends Service {
 
 		AdvertiseSettings	settings	= buildAdvertiseSettings();
 		AdvertiseData		data		= buildAdvertiseData(seekerid);
-		if (mBluetoothLeAdvertiser != null) {
+		if (mBluetoothLeAdvertiser != null)
 			mBluetoothLeAdvertiser.startAdvertising(settings, data, mAdvertiseCallback);
-		}
 	}
 
 	private AdvertiseData buildAdvertiseData(int seekerid) {

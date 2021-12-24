@@ -52,7 +52,6 @@ public class FragMainViewModel extends ViewModel {
 	private final MutableLiveData<Boolean>			m1sNotifyFlg	= new MutableLiveData<>(false);
 	private int										mSeekerID		= 0;
 	public MutableLiveData<Boolean>		AdvertisingFlg()	{ return mAdvertisingFlg; }
-	public MutableLiveData<Boolean>		Priodic1sNotifyFlg(){ return m1sNotifyFlg; }
 	public void							setSeekerID(int id)	{ mSeekerID = id; }
 	public int							getSeekerID()		{ return mSeekerID; }
 
@@ -160,14 +159,14 @@ public class FragMainViewModel extends ViewModel {
 		TLog.d("Bluetooth使用クリア -> Bluetoothサービス起動");
 	}
 
-	/** *************
-	 * 1秒周期通知 開始
-	 ** ************/
-	public int notifyOneShot() {
-		try { mBleServiceIf.notifyOneShot(); }
-		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_REMOTE_ERROR;}
-		return UWS_NG_SUCCESS;
-	}
+//	/** *************
+//	 * 1秒周期通知 開始
+//	 ** ************/
+//	public int notifyOneShot() {
+//		try { mBleServiceIf.notifyOneShot(); }
+//		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_REMOTE_ERROR;}
+//		return UWS_NG_SUCCESS;
+//	}
 
 	/** *****************
 	 * AIDLコールバック
