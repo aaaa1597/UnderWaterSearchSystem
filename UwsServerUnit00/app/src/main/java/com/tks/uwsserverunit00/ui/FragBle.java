@@ -31,13 +31,11 @@ public class FragBle extends Fragment {
 		super.onViewCreated(view, savedInstanceState);
 		mViewModel = new ViewModelProvider(requireActivity()).get(FragBleViewModel.class);
 		mViewModel.NotifyDataSetChanged().observe(getViewLifecycleOwner(), upd -> {
-			TLog.d("item全表示");
 			mViewModel.getDeviceListAdapter().notifyDataSetChanged();
 //			int maxidx = mViewModel.getDeviceListAdapter().getItemCount() - 1;
 //			mViewModel.getDeviceListAdapter().notifyItemRangeInserted(maxidx ,1);
 		});
 		mViewModel.NotifyItemChanged().observe(getViewLifecycleOwner(), pos -> {
-			TLog.d("Item変更 DeviceListAdapter::notifyItemChanged(pos＝{0})", pos);
 			if(pos ==-1 )
 				TLog.d("Item変更 最初はposが-1になるらしい.)");
 			else if(pos < 0|| pos >= mViewModel.getDeviceListAdapter().getItemCount()) {
