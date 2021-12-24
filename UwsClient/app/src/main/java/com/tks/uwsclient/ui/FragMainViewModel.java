@@ -173,7 +173,7 @@ public class FragMainViewModel extends ViewModel {
 	 * *****************/
 	IBleClientServiceCallback mCb = new IBleClientServiceCallback.Stub() {
 		@Override
-		public void notifyAdvertising(int ret) throws RemoteException {
+		public void notifyAdvertising(int ret) {
 			TLog.d("アドバタイズ開始結果 ret={0}", ret);
 			if(ret == UWS_NG_SUCCESS) {
 				ConnectStatus().postValue(ConnectStatus.ADVERTISING);
@@ -214,19 +214,19 @@ public class FragMainViewModel extends ViewModel {
 		}
 
 		@Override
-		public void notifyConnect() throws RemoteException {
+		public void notifyConnect() {
 			TLog.d("接続確立");
 			ConnectStatus().postValue(ConnectStatus.CONNECTED);
 		}
 
 		@Override
-		public void notifyDisConnect() throws RemoteException {
+		public void notifyDisConnect() {
 			TLog.d("切断");
 			ConnectStatus().postValue(ConnectStatus.NONE);
 		}
 
 		@Override
-		public void notifyErrorConnect(int status) throws RemoteException {
+		public void notifyErrorConnect(int status) {
 			TLog.d("接続失敗!!");
 			ConnectStatus().postValue(ConnectStatus.ERROR);
 			String errstr = "アドバタイズに失敗。再度、実施してみてください。code="+status;
@@ -235,21 +235,21 @@ public class FragMainViewModel extends ViewModel {
 		}
 
 		@Override
-		public double getLongitude() throws RemoteException {
+		public double getLongitude() {
 			double loongitude = Longitude().getValue();
 			TLog.d("loongitude={0}", loongitude);
 			return loongitude;
 		}
 
 		@Override
-		public double getLatitude() throws RemoteException {
+		public double getLatitude() {
 			double latitude = Latitude().getValue();
 			TLog.d("latitude={0}", latitude);
 			return latitude;
 		}
 
 		@Override
-		public int getHeartbeat() throws RemoteException {
+		public int getHeartbeat() {
 			int hearBeat = HearBeat().getValue();
 			TLog.d("hearBeat={0}", hearBeat);
 			return hearBeat;

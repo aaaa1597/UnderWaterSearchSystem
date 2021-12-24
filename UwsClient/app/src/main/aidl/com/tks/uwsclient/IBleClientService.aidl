@@ -7,5 +7,4 @@ interface IBleClientService {
     int initBle();
 	void startAdvertising(int seekerid);
 	void stopAdvertising();
-//	void notifyOneShot();
 }
