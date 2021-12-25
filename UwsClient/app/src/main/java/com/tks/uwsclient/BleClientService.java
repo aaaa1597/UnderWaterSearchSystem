@@ -137,7 +137,7 @@ public class BleClientService extends Service {
 		dataBuilder.setIncludeDeviceName(true);
 
 		/* 拡張データ生成 */
-		byte[] sndBin = new byte[10];	/* 全部で12byteまでは送信可 */
+		byte[] sndBin = new byte[12];	/* 全部で12byteまでは送信可 */
 		int spos = 0;
 		/* (小城消防署からの)経度差分(4byte) */
 		byte[] bdifflong = f2bs(difflong);
