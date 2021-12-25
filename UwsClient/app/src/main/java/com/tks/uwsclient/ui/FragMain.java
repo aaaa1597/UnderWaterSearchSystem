@@ -103,9 +103,9 @@ public class FragMain extends Fragment {
 			}
 		});
 		/* 情報表示(脈拍) */
-		mViewModel.HearBeat().observe(getActivity(), new Observer<Integer>() {
+		mViewModel.HearBeat().observe(getActivity(), new Observer<Short>() {
 			@Override
-			public void onChanged(Integer heartbeat) {
+			public void onChanged(Short heartbeat) {
 				((TextView)view.findViewById(R.id.txtHeartbeat)).setText(String.valueOf(heartbeat));
 			}
 		});
@@ -117,11 +117,9 @@ public class FragMain extends Fragment {
 				switch (status) {
 					case NONE:				txtStatus.setText("-- none --");			break;
 					case SETTING_ID:		txtStatus.setText("ID設定中...");			break;
-					case START_ADVERTISE:	txtStatus.setText("アドバタイズ開始");			break;
-					case ADVERTISING:		txtStatus.setText("アドバタイズ中... 接続待ち");break;
-					case CONNECTED:			txtStatus.setText("接続確立");				break;
-					case DISCONNECTED:		txtStatus.setText("接続断");					break;
-					case ERROR:				txtStatus.setText("エラーが発生しました。");	break;
+					case START_ADVERTISE:	txtStatus.setText("アドバタイズ開始");		break;
+					case ADVERTISING:		txtStatus.setText("アドバタイズ中...");		break;
+					case ERROR:				txtStatus.setText("エラーが発生しました。");break;
 				}
 			}
 		});

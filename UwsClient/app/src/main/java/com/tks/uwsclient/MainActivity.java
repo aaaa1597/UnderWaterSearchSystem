@@ -4,7 +4,6 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import android.Manifest;
@@ -82,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
 		SettingsClient settingsClient = LocationServices.getSettingsClient(this);
 		settingsClient.checkLocationSettings(locationSettingsRequest)
 				.addOnSuccessListener(this, locationSettingsResponse -> {
-					mViewModel.mIsSettingLocationON = true;
+					mViewModel.mIsSettedLocationON = true;
 					/* Bleサーバへの接続処理開始 */
 					mViewModel.bindBleService(getApplicationContext(), mCon);
 				})
@@ -158,7 +157,7 @@ public class MainActivity extends AppCompatActivity {
 		if (requestCode != REQUEST_LOCATION_SETTINGS) return;	/* 対象外 */
 		switch (resultCode) {
 			case Activity.RESULT_OK:
-				mViewModel.mIsSettingLocationON = true;
+				mViewModel.mIsSettedLocationON = true;
 				/* Bleサーバへの接続処理開始 */
 				mViewModel.bindBleService(getApplicationContext(), mCon);
 				break;
@@ -251,21 +250,21 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	private Random						mRandom = new Random(new Date().getTime());
-	private final static int			REQUEST_PERMISSIONS			= 2222;
+	private final static int			REQUEST_PERMISSIONS	= 2222;
+	private final static int			LOC_UPD_INTERVAL	= 2500;
 	private FusedLocationProviderClient	mFusedLocationClient;
-	private final LocationRequest		mLocationRequest = LocationRequest.create().setInterval(1000)
-																					.setFastestInterval(1000/2)
+	private final LocationRequest		mLocationRequest = LocationRequest.create().setInterval(LOC_UPD_INTERVAL)
+																					.setFastestInterval(LOC_UPD_INTERVAL/2)
 																					.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 	private final LocationCallback		mLocationCallback = new LocationCallback() {
 		@Override
 		public void onLocationResult(@NonNull LocationResult locationResult) {
 			super.onLocationResult(locationResult);
 			Location location = locationResult.getLastLocation();
-			TLog.d("aaaaaaaa 1秒定期 (経度:{0} 緯度:{1})", locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude());
+			TLog.d("1秒定期 (経度:{0} 緯度:{1})", locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude());
 			mViewModel.Longitude().setValue(location.getLongitude());
 			mViewModel.Latitude().setValue(location.getLatitude());
-			mViewModel.HearBeat().setValue(mRandom.nextInt(40)+30);
-//			mViewModel.notifyOneShot();
+			mViewModel.HearBeat().setValue((short)(mRandom.nextInt(40)+30));
 		}
 	};
 }
