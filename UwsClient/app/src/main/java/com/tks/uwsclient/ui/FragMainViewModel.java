@@ -117,7 +117,7 @@ public class FragMainViewModel extends ViewModel {
 				catch (RemoteException e) { e.printStackTrace(); throw new RuntimeException("起きないはず.");}
 
 				/* 新データでアドバタイズ開始 */
-				float difflong = (float)(Latitude().getValue() - UWS_LOC_BASE_LONGITUDE);
+				float difflong = (float)(Longitude().getValue() - UWS_LOC_BASE_LONGITUDE);
 				float difflat  = (float)(Latitude().getValue() - UWS_LOC_BASE_LATITUDE);
 				short heartbeat= HearBeat().getValue();
 				try { mBleServiceIf.startAdvertising(mSeekerID, difflong, difflat, heartbeat); }
