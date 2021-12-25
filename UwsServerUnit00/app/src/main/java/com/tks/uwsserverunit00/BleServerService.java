@@ -11,7 +11,9 @@ import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanRecord;
 import android.bluetooth.le.ScanResult;
+import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -32,8 +34,8 @@ import java.util.stream.Collectors;
 
 import static com.tks.uwsserverunit00.Constants.UWS_NG_SUCCESS;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_DEVICE_NOTFOUND;
-import static com.tks.uwsserverunit00.Constants.UWS_UUID_SERVICE;
 import static com.tks.uwsserverunit00.Constants.UWS_UUID_CHARACTERISTIC_HRATBEAT;
+import static com.tks.uwsserverunit00.Constants.UWS_UUID_SERVICE;
 
 /**
  * -30 dBm	素晴らしい	達成可能な最大信号強度。クライアントは、これを実現するには、APから僅か数フィートである必要があります。現実的には一般的ではなく、望ましいものでもありません	N/A
@@ -178,6 +180,14 @@ public class BleServerService extends Service {
 		@Override
 		public void onScanResult(int callbackType, ScanResult result) {
 			super.onScanResult(callbackType, result);
+
+			if(result.getScanRecord().getDeviceName()!=null && result.getScanRecord().getDeviceName().startsWith("消防士")) {
+				ScanRecord aaaa = result.getScanRecord();
+				TLog.d("zzzzz 拡張データ={0}", Arrays.toString(result.getScanRecord().getManufacturerSpecificData(0xffff)));
+				TLog.d("zzzzz 拡張データall(size:{0} data={1})", result.getScanRecord().getManufacturerSpecificData().size(), result.getScanRecord().getManufacturerSpecificData().toString());
+				TLog.d("zzzzz aaaaaaaaaaaaaa");
+			}
+
 			boolean	isApplicable = false;
 			int		seekerid = -1;
 			String	retUuisStr = null;

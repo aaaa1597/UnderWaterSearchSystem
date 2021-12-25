@@ -20,9 +20,7 @@ import java.util.Map;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_SUCCESS;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_GATT_SUCCESS;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_DEVICE_NOTFOUND;
-import static com.tks.uwsserverunit00.Constants.UWS_NG_AIDL_CALLBACK_FAILED;
-import static com.tks.uwsserverunit00.Constants.UWS_NG_AIDL_INIT_BLE_FAILED;
-import static com.tks.uwsserverunit00.Constants.UWS_NG_AIDL_STARTSCAN_FAILED;
+import static com.tks.uwsserverunit00.Constants.UWS_NG_AIDL_REMOTE_ERROR;
 
 public class FragBleViewModel extends ViewModel {
 	final int PERIODIC_INTERVAL_TIME = 3000;
@@ -52,12 +50,12 @@ public class FragBleViewModel extends ViewModel {
 
 		/* コールバック設定 */
 		try { mBleServiceIf.setCallback(mCb); }
-		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_CALLBACK_FAILED;}
+		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_REMOTE_ERROR;}
 
 		/* BLE初期化 */
 		int ret;
 		try { ret = mBleServiceIf.initBle(); }
-		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_INIT_BLE_FAILED;}
+		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_REMOTE_ERROR;}
 
 		if(ret != UWS_NG_SUCCESS)
 			return ret;
@@ -83,7 +81,7 @@ public class FragBleViewModel extends ViewModel {
 		TLog.d("Scan開始.");
 		int ret;
 		try { ret = mBleServiceIf.startScan();}
-		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_STARTSCAN_FAILED;}
+		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_REMOTE_ERROR;}
 		TLog.d("ret={0}", ret);
 
 		if(ret != UWS_NG_SUCCESS)
