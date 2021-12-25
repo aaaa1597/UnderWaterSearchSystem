@@ -3,9 +3,6 @@ package com.tks.uwsserverunit00;
 import android.Manifest;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothGatt;
-import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanRecord;
@@ -18,20 +15,16 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
 import androidx.annotation.Nullable;
-
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static com.tks.uwsserverunit00.Constants.UWS_LOC_BASE_LATITUDE;
 import static com.tks.uwsserverunit00.Constants.UWS_LOC_BASE_LONGITUDE;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_SUCCESS;
 import static com.tks.uwsserverunit00.Constants.UWS_OWNDATA_KEY;
-import static com.tks.uwsserverunit00.Constants.UWS_UUID_CHARACTERISTIC_HRATBEAT;
-import static com.tks.uwsserverunit00.Constants.UWS_UUID_SERVICE;
 
 /**
  * -30 dBm	素晴らしい	達成可能な最大信号強度。クライアントは、これを実現するには、APから僅か数フィートである必要があります。現実的には一般的ではなく、望ましいものでもありません	N/A
