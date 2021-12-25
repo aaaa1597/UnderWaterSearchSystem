@@ -2,40 +2,45 @@ package com.tks.uwsserverunit00;
 
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.provider.ContactsContract;
+
+import java.util.Date;
 
 public class DeviceInfo implements Parcelable {
-	private final String	mShortUuid;
-	private final int		mSeekerId;
+	private final Date		mDatetime;
+	private final short		mSeekerId;
 	private final String	mDeviceName;
 	private final String	mDeviceAddress;
 	private final int		mDeviceRssi;
-	private final boolean	mIsApplicable;
-	private final boolean	mIsReading;
 	private final double	mLongitude;
 	private final double	mLatitude;
+	private final short		mHeartbeat;
 
-	public DeviceInfo(String shortuuid, int seekerid, String devicename, String deviceaddress, int devicerssi, boolean isApplicable, boolean isReading, double longitude, double latitude) {
-		mShortUuid		= shortuuid;
+	public DeviceInfo(Date datetime, short seekerid, String devicename, String deviceaddress, int devicerssi, double longitude, double latitude, short heartbeat) {
+		mDatetime		= datetime;
 		mSeekerId		= seekerid;
 		mDeviceName		= devicename;
 		mDeviceAddress	= deviceaddress;
 		mDeviceRssi		= devicerssi;
-		mIsApplicable	= isApplicable;
-		mIsReading		= isReading;
 		mLongitude		= longitude;
 		mLatitude		= latitude;
+		mHeartbeat		= heartbeat;
 	}
 
 	protected DeviceInfo(Parcel in) {
-		mShortUuid		= in.readString();
-		mSeekerId		= in.readInt();
-		mDeviceName		= in.readString();
-		mDeviceAddress	= in.readString();
+		String tmp1, tmp2;
+		mDatetime		= new Date(in.readLong());
+		mSeekerId		= (short)in.readInt();
+		tmp1			= in.readString();
+		if(tmp1.equals(""))	tmp1 = null;
+		mDeviceName		= tmp1;
+		tmp2			= in.readString();
+		if(tmp2.equals(""))	tmp2 = null;
+		mDeviceAddress	= tmp2;
 		mDeviceRssi		= in.readInt();
-		mIsApplicable	= in.readByte() != 0x00;
-		mIsReading		= in.readByte() != 0x00;
 		mLongitude		= in.readDouble();
 		mLatitude		= in.readDouble();
+		mHeartbeat		= (short)in.readInt();
 	}
 
 	public static final Creator<DeviceInfo> CREATOR = new Creator<DeviceInfo>() {
@@ -57,24 +62,22 @@ public class DeviceInfo implements Parcelable {
 
 	@Override
 	public void writeToParcel(Parcel dest, int flags) {
-		dest.writeString(mShortUuid);
+		dest.writeLong(mDatetime.getTime());
 		dest.writeInt(mSeekerId);
-		dest.writeString(mDeviceName);
-		dest.writeString(mDeviceAddress);
+		dest.writeString(mDeviceName==null?"":mDeviceName);
+		dest.writeString(mDeviceAddress==null?"":mDeviceAddress);
 		dest.writeInt(mDeviceRssi);
-		dest.writeByte((byte)(mIsApplicable?0x01:0x00));
-		dest.writeByte((byte)(mIsReading?0x01:0x00));
 		dest.writeDouble(mLongitude);
 		dest.writeDouble(mLatitude);
+		dest.writeInt(mHeartbeat);
 	}
 
-	public String	getShortUuid()		{ return mShortUuid;}
-	public int		getSeekerId()		{ return mSeekerId;}
+	public Date		getDate()			{ return mDatetime;}
+	public short	getSeekerId()		{ return mSeekerId;}
 	public String	getDeviceName()		{ return mDeviceName;}
 	public String	getDeviceAddress()	{ return mDeviceAddress;}
 	public int		getDeviceRssi()		{ return mDeviceRssi;}
-	public boolean	isApplicable()		{ return mIsApplicable;}
-	public boolean	isReading()			{ return mIsReading;}
 	public double	getLongitude()		{ return mLongitude;}
 	public double	getLatitude()		{ return mLatitude;}
+	public short	getHeartbeat()		{ return mHeartbeat;}
 }

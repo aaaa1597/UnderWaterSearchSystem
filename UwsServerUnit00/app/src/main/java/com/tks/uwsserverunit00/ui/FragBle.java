@@ -44,15 +44,7 @@ public class FragBle extends Fragment {
 			}
 			mViewModel.getDeviceListAdapter().notifyItemChanged(pos);
 		});
-		mViewModel.setDeviceListAdapter(new DeviceListAdapter(getActivity().getApplicationContext(), (view1, sUuid, address, isChecked) -> {
-			int pos = mViewModel.getDeviceListAdapter().setChecked(sUuid, address, isChecked);
-			mViewModel.NotifyItemChanged().postValue(pos);
-
-			if(isChecked)
-				mViewModel.startPeriodicRead(sUuid, address);
-			else
-				mViewModel.stopPeriodicRead(sUuid, address);
-		}));
+		mViewModel.setDeviceListAdapter(new DeviceListAdapter(getActivity().getApplicationContext()));
 
 		/* BLEデバイスリストの初期化 */
 		RecyclerView deviceListRvw = getActivity().findViewById(R.id.rvw_devices);
