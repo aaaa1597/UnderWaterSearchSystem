@@ -34,7 +34,7 @@ import static com.tks.uwsserverunit00.Constants.UWS_NG_DEVICE_NOTFOUND;
 
 public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.ViewHolder> {
 	static class ViewHolder extends RecyclerView.ViewHolder {
-		TextView mtxtDatetime;
+		TextView	mtxtDatetime;
 		TextView	mTxtSeekerId;
 		TextView	mTxtDeviceName;
 		TextView	mTxtDeviceNameAddress;
@@ -78,6 +78,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		public String			mDeviceName;
 		public String			mDeviceAddress;
 		public int				mDeviceRssi;
+		public byte				mSeqNo;
 		public double			mLongitude;
 		public double			mLatitude;
 		public short			mHertBeat;
@@ -158,6 +159,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 						mDeviceName		= deviceInfo.getDeviceName();
 						mDeviceAddress	= deviceInfo.getDeviceAddress();
 						mDeviceRssi		= deviceInfo.getDeviceRssi();
+						mSeqNo			= deviceInfo.getSeqNo();
 						mLongitude		= deviceInfo.getLongitude();
 						mLatitude		= deviceInfo.getLongitude();
 						mHertBeat		= deviceInfo.getHeartbeat();
@@ -165,11 +167,16 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 					}});
 		}
 		else {
+			if(device.mSeqNo != deviceInfo.getSeqNo()) {
+ 				boolean newPos = true;
+			}
+
 //			device.mDatetime		= deviceInfo.mDatetime;			更新しない
 			device.mSeekerId		= deviceInfo.getSeekerId();
 			device.mDeviceName		= deviceInfo.getDeviceName();
 			device.mDeviceAddress	= deviceInfo.getDeviceAddress();
 			device.mDeviceRssi		= deviceInfo.getDeviceRssi();
+			device.mSeqNo			= deviceInfo.getSeqNo();
 			device.mLongitude		= deviceInfo.getLongitude();
 			device.mLatitude		= deviceInfo.getLatitude();
 			device.mHertBeat		= deviceInfo.getHeartbeat();

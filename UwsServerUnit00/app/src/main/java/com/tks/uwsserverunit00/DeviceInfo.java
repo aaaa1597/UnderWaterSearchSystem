@@ -12,16 +12,18 @@ public class DeviceInfo implements Parcelable {
 	private final String	mDeviceName;
 	private final String	mDeviceAddress;
 	private final int		mDeviceRssi;
+	private final byte		mSeqNo;
 	private final double	mLongitude;
 	private final double	mLatitude;
 	private final short		mHeartbeat;
 
-	public DeviceInfo(Date datetime, short seekerid, String devicename, String deviceaddress, int devicerssi, double longitude, double latitude, short heartbeat) {
+	public DeviceInfo(Date datetime, short seekerid, String devicename, String deviceaddress, int devicerssi, byte seqno, double longitude, double latitude, short heartbeat) {
 		mDatetime		= datetime;
 		mSeekerId		= seekerid;
 		mDeviceName		= devicename;
 		mDeviceAddress	= deviceaddress;
 		mDeviceRssi		= devicerssi;
+		mSeqNo			= seqno;
 		mLongitude		= longitude;
 		mLatitude		= latitude;
 		mHeartbeat		= heartbeat;
@@ -38,6 +40,7 @@ public class DeviceInfo implements Parcelable {
 		if(tmp2.equals(""))	tmp2 = null;
 		mDeviceAddress	= tmp2;
 		mDeviceRssi		= in.readInt();
+		mSeqNo			= in.readByte();
 		mLongitude		= in.readDouble();
 		mLatitude		= in.readDouble();
 		mHeartbeat		= (short)in.readInt();
@@ -67,6 +70,7 @@ public class DeviceInfo implements Parcelable {
 		dest.writeString(mDeviceName==null?"":mDeviceName);
 		dest.writeString(mDeviceAddress==null?"":mDeviceAddress);
 		dest.writeInt(mDeviceRssi);
+		dest.writeByte(mSeqNo);
 		dest.writeDouble(mLongitude);
 		dest.writeDouble(mLatitude);
 		dest.writeInt(mHeartbeat);
@@ -77,6 +81,7 @@ public class DeviceInfo implements Parcelable {
 	public String	getDeviceName()		{ return mDeviceName;}
 	public String	getDeviceAddress()	{ return mDeviceAddress;}
 	public int		getDeviceRssi()		{ return mDeviceRssi;}
+	public byte		getSeqNo()			{ return mSeqNo;}
 	public double	getLongitude()		{ return mLongitude;}
 	public double	getLatitude()		{ return mLatitude;}
 	public short	getHeartbeat()		{ return mHeartbeat;}

@@ -131,6 +131,7 @@ public class BleClientService extends Service {
 		return settingsBuilder.build();
 	}
 
+	private byte mSeqNo = 0;
 	private AdvertiseData buildAdvertiseData(short seekerid, float difflong, float difflat, short heartbeat) {
 		AdvertiseData.Builder dataBuilder = new AdvertiseData.Builder();
 		dataBuilder.addServiceUuid(ParcelUuid.fromString(Constants.createServiceUuid(seekerid)));
@@ -139,6 +140,9 @@ public class BleClientService extends Service {
 		/* 拡張データ生成 */
 		byte[] sndBin = new byte[12];	/* 全部で12byteまでは送信可 */
 		int spos = 0;
+		/* SeqNo(1byte) */
+		sndBin[0] = mSeqNo++;
+		spos += 1;
 		/* (小城消防署からの)経度差分(4byte) */
 		byte[] bdifflong = f2bs(difflong);
 		System.arraycopy(bdifflong, 0, sndBin, spos, bdifflong.length);

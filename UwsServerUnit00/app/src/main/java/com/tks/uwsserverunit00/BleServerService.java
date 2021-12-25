@@ -163,6 +163,7 @@ public class BleServerService extends Service {
 		String	name	= result.getDevice().getName();
 		String	address = result.getDevice().getAddress();
 		int		rssi	= result.getRssi();
+		byte	seqno = 0;
 		double	longitude = 0;
 		double	latitude = 0;
 		short	heartbeat = 0;
@@ -172,13 +173,14 @@ public class BleServerService extends Service {
 			seekerid= Short.parseShort(deviceName.substring("消防士".length()));
 			/* 経度/緯度 脈拍を取得 */
 			byte[] rcvdata = result.getScanRecord().getManufacturerSpecificData(UWS_OWNDATA_KEY);
-			longitude	= ByteBuffer.wrap(rcvdata).getFloat()		+ UWS_LOC_BASE_LONGITUDE;
-			latitude	= ByteBuffer.wrap(rcvdata).getFloat(4)+ UWS_LOC_BASE_LATITUDE;
-			heartbeat	= ByteBuffer.wrap(rcvdata).getShort(8);
+			seqno		= rcvdata[0];
+			longitude	= ByteBuffer.wrap(rcvdata).getFloat(1)+ UWS_LOC_BASE_LONGITUDE;
+			latitude	= ByteBuffer.wrap(rcvdata).getFloat(5)+ UWS_LOC_BASE_LATITUDE;
+			heartbeat	= ByteBuffer.wrap(rcvdata).getShort(9);
 		}
 
 		TLog.d("読込データ=({0} {1}({2}):{3} 経度:{4} 緯度:{5} 脈拍:{6})", nowtime, address, name, seekerid, longitude, latitude, heartbeat);
-		return new DeviceInfo(nowtime, seekerid, name, address, rssi, longitude, latitude, heartbeat);
+		return new DeviceInfo(nowtime, seekerid, name, address, rssi, seqno, longitude, latitude, heartbeat);
 	}
 
 	/** *******
