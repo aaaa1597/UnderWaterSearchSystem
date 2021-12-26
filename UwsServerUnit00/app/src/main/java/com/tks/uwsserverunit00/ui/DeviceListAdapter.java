@@ -71,7 +71,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	}
 
 	/* メンバ変数 */
-	private final ArrayList<DevicveInfoModel> mDeviceList = new ArrayList<>();
+	private final List<DevicveInfoModel> mDeviceList = new ArrayList<>();
 	private static class DevicveInfoModel {
 		public Date				mDatetime;
 		public short			mSeekerId;
@@ -168,6 +168,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		}
 		else {
 			if(device.mSeqNo != deviceInfo.getSeqNo()) {
+				/* TODO aaaaaaaaaaa. */
  				boolean newPos = true;
 			}
 
@@ -208,5 +209,9 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	public void clearDevice() {
 		mDeviceList.clear();
 //		notifyDataSetChanged(); UIスレッドで実行する必要がある。
+	}
+
+	public void clearDeviceWithoutAppliciated() {
+		mDeviceList.removeIf(item -> item.mSeekerId == -1);
 	}
 }

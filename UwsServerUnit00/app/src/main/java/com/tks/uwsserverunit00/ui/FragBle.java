@@ -46,6 +46,10 @@ public class FragBle extends Fragment {
 		});
 		mViewModel.setDeviceListAdapter(new DeviceListAdapter(getActivity().getApplicationContext()));
 
+		view.findViewById(R.id.btnClear).setOnClickListener(lview -> {
+			mViewModel.clearDeviceWithoutAppliciated();
+		});
+
 		/* BLEデバイスリストの初期化 */
 		RecyclerView deviceListRvw = getActivity().findViewById(R.id.rvw_devices);
 		/* BLEデバイスリストに区切り線を表示 */

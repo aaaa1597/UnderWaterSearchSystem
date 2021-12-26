@@ -113,4 +113,9 @@ public class FragBleViewModel extends ViewModel {
 //			TLog.d("発見!! No:{0}, {1}({2}):Rssi({3})", device.getSeekerId(), device.getDeviceAddress(), device.getDeviceName(), device.getDeviceRssi());
 		}
 	};
+
+	public void clearDeviceWithoutAppliciated() {
+		mDeviceListAdapter.clearDeviceWithoutAppliciated();
+		mNotifyDataSetChanged.postValue(true);
+	}
 }
