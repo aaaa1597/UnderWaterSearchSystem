@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.tks.uwsserverunit00.DeviceInfo;
 import com.tks.uwsserverunit00.R;
-
+import com.tks.uwsserverunit00.TLog;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_DEVICE_NOTFOUND;
 
 /**
@@ -63,11 +63,18 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		}
 	}
 
+	/* インターフェース */
+	interface OnCheckedChangeListener {
+		void onCheckedChanged(short seekerid, boolean isChecked);
+	}
+
 	/* コンストラクタ */
-	private final Context mContext;
+	private final Context					mContext;
+	private final OnCheckedChangeListener	mOnCheckedChangeListener;
 	private final SimpleDateFormat mDf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSSXXX", Locale.JAPAN);
-	public DeviceListAdapter(Context context) {
-		mContext = context;
+	public DeviceListAdapter(Context context, OnCheckedChangeListener lisner) {
+		mContext				= context;
+		mOnCheckedChangeListener= lisner;
 	}
 
 	/* メンバ変数 */
@@ -95,15 +102,16 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	@Override
 	public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
 		DevicveInfoModel model = mDeviceList.get(position);
+		final short  seekerid		= model.mSeekerId;
 		final String deviceName		= model.mDeviceName;
 		final String deviceAddress	= model.mDeviceAddress;
 		final int rssiresid	=	model.mDeviceRssi > -60 ? R.drawable.wifi_level_3 :
 								model.mDeviceRssi > -70 ? R.drawable.wifi_level_2 :
 								model.mDeviceRssi > -80 ? R.drawable.wifi_level_1 : R.drawable.wifi_level_0;
-		final int constsresid =	model.mSeekerId==-1	? R.drawable.statusx_na :
+		final int constsresid =	seekerid==-1			? R.drawable.statusx_na :
 								model.mSelected		? R.drawable.status5_ready : R.drawable.status0_none;
 		holder.mtxtDatetime.setText(mDf.format(model.mDatetime));
-		holder.mTxtSeekerId.setText((model.mSeekerId ==-1) ? " - " : String.valueOf(model.mSeekerId));
+		holder.mTxtSeekerId.setText((seekerid==-1) ? " - " : String.valueOf(seekerid));
 		holder.mTxtDeviceName.setText(TextUtils.isEmpty(deviceName) ? "" : deviceName);
 		holder.mTxtDeviceNameAddress.setText(TextUtils.isEmpty(deviceAddress) ? "" : deviceAddress);
 		holder.mImvRssi.setImageResource(rssiresid);
@@ -118,7 +126,18 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		});
 		holder.mTxtLongitude.setText(String.valueOf(model.mLongitude));
 		holder.mTxtLatitude .setText(String.valueOf(model.mLatitude));
-		holder.mSwhSelected.setChecked(model.mSelected);
+		if(seekerid == -1) {
+			holder.mSwhSelected.setEnabled(false);
+		}
+		else {
+			holder.mSwhSelected.setEnabled(true);
+			holder.mSwhSelected.setOnCheckedChangeListener(null);
+			holder.mSwhSelected.setChecked(model.mSelected);
+			holder.mSwhSelected.setOnCheckedChangeListener((buttonView, isChecked) -> {
+				mOnCheckedChangeListener.onCheckedChanged(seekerid, isChecked);
+			});
+		}
+
 	}
 
 	@Override
@@ -213,5 +232,14 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 
 	public void clearDeviceWithoutAppliciated() {
 		mDeviceList.removeIf(item -> item.mSeekerId == -1);
+	}
+
+	public int setChecked(short seekerid, boolean isChecked) {
+		AtomicInteger index = new AtomicInteger(-1);
+		DevicveInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
+		if(device == null) return UWS_NG_DEVICE_NOTFOUND;	/* 対象外デバイスが存在しない。ありえないはず。 */
+
+		device.mSelected = isChecked;
+		return index.get();
 	}
 }
