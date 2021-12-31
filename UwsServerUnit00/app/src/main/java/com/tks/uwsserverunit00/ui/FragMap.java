@@ -3,6 +3,7 @@ package com.tks.uwsserverunit00.ui;
 import androidx.core.app.ActivityCompat;
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
@@ -21,11 +22,16 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.Circle;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.Polygon;
+import com.tks.uwsserverunit00.DeviceInfo;
 import com.tks.uwsserverunit00.R;
 import com.tks.uwsserverunit00.TLog;
 import java.util.HashMap;
@@ -33,16 +39,18 @@ import java.util.Map;
 import java.util.Objects;
 
 public class FragMap extends SupportMapFragment {
-	private FragMapViewModel		mViewModel;
-	private GoogleMap				mGoogleMap;
-	private Location				mLocation;
-	private Map<String, SerchInfo>	mSerchInfos = new HashMap<>();
-	int								mNowSerchColor = 0xff78e06b;    /* 緑っぽい色 */
+	private FragBleViewModel				mBleViewModel;
+	private FragMapViewModel				mMapViewModel;
+	private GoogleMap						mGoogleMap;
+	private Location						mLocation;
+	private final Map<String, SerchInfo>	mSerchInfos = new HashMap<>();
+	int										mNowSerchColor = 0xff78e06b;    /* 緑っぽい色 */
 
 	/* 検索情報 */
 	static class SerchInfo {
-		public Marker maker;		/* GoogleMapの Marker */
-		public Polyline polyline;	/* GoogleMapの polyline */
+		public Marker	maker;	/* GoogleMapの Marker */
+		public Polygon	polygon;/* GoogleMapの Polygon */
+		public Circle	circle;	/* GoogleMapの Circle 中心点は隊員の現在値 */
 	};
 
 	@NonNull
@@ -54,8 +62,14 @@ public class FragMap extends SupportMapFragment {
 	@Override
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
-		mViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
-		mViewModel.Permission().observe(getViewLifecycleOwner(), aBoolean -> {
+		mBleViewModel = new ViewModelProvider(requireActivity()).get(FragBleViewModel.class);
+		mBleViewModel.NewDeviceInfo().observe(getViewLifecycleOwner(), deviceInfo -> {
+			if(deviceInfo==null) return;
+			updSerchInfo(mGoogleMap, mSerchInfos, deviceInfo);
+		});
+
+		mMapViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
+		mMapViewModel.Permission().observe(getViewLifecycleOwner(), aBoolean -> {
 			getNowPosAndDraw();
 		});
 
@@ -123,7 +137,7 @@ public class FragMap extends SupportMapFragment {
 
 		/* 現在地マーカ追加 */
 		Marker basemarker = googleMap.addMarker(new MarkerOptions().position(nowposgps).title("BasePos"));
-		mSerchInfos.put("base", new SerchInfo(){{maker=basemarker; polyline=null;}});
+		mSerchInfos.put("base", new SerchInfo(){{maker=basemarker; polygon =null;}});
 
 		/* 現在地マーカを中心に */
 		googleMap.moveCamera(CameraUpdateFactory.newLatLng(nowposgps));
@@ -133,8 +147,99 @@ public class FragMap extends SupportMapFragment {
 		TLog.d("拡縮 zoom:{0}", 19);
 		googleMap.moveCamera(CameraUpdateFactory.zoomTo(19));
 
-		/* 地図俯角 50° */
+		/* 地図俯角 70° */
 		CameraPosition tilt = new CameraPosition.Builder(googleMap.getCameraPosition()).tilt(70).build();
 		googleMap.moveCamera(CameraUpdateFactory.newCameraPosition(tilt));
+	}
+
+	/* 探索線表示 */
+	private void updSerchInfo(GoogleMap googleMap, Map<String, SerchInfo> mSerchInfos, DeviceInfo deviceInfo) {
+		String key = String.valueOf(deviceInfo.getSeekerId());
+		if(key.equals("-1")) {
+			TLog.d("対象外エントリ.何もしない.info({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7})", deviceInfo.getDate(), deviceInfo.getSeekerId(), deviceInfo.getSeqNo(), deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getLongitude(), deviceInfo.getLatitude(), deviceInfo.getHeartbeat());
+			return;
+		}
+
+		/* TODO 削除予定 */
+		for(String keyaaa: mSerchInfos.keySet())
+			TLog.d("SerchInfos::key={0} maker={1} circle={2} polygon={3}", keyaaa, mSerchInfos.get(keyaaa).maker, mSerchInfos.get(keyaaa).circle, mSerchInfos.get(keyaaa).polygon);
+
+		SerchInfo drawinfo = mSerchInfos.get(key);
+		if(drawinfo == null) {
+			/* 新規追加 */
+			LatLng nowposgps = new LatLng(deviceInfo.getLatitude(), deviceInfo.getLongitude());
+			Marker marker = googleMap.addMarker(new MarkerOptions()
+												.position(nowposgps)
+												.title(key)
+												.icon(createIcon(deviceInfo.getSeekerId())));
+
+			Circle nowPoint = googleMap.addCircle(new CircleOptions().center(nowposgps)
+																	  .radius(1.0)
+																	  .fillColor(Color.MAGENTA)
+																	  .strokeColor(Color.MAGENTA));
+			TLog.d("Circle = {0}", nowPoint);
+			SerchInfo si = new SerchInfo();
+			si.maker = marker;
+			si.circle= nowPoint;
+			mSerchInfos.put(key, si);
+
+			/* TODO 削除予定 */
+			for(String keyaaa: mSerchInfos.keySet())
+				TLog.d("SerchInfos::key={0} maker={1} circle={2} polygon={3}", keyaaa, mSerchInfos.get(keyaaa).maker, mSerchInfos.get(keyaaa).circle, mSerchInfos.get(keyaaa).polygon);
+		}
+		else {
+			/* TODO 削除予定 */
+			for(String keyaaa: mSerchInfos.keySet())
+				TLog.d("SerchInfos::key={0} maker={1} circle={2} polygon={3}", keyaaa, mSerchInfos.get(keyaaa).maker, mSerchInfos.get(keyaaa).circle, mSerchInfos.get(keyaaa).polygon);
+
+			TLog.d("SerchInfos::maker={0} circle={1} polygon={2}", drawinfo.maker, drawinfo.circle, drawinfo.polygon);
+
+			drawinfo.maker.remove();
+			drawinfo.maker = null;
+			drawinfo.circle.remove();
+			drawinfo.circle = null;
+			LatLng nowposgps = new LatLng(deviceInfo.getLatitude(), deviceInfo.getLongitude());
+			Marker marker = googleMap.addMarker(new MarkerOptions()
+					.position(nowposgps)
+					.title(key)
+					.icon(createIcon(deviceInfo.getSeekerId())));
+
+			Circle nowPoint = googleMap.addCircle(new CircleOptions().center(nowposgps)
+					.radius(1.0)
+					.fillColor(Color.MAGENTA)
+					.strokeColor(Color.MAGENTA));
+
+			drawinfo.maker = marker;
+			drawinfo.circle= nowPoint;
+
+//// Add polygons to indicate areas on the map.
+//			Polygon polygon1 = googleMap.addPolygon(new PolygonOptions()
+//					.clickable(true)
+//					.add(
+//							new LatLng(-27.457, 153.040),
+//							new LatLng(-33.852, 151.211),
+//							new LatLng(-37.813, 144.962),
+//							new LatLng(-34.928, 138.599)));
+//// Store a data object with the polygon, used here to indicate an arbitrary type.
+//			polygon1.setTag("alpha");
+		}
+
+	}
+
+	private BitmapDescriptor createIcon(short seekerid) {
+		switch(seekerid) {
+			case 0: return BitmapDescriptorFactory.fromResource(R.drawable.marker0);
+			case 1: return BitmapDescriptorFactory.fromResource(R.drawable.marker1);
+			case 2: return BitmapDescriptorFactory.fromResource(R.drawable.marker2);
+			case 3: return BitmapDescriptorFactory.fromResource(R.drawable.marker3);
+			case 4: return BitmapDescriptorFactory.fromResource(R.drawable.marker4);
+			case 5: return BitmapDescriptorFactory.fromResource(R.drawable.marker5);
+			case 6: return BitmapDescriptorFactory.fromResource(R.drawable.marker6);
+			case 7: return BitmapDescriptorFactory.fromResource(R.drawable.marker7);
+			case 8: return BitmapDescriptorFactory.fromResource(R.drawable.marker8);
+			case 9: return BitmapDescriptorFactory.fromResource(R.drawable.marker9);
+			default:
+				return BitmapDescriptorFactory.fromResource(R.drawable.marker9);
+		}
 	}
 }

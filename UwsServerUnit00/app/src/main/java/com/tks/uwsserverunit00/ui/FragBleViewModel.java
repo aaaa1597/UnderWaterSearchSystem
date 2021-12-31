@@ -33,6 +33,9 @@ public class FragBleViewModel extends ViewModel {
 	public void								setDeviceListAdapter(DeviceListAdapter adapter)	{ mDeviceListAdapter = adapter; }
 	public DeviceListAdapter				getDeviceListAdapter()	{ return mDeviceListAdapter; }
 	/* ---------------- */
+	private final MutableLiveData<DeviceInfo>	mNewDeviceInfo		= new MutableLiveData<>(null);
+	public MutableLiveData<DeviceInfo>			NewDeviceInfo()		{ return mNewDeviceInfo; }
+	/* ---------------- */
 
 	/** *****************
 	 * サービス接続Callback
@@ -108,8 +111,11 @@ public class FragBleViewModel extends ViewModel {
 
 		@Override
 		public void notifyDeviceInfo(DeviceInfo device) {
-			mDeviceListAdapter.addDevice(device);
+			boolean newDataFlg = mDeviceListAdapter.addDevice(device);
 			mNotifyDataSetChanged.postValue(true);
+			if(newDataFlg && device.getSeekerId()!=-1)
+				NewDeviceInfo().postValue(device);
+
 //			TLog.d("発見!! No:{0}, {1}({2}):Rssi({3})", device.getSeekerId(), device.getDeviceAddress(), device.getDeviceName(), device.getDeviceRssi());
 		}
 	};

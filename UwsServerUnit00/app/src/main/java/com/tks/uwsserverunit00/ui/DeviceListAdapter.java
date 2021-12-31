@@ -148,19 +148,20 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	public void addDevice(List<DeviceInfo> deviceInfos) {
 		if (deviceInfos != null) {
 			for (DeviceInfo deviceInfo : deviceInfos) {
-				addDevice(deviceInfo, false);
+				addDevice(deviceInfo);
 			}
 //			notifyDataSetChanged();
 		}
 	}
 
-	public void addDevice(DeviceInfo deviceInfo) {
-		addDevice(deviceInfo, true);
-	}
+//	public void addDevice(DeviceInfo deviceInfo) {
+//		addDevice(deviceInfo, true);
+//	}
 
-	private void addDevice(DeviceInfo deviceInfo, boolean notify) {
+	/** * @return 新データかどうかのフラグ */
+	public boolean addDevice(DeviceInfo deviceInfo) {
 		if (deviceInfo == null)
-			return;
+			return false;
 
 		/* リスト済確認 */
 		DevicveInfoModel device = mDeviceList.stream().filter((item) -> {
@@ -169,8 +170,11 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			else					/* SeekerIdが-1の場合は、対象外デバイス。Adressで識別する */
 				return item.mDeviceAddress.equals(deviceInfo.getDeviceAddress());
 		}).findFirst().orElse(null);
+
+		boolean retNewDataFlg;
 		if(device == null) {
 			/* 新規追加 */
+			retNewDataFlg = true;
 			mDeviceList.add(
 					new DevicveInfoModel() {{
 						mDatetime		= deviceInfo.getDate();
@@ -186,10 +190,8 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 					}});
 		}
 		else {
-			if(device.mSeqNo != deviceInfo.getSeqNo()) {
-				/* TODO aaaaaaaaaaa. */
- 				boolean newPos = true;
-			}
+			/* 新データ判定 */
+			retNewDataFlg = device.mSeqNo != deviceInfo.getSeqNo();
 
 //			device.mDatetime		= deviceInfo.mDatetime;			更新しない
 			device.mSeekerId		= deviceInfo.getSeekerId();
@@ -223,6 +225,8 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 //		if (notify) {
 //			notifyDataSetChanged();
 //		}
+
+		return retNewDataFlg;
 	}
 
 	public void clearDevice() {
