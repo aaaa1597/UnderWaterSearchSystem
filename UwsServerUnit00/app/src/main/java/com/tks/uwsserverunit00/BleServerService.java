@@ -129,15 +129,6 @@ public class BleServerService extends Service {
 		public void onScanResult(int callbackType, ScanResult result) {
 			super.onScanResult(callbackType, result);
 
-			/* TODO 削除予定  */
-			if(result.getScanRecord().getDeviceName()!=null && result.getScanRecord().getDeviceName().startsWith("消防士")) {
-				ScanRecord aaaa = result.getScanRecord();
-				TLog.d("zzzzz 拡張データ={0}", Arrays.toString(result.getScanRecord().getManufacturerSpecificData(UWS_OWNDATA_KEY)));
-				TLog.d("zzzzz 拡張データall(size:{0} data={1})", result.getScanRecord().getManufacturerSpecificData().size(), result.getScanRecord().getManufacturerSpecificData().toString());
-				TLog.d("zzzzz aaaaaaaaaaaaaa");
-			}
-			/* TODO 削除予定  */
-
 			DeviceInfo deviceInfo = parseScanResult(result);
 //			TLog.d("発見!! {0}({1}):Rssi({2}) ScanRecord={3}", result.getDevice().getAddress(), result.getDevice().getName(), result.getRssi(), result.getScanRecord());
 			try { mCb.notifyDeviceInfo(deviceInfo);}
