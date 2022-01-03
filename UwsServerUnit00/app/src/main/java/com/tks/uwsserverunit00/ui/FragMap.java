@@ -221,7 +221,7 @@ public class FragMap extends SupportMapFragment {
 			/* 9.矩形追加 */
 			Polygon polygon = googleMap.addPolygon(new PolygonOptions()
 													.fillColor(Color.CYAN)
-//													.strokeColor(Color.CYAN)
+													.strokeColor(Color.BLUE)
 													.add(square[0], square[1], square[3], square[2]));
 			drawinfo.polygon = polygon;
 
