@@ -19,20 +19,20 @@
         tools:ignore="HardcodedText" />
 
     <Button
-        android:id="@+id/btnSerchStartEnd"
+        android:id="@+id/btnSerchStartStop"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toBottomOf="@+id/btnSelectMember"
         app:layout_constraintRight_toRightOf="parent"
         android:layout_marginEnd="10dp"
-        android:text=" 検索開始 "
+        android:text="検索開始"
         tools:ignore="HardcodedText" />
 
     <Space
         android:id="@+id/sps001"
         android:layout_width="wrap_content"
         android:layout_height="100dp"
-        app:layout_constraintTop_toBottomOf="@+id/btnSerchStartEnd"
+        app:layout_constraintTop_toBottomOf="@+id/btnSerchStartStop"
         app:layout_constraintRight_toRightOf="parent"/>
 
     <Button

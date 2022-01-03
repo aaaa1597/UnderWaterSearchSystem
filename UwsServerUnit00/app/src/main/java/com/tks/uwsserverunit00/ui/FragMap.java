@@ -40,11 +40,11 @@ import java.util.Objects;
 import com.tks.uwsserverunit00.DeviceInfo;
 import com.tks.uwsserverunit00.R;
 import com.tks.uwsserverunit00.TLog;
-import static com.tks.uwsserverunit00.Constants.UWS_LOC_BASE_LATITUDE;
 import static com.tks.uwsserverunit00.Constants.UWS_LOC_BASE_DISTANCE_X;
 import static com.tks.uwsserverunit00.Constants.UWS_LOC_BASE_DISTANCE_Y;
 
 public class FragMap extends SupportMapFragment {
+	private FragBizLogicViewModel			mBizLogicViewModel;
 	private FragBleViewModel				mBleViewModel;
 	private FragMapViewModel				mMapViewModel;
 	private GoogleMap						mGoogleMap;
@@ -54,7 +54,7 @@ public class FragMap extends SupportMapFragment {
 	static class SerchInfo {
 		public Marker	maker;	/* GoogleMapの Marker */
 		public Polygon	polygon;/* GoogleMapの Polygon */
-		public Circle	circle;	/* GoogleMapの Circle 中心点は隊員の現在値 */
+		public Circle	circle;	/* GoogleMapの Circle-中心点は隊員の現在値 */
 	};
 
 	@NonNull
@@ -66,9 +66,11 @@ public class FragMap extends SupportMapFragment {
 	@Override
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
+		mBizLogicViewModel = new ViewModelProvider(requireActivity()).get(FragBizLogicViewModel.class);
 		mBleViewModel = new ViewModelProvider(requireActivity()).get(FragBleViewModel.class);
 		mBleViewModel.NewDeviceInfo().observe(getViewLifecycleOwner(), deviceInfo -> {
 			if(deviceInfo==null) return;
+			if(!mBizLogicViewModel.getSerchStatus()) return;	/* 検索中でなければ何もしない。 */
 			updSerchInfo(mGoogleMap, mSerchInfos, deviceInfo);
 		});
 
