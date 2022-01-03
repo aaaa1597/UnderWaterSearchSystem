@@ -31,12 +31,18 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polygon;
+import com.google.android.gms.maps.model.PolygonOptions;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+
 import com.tks.uwsserverunit00.DeviceInfo;
 import com.tks.uwsserverunit00.R;
 import com.tks.uwsserverunit00.TLog;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import static com.tks.uwsserverunit00.Constants.UWS_LOC_BASE_LATITUDE;
+import static com.tks.uwsserverunit00.Constants.UWS_LOC_BASE_DISTANCE_X;
+import static com.tks.uwsserverunit00.Constants.UWS_LOC_BASE_DISTANCE_Y;
 
 public class FragMap extends SupportMapFragment {
 	private FragBleViewModel				mBleViewModel;
@@ -44,8 +50,6 @@ public class FragMap extends SupportMapFragment {
 	private GoogleMap						mGoogleMap;
 	private Location						mLocation;
 	private final Map<String, SerchInfo>	mSerchInfos = new HashMap<>();
-	int										mNowSerchColor = 0xff78e06b;    /* 緑っぽい色 */
-
 	/* 検索情報 */
 	static class SerchInfo {
 		public Marker	maker;	/* GoogleMapの Marker */
@@ -137,7 +141,13 @@ public class FragMap extends SupportMapFragment {
 
 		/* 現在地マーカ追加 */
 		Marker basemarker = googleMap.addMarker(new MarkerOptions().position(nowposgps).title("BasePos"));
-		mSerchInfos.put("base", new SerchInfo(){{maker=basemarker; polygon =null;}});
+		Circle nowPoint = googleMap.addCircle(new CircleOptions()
+									.center(nowposgps)
+									.radius(1.0)
+									.fillColor(Color.CYAN)
+									.strokeColor(Color.CYAN));
+
+		mSerchInfos.put("base", new SerchInfo(){{maker=basemarker; circle=nowPoint; polygon=null;}});
 
 		/* 現在地マーカを中心に */
 		googleMap.moveCamera(CameraUpdateFactory.newLatLng(nowposgps));
@@ -160,10 +170,6 @@ public class FragMap extends SupportMapFragment {
 			return;
 		}
 
-		/* TODO 削除予定 */
-		for(String keyaaa: mSerchInfos.keySet())
-			TLog.d("SerchInfos::key={0} maker={1} circle={2} polygon={3}", keyaaa, mSerchInfos.get(keyaaa).maker, mSerchInfos.get(keyaaa).circle, mSerchInfos.get(keyaaa).polygon);
-
 		SerchInfo drawinfo = mSerchInfos.get(key);
 		if(drawinfo == null) {
 			/* 新規追加 */
@@ -182,48 +188,104 @@ public class FragMap extends SupportMapFragment {
 			si.maker = marker;
 			si.circle= nowPoint;
 			mSerchInfos.put(key, si);
-
-			/* TODO 削除予定 */
-			for(String keyaaa: mSerchInfos.keySet())
-				TLog.d("SerchInfos::key={0} maker={1} circle={2} polygon={3}", keyaaa, mSerchInfos.get(keyaaa).maker, mSerchInfos.get(keyaaa).circle, mSerchInfos.get(keyaaa).polygon);
 		}
 		else {
-			/* TODO 削除予定 */
-			for(String keyaaa: mSerchInfos.keySet())
-				TLog.d("SerchInfos::key={0} maker={1} circle={2} polygon={3}", keyaaa, mSerchInfos.get(keyaaa).maker, mSerchInfos.get(keyaaa).circle, mSerchInfos.get(keyaaa).polygon);
-
-			TLog.d("SerchInfos::maker={0} circle={1} polygon={2}", drawinfo.maker, drawinfo.circle, drawinfo.polygon);
+			LatLng spos = drawinfo.circle.getCenter();
+			LatLng epos = new LatLng(deviceInfo.getLatitude(), deviceInfo.getLongitude());
+			double dx = epos.longitude- spos.longitude;
+			double dy = epos.latitude - spos.latitude;
+			if(Math.abs(dx) < 2*Float.MIN_VALUE && Math.abs(dy) < 2*Float.MIN_VALUE) {
+				TLog.d("matrix 移動量が小さいので処理しない dx={0} dy={1} Double.MIN_VALUE={2}", dx, dy, Double.MIN_VALUE);
+				return;
+			}
 
 			drawinfo.maker.remove();
 			drawinfo.maker = null;
 			drawinfo.circle.remove();
 			drawinfo.circle = null;
-			LatLng nowposgps = new LatLng(deviceInfo.getLatitude(), deviceInfo.getLongitude());
 			Marker marker = googleMap.addMarker(new MarkerOptions()
-					.position(nowposgps)
-					.title(key)
-					.icon(createIcon(deviceInfo.getSeekerId())));
-
-			Circle nowPoint = googleMap.addCircle(new CircleOptions().center(nowposgps)
-					.radius(1.0)
-					.fillColor(Color.MAGENTA)
-					.strokeColor(Color.MAGENTA));
-
+												.position(epos)
+												.title(key)
+												.icon(createIcon(deviceInfo.getSeekerId())));
+			Circle nowPoint = googleMap.addCircle(new CircleOptions()
+													.center(epos)
+													.radius(0.5)
+													.fillColor(Color.MAGENTA)
+													.strokeColor(Color.MAGENTA));
 			drawinfo.maker = marker;
 			drawinfo.circle= nowPoint;
 
-//// Add polygons to indicate areas on the map.
-//			Polygon polygon1 = googleMap.addPolygon(new PolygonOptions()
-//					.clickable(true)
-//					.add(
-//							new LatLng(-27.457, 153.040),
-//							new LatLng(-33.852, 151.211),
-//							new LatLng(-37.813, 144.962),
-//							new LatLng(-34.928, 138.599)));
-//// Store a data object with the polygon, used here to indicate an arbitrary type.
-//			polygon1.setTag("alpha");
+			/* 検索線描画の頂点情報取得 */
+			LatLng[] square = createSquare(spos, epos, UWS_LOC_BASE_DISTANCE_X, UWS_LOC_BASE_DISTANCE_Y);
+
+			/* 9.矩形追加 */
+			Polygon polygon = googleMap.addPolygon(new PolygonOptions()
+													.fillColor(Color.CYAN)
+//													.strokeColor(Color.CYAN)
+													.add(square[0], square[1], square[3], square[2]));
+			drawinfo.polygon = polygon;
+
 		}
 
+	}
+
+	private LatLng[] createSquare(final LatLng spos, final LatLng epos, final double BASE_DISTANCE_X, final double BASE_DISTANCE_Y) {
+		/* 0.準備 */
+		double dx = epos.longitude- spos.longitude;
+		double dy = epos.latitude - spos.latitude;
+		TLog.d("0.準備 dx={0} dy={1}", String.format(Locale.JAPAN, "%.10f", dx), String.format(Locale.JAPAN, "%.10f", dy));
+
+//		/* 1.傾きを求める */
+//		double slope = dy / dx;
+//		TLog.d("1.傾きを求める slope={0}", String.format(Locale.JAPAN, "%.10f", slope));
+//
+//		/* 2.直行線分の傾きを求める */
+//		double rslope = -1 / slope;
+//		TLog.d("2.直行線分の傾きを求める rslope={0}", String.format(Locale.JAPAN, "%.10f", rslope));
+
+		/* 3.直行線分の傾きの角度(rad)を求める */
+		double rdegree = Math.atan2(dx, -dy);	/* 直交座標なので反転(xy入替え)する */
+		TLog.d("3.直行線分の傾きの角度(°)を求める rdegree={0}", String.format(Locale.JAPAN, "%.10f", rdegree));
+
+		/* 4. 50cmをx,y成分に分ける1 x成分を求める */
+		double newdx = 50/*cm*/ * Math.cos(rdegree);	/* 引数はすでにrad. */
+		TLog.d("4. 50cmをx,y成分に分ける1 x成分を求める newdx={0}", String.format(Locale.JAPAN, "%.10f", newdx));
+
+		/* 5. 50cmをx,y成分に分ける2 y成分を求める */
+		double newdy = 50/*cm*/ * Math.sin(rdegree);	/* 引数はすでにrad. */
+		TLog.d("5. 50cmをx,y成分に分ける2 y成分を求める newdy={0}", String.format(Locale.JAPAN, "%.10f", newdy));
+
+		/* 6. x成分を度分秒に変換 */
+		double difflng = newdx * (1/(BASE_DISTANCE_X*100));
+		TLog.d("6. x成分を度分秒に変換 difflng={0}", String.format(Locale.JAPAN, "%.10f", difflng));
+
+		/* 7. y成分を度分秒に変換 */
+		double difflat = newdx * (1/(BASE_DISTANCE_Y*100));
+		TLog.d("7. y成分を度分秒に変換 difflat={0}", String.format(Locale.JAPAN, "%.10f", difflat));
+
+		/* 8. (左上/右上/左下/右下) 経度/緯度を算出 */
+		LatLng ltpos, rtpos, lbpos, rbpos;
+		if( (epos.longitude-spos.longitude > 0 && epos.latitude-spos.latitude > 0) ||	/* 第1象限 or */
+				(epos.longitude-spos.longitude < 0 && epos.latitude-spos.latitude < 0)) {	/* 第3象限 */
+			ltpos = new LatLng(spos.latitude-difflat, spos.longitude+difflng);
+			rtpos = new LatLng(epos.latitude-difflat, epos.longitude+difflng);
+			lbpos = new LatLng(spos.latitude+difflat, spos.longitude-difflng);
+			rbpos = new LatLng(epos.latitude+difflat, epos.longitude-difflng);
+		}
+		else {
+			/* 第2象限 or 第4象限 */
+			ltpos = new LatLng(spos.latitude-difflat, spos.longitude-difflng);
+			rtpos = new LatLng(epos.latitude-difflat, epos.longitude-difflng);
+			lbpos = new LatLng(spos.latitude+difflat, spos.longitude+difflng);
+			rbpos = new LatLng(epos.latitude+difflat, epos.longitude+difflng);
+		}
+
+		TLog.d("8. 完成 左上=({0})", String.format(Locale.JAPAN, "%.10f,%.10f", ltpos.latitude, ltpos.longitude));
+		TLog.d("8. 完成 右上=({0})", String.format(Locale.JAPAN, "%.10f,%.10f", rtpos.latitude, rtpos.longitude));
+		TLog.d("8. 完成 左下=({0})", String.format(Locale.JAPAN, "%.10f,%.10f", lbpos.latitude, lbpos.longitude));
+		TLog.d("8. 完成 右下=({0})", String.format(Locale.JAPAN, "%.10f,%.10f", rbpos.latitude, rbpos.longitude));
+
+		return new LatLng[]{ltpos, rtpos, lbpos, rbpos};
 	}
 
 	private BitmapDescriptor createIcon(short seekerid) {
