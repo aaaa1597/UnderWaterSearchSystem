@@ -43,8 +43,9 @@ public class FragBle extends Fragment {
 			mViewModel.getDeviceListAdapter().notifyItemChanged(pos);
 		});
 		mViewModel.setDeviceListAdapter(new DeviceListAdapter(getActivity().getApplicationContext(),
-															  (seekerid, isChecked) -> mViewModel.setChecked(seekerid, isChecked))
-															);
+															  (seekerid, isChecked) -> mViewModel.setChecked(seekerid, isChecked),
+															  (seekerid, isChecked) -> mViewModel.setBuoy(seekerid, isChecked)
+															));
 
 		view.findViewById(R.id.btnClear).setOnClickListener(lview -> {
 			mViewModel.clearDeviceWithoutAppliciated();

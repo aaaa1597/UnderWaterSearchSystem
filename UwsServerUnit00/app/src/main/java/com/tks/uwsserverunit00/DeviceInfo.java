@@ -16,6 +16,7 @@ public class DeviceInfo implements Parcelable {
 	private final double	mLongitude;
 	private final double	mLatitude;
 	private final short		mHeartbeat;
+	private final boolean	mIsBuoy;
 
 	public DeviceInfo(Date datetime, short seekerid, String devicename, String deviceaddress, int devicerssi, byte seqno, double longitude, double latitude, short heartbeat) {
 		mDatetime		= datetime;
@@ -27,6 +28,7 @@ public class DeviceInfo implements Parcelable {
 		mLongitude		= longitude;
 		mLatitude		= latitude;
 		mHeartbeat		= heartbeat;
+		mIsBuoy			= false;
 	}
 
 	protected DeviceInfo(Parcel in) {
@@ -44,6 +46,7 @@ public class DeviceInfo implements Parcelable {
 		mLongitude		= in.readDouble();
 		mLatitude		= in.readDouble();
 		mHeartbeat		= (short)in.readInt();
+		mIsBuoy			= in.readByte() != 0;
 	}
 
 	public static final Creator<DeviceInfo> CREATOR = new Creator<DeviceInfo>() {
@@ -74,6 +77,7 @@ public class DeviceInfo implements Parcelable {
 		dest.writeDouble(mLongitude);
 		dest.writeDouble(mLatitude);
 		dest.writeInt(mHeartbeat);
+		dest.writeByte((byte)(mIsBuoy?1:0));
 	}
 
 	public Date		getDate()			{ return mDatetime;}
@@ -85,4 +89,5 @@ public class DeviceInfo implements Parcelable {
 	public double	getLongitude()		{ return mLongitude;}
 	public double	getLatitude()		{ return mLatitude;}
 	public short	getHeartbeat()		{ return mHeartbeat;}
+	public boolean	getIsBuoy()			{ return mIsBuoy;}
 }

@@ -1,6 +1,7 @@
 package com.tks.uwsserverunit00.ui;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,7 +12,6 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.recyclerview.widget.RecyclerView;
-
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.tks.uwsserverunit00.DeviceInfo;
 import com.tks.uwsserverunit00.R;
-import com.tks.uwsserverunit00.TLog;
+
 import static com.tks.uwsserverunit00.Constants.UWS_NG_DEVICE_NOTFOUND;
 
 /**
@@ -64,17 +64,18 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	}
 
 	/* インターフェース */
-	interface OnCheckedChangeListener {
-		void onCheckedChanged(short seekerid, boolean isChecked);
-	}
+	interface OnCheckedChangeListener	{ void onCheckedChanged(short seekerid, boolean isChecked); }
+	interface OnSetBuoyListener			{ void onSetBuoyListener(short seekerid, boolean isChecked); }
 
 	/* コンストラクタ */
 	private final Context					mContext;
 	private final OnCheckedChangeListener	mOnCheckedChangeListener;
+	private final OnSetBuoyListener			mOnSetBuoyListener;
 	private final SimpleDateFormat mDf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSSXXX", Locale.JAPAN);
-	public DeviceListAdapter(Context context, OnCheckedChangeListener lisner) {
+	public DeviceListAdapter(Context context, OnCheckedChangeListener lisner, OnSetBuoyListener lisner2) {
 		mContext				= context;
 		mOnCheckedChangeListener= lisner;
+		mOnSetBuoyListener		= lisner2;
 	}
 
 	/* メンバ変数 */
@@ -90,6 +91,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		public double			mLatitude;
 		public short			mHertBeat;
 		public boolean			mSelected;
+		public boolean			mIsBuoy;
 	}
 
 	@NonNull
@@ -121,9 +123,21 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		holder.mTxtHertBeat.setText(model.mHertBeat == 0 ? "-" : ""+model.mHertBeat);
 //		holder.mBtnBuoy.setOnClickListener(null);
 //		holder.mBtnBuoy.setValue(true);
-		holder.mBtnBuoy.setOnClickListener(v -> {
-			/* 浮標ボタン押下 */
-		});
+		if(seekerid==-1) {
+			holder.mBtnBuoy.setEnabled(false);
+			holder.mBtnBuoy.setBackgroundColor(Color.DKGRAY);
+		}
+		else {
+			holder.mBtnBuoy.setEnabled(true);
+			holder.mBtnBuoy.setOnClickListener(v -> {
+				/* 浮標ボタン押下 */
+				mOnSetBuoyListener.onSetBuoyListener(seekerid, !model.mIsBuoy);
+			});
+			if(model.mIsBuoy)
+				holder.mBtnBuoy.setBackgroundColor(Color.WHITE);
+			else
+				holder.mBtnBuoy.setBackgroundColor(Color.GRAY);
+		}
 		holder.mTxtLongitude.setText(String.valueOf(model.mLongitude));
 		holder.mTxtLatitude .setText(String.valueOf(model.mLatitude));
 		if(seekerid == -1) {
@@ -134,6 +148,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			holder.mSwhSelected.setOnCheckedChangeListener(null);
 			holder.mSwhSelected.setChecked(model.mSelected);
 			holder.mSwhSelected.setOnCheckedChangeListener((buttonView, isChecked) -> {
+				/* 選択中スイッチ */
 				mOnCheckedChangeListener.onCheckedChanged(seekerid, isChecked);
 			});
 		}
@@ -187,6 +202,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 						mLatitude		= deviceInfo.getLongitude();
 						mHertBeat		= deviceInfo.getHeartbeat();
 						mSelected		= false;
+						mIsBuoy			= false;
 					}});
 		}
 		else {
@@ -203,6 +219,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			device.mLatitude		= deviceInfo.getLatitude();
 			device.mHertBeat		= deviceInfo.getHeartbeat();
 //			device.mSelected		= false;						更新しない
+//			device.mIsBuoy			= deviceInfo.getIsBuoy();		更新しない
 		}
 
 		/* 並び替え。 */
@@ -245,5 +262,17 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 
 		device.mSelected = isChecked;
 		return index.get();
+	}
+
+	public void setBuoy(short seekerid, boolean isChecked) {
+		/* 以前のBuoyは無効化 */
+		DevicveInfoModel oldbuoy = mDeviceList.stream().filter(item->item.mIsBuoy).findAny().orElse(null);
+		if(oldbuoy!=null)
+			oldbuoy.mIsBuoy = false;
+
+		/* 今回のBuoyを有効化 */
+		DevicveInfoModel nowbuoy = mDeviceList.stream().filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
+		if(nowbuoy!=null)
+			nowbuoy.mIsBuoy = isChecked;
 	}
 }

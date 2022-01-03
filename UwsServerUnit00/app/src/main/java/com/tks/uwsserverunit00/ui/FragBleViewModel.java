@@ -129,4 +129,9 @@ public class FragBleViewModel extends ViewModel {
 		int idx = mDeviceListAdapter.setChecked(seekerid, isChecked);
 		mNotifyItemChanged.postValue(idx);
 	}
+
+	public void setBuoy(short seekerid, boolean isChecked) {
+		mDeviceListAdapter.setBuoy(seekerid, isChecked);
+		mNotifyDataSetChanged.postValue(true);
+	}
 }
