@@ -74,6 +74,9 @@ public class FragMap extends SupportMapFragment {
 		mBleViewModel.NewDeviceInfo().observe(getViewLifecycleOwner(), deviceInfo -> {
 			if(deviceInfo==null) return;
 			updSerchInfo(mGoogleMap, mSerchInfos, deviceInfo);
+			SerchInfo si = mSerchInfos.get(String.valueOf(deviceInfo.getSeekerId()));
+			if(si != null)
+				si.pos = new LatLng(deviceInfo.getLatitude(), deviceInfo.getLongitude());
 		});
 
 		mMapViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
