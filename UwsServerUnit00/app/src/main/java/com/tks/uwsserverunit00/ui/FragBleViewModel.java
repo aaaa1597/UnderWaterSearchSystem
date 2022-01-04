@@ -101,7 +101,6 @@ public class FragBleViewModel extends ViewModel {
 	/** *****************
 	 * AIDLコールバック
 	 * *****************/
-	private final Map<Pair<String, String>, Boolean> mMsg = new HashMap<>();
 	private final IBleServerServiceCallback mCb = new IBleServerServiceCallback.Stub() {
 		@Override
 		public void notifyDeviceInfolist(List<DeviceInfo> devices) {
@@ -114,7 +113,7 @@ public class FragBleViewModel extends ViewModel {
 			boolean newDataFlg = mDeviceListAdapter.addDevice(device);
 			mNotifyDataSetChanged.postValue(true);
 			if(newDataFlg && device.getSeekerId()!=-1)
-				NewDeviceInfo().postValue(device);
+				mNewDeviceInfo.postValue(device);
 
 //			TLog.d("発見!! No:{0}, {1}({2}):Rssi({3})", device.getSeekerId(), device.getDeviceAddress(), device.getDeviceName(), device.getDeviceRssi());
 		}

@@ -8,8 +8,10 @@ import android.location.Location;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import android.os.Looper;
+import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -52,6 +54,7 @@ public class FragMap extends SupportMapFragment {
 	private final Map<String, SerchInfo>	mSerchInfos = new HashMap<>();
 	/* 検索情報 */
 	static class SerchInfo {
+		public LatLng	pos;
 		public Marker	maker;	/* GoogleMapの Marker */
 		public Polygon	polygon;/* GoogleMapの Polygon */
 		public Circle	circle;	/* GoogleMapの Circle-中心点は隊員の現在値 */
@@ -70,7 +73,6 @@ public class FragMap extends SupportMapFragment {
 		mBleViewModel = new ViewModelProvider(requireActivity()).get(FragBleViewModel.class);
 		mBleViewModel.NewDeviceInfo().observe(getViewLifecycleOwner(), deviceInfo -> {
 			if(deviceInfo==null) return;
-			if(!mBizLogicViewModel.getSerchStatus()) return;	/* 検索中でなければ何もしない。 */
 			updSerchInfo(mGoogleMap, mSerchInfos, deviceInfo);
 		});
 
@@ -98,6 +100,36 @@ public class FragMap extends SupportMapFragment {
 
 		/* 現在値取得 → 地図更新 */
 		getNowPosAndDraw();
+
+		mMapViewModel.SelectedSeeker().observe(getViewLifecycleOwner(), new Observer<Pair<Short, Boolean>>() {
+			@Override
+			public void onChanged(Pair<Short, Boolean> selected) {
+				if(selected.first==-32768) return;/* 初期設定なので、何もしない。 */
+
+				String seekeridStr = String.valueOf(selected.first);
+				boolean isSelected = selected.second;
+				SerchInfo si = mSerchInfos.get(seekeridStr);
+				if(isSelected) {
+					Marker marker = mGoogleMap.addMarker(new MarkerOptions()
+												.position(si.pos)
+												.title(seekeridStr)
+												.icon(createIcon(selected.first)));
+					Circle nowPoint = mGoogleMap.addCircle(new CircleOptions().center(si.pos)
+												.radius(0.5)
+												.fillColor(Color.MAGENTA)
+												.strokeColor(Color.MAGENTA));
+//					si.pos = si.pos;
+					si.maker = marker;
+					si.circle= nowPoint;
+				}
+				else {
+					si.maker.remove();
+					si.maker = null;
+					si.circle.remove();
+					si.circle = null;
+				}
+			}
+		});
 	}
 
 	/* 現在値取得 → 地図更新 */
@@ -145,11 +177,11 @@ public class FragMap extends SupportMapFragment {
 		Marker basemarker = googleMap.addMarker(new MarkerOptions().position(nowposgps).title("BasePos"));
 		Circle nowPoint = googleMap.addCircle(new CircleOptions()
 									.center(nowposgps)
-									.radius(1.0)
+									.radius(0.5)
 									.fillColor(Color.CYAN)
 									.strokeColor(Color.CYAN));
 
-		mSerchInfos.put("base", new SerchInfo(){{maker=basemarker; circle=nowPoint; polygon=null;}});
+		mSerchInfos.put("base", new SerchInfo(){{pos=nowposgps;maker=basemarker; circle=nowPoint; polygon=null;}});
 
 		/* 現在地マーカを中心に */
 		googleMap.moveCamera(CameraUpdateFactory.newLatLng(nowposgps));
@@ -165,34 +197,37 @@ public class FragMap extends SupportMapFragment {
 	}
 
 	/* 探索線表示 */
-	private void updSerchInfo(GoogleMap googleMap, Map<String, SerchInfo> mSerchInfos, DeviceInfo deviceInfo) {
+	private void updSerchInfo(GoogleMap googleMap, Map<String, SerchInfo> siList, DeviceInfo deviceInfo) {
 		String key = String.valueOf(deviceInfo.getSeekerId());
 		if(key.equals("-1")) {
 			TLog.d("対象外エントリ.何もしない.info({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7})", deviceInfo.getDate(), deviceInfo.getSeekerId(), deviceInfo.getSeqNo(), deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getLongitude(), deviceInfo.getLatitude(), deviceInfo.getHeartbeat());
 			return;
 		}
 
-		SerchInfo drawinfo = mSerchInfos.get(key);
+		SerchInfo drawinfo = siList.get(key);
 		if(drawinfo == null) {
 			/* 新規追加 */
 			LatLng nowposgps = new LatLng(deviceInfo.getLatitude(), deviceInfo.getLongitude());
-			Marker marker = googleMap.addMarker(new MarkerOptions()
-												.position(nowposgps)
-												.title(key)
-												.icon(createIcon(deviceInfo.getSeekerId())));
+			if(mMapViewModel.isSelected(deviceInfo.getSeekerId())/*選択中*/) {
+				Marker marker = googleMap.addMarker(new MarkerOptions()
+														.position(nowposgps)
+														.title(key)
+														.icon(createIcon(deviceInfo.getSeekerId())));
 
-			Circle nowPoint = googleMap.addCircle(new CircleOptions().center(nowposgps)
-																	  .radius(1.0)
-																	  .fillColor(Color.MAGENTA)
-																	  .strokeColor(Color.MAGENTA));
-			TLog.d("Circle = {0}", nowPoint);
-			SerchInfo si = new SerchInfo();
-			si.maker = marker;
-			si.circle= nowPoint;
-			mSerchInfos.put(key, si);
+				Circle nowPoint = googleMap.addCircle(new CircleOptions()
+																.center(nowposgps)
+																.radius(0.5)
+																.fillColor(Color.MAGENTA)
+																.strokeColor(Color.MAGENTA));
+				TLog.d("Circle = {0}", nowPoint);
+				siList.put(key, new SerchInfo(){{pos=nowposgps;maker=marker;circle=nowPoint;}});
+			}
+			else {
+				siList.put(key, new SerchInfo(){{pos=nowposgps;maker=null;circle=null;}});
+			}
 		}
 		else {
-			LatLng spos = drawinfo.circle.getCenter();
+			LatLng spos = drawinfo.pos;
 			LatLng epos = new LatLng(deviceInfo.getLatitude(), deviceInfo.getLongitude());
 			double dx = epos.longitude- spos.longitude;
 			double dy = epos.latitude - spos.latitude;
@@ -201,32 +236,43 @@ public class FragMap extends SupportMapFragment {
 				return;
 			}
 
-			drawinfo.maker.remove();
-			drawinfo.maker = null;
-			drawinfo.circle.remove();
-			drawinfo.circle = null;
-			Marker marker = googleMap.addMarker(new MarkerOptions()
-												.position(epos)
-												.title(key)
-												.icon(createIcon(deviceInfo.getSeekerId())));
-			Circle nowPoint = googleMap.addCircle(new CircleOptions()
-													.center(epos)
-													.radius(0.5)
-													.fillColor(Color.MAGENTA)
-													.strokeColor(Color.MAGENTA));
-			drawinfo.maker = marker;
-			drawinfo.circle= nowPoint;
+			if(drawinfo.maker!=null) {
+				drawinfo.maker.remove();
+				drawinfo.maker = null;
+			}
+			if(drawinfo.circle!=null) {
+				drawinfo.circle.remove();
+				drawinfo.circle = null;
+			}
+//			if(drawinfo.polygon!=null) {	/* 検索矩形は保持したまま */
+//				drawinfo.polygon.remove();
+//				drawinfo.polygon = null;
+//			}
+			if(mMapViewModel.isSelected(deviceInfo.getSeekerId())/*選抜中*/) {
+				Marker marker = googleMap.addMarker(new MarkerOptions()
+														.position(epos)
+														.title(key)
+														.icon(createIcon(deviceInfo.getSeekerId())));
+				Circle nowPoint = googleMap.addCircle(new CircleOptions()
+														.center(epos)
+														.radius(0.5)
+														.fillColor(Color.MAGENTA)
+														.strokeColor(Color.MAGENTA));
+				drawinfo.maker = marker;
+				drawinfo.circle= nowPoint;
 
-			/* 検索線描画の頂点情報取得 */
-			LatLng[] square = createSquare(spos, epos, UWS_LOC_BASE_DISTANCE_X, UWS_LOC_BASE_DISTANCE_Y);
+				/* 検索線描画の頂点情報取得 */
+				LatLng[] square = createSquare(spos, epos, UWS_LOC_BASE_DISTANCE_X, UWS_LOC_BASE_DISTANCE_Y);
 
-			/* 9.矩形追加 */
-			Polygon polygon = googleMap.addPolygon(new PolygonOptions()
-													.fillColor(Color.CYAN)
-													.strokeColor(Color.BLUE)
-													.add(square[0], square[1], square[3], square[2]));
-			drawinfo.polygon = polygon;
-
+				if(mBizLogicViewModel.getSerchStatus()/*検索中*/) {
+					/* 矩形追加 */
+					Polygon polygon = googleMap.addPolygon(new PolygonOptions()
+												.fillColor(Color.CYAN)
+												.strokeColor(Color.BLUE)
+												.add(square[0], square[1], square[3], square[2]));
+					drawinfo.polygon = polygon;
+				}
+			}
 		}
 
 	}

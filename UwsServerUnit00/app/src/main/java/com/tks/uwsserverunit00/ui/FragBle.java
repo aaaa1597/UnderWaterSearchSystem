@@ -18,6 +18,7 @@ import com.tks.uwsserverunit00.TLog;
 
 public class FragBle extends Fragment {
 	private FragBleViewModel	mViewModel;
+	private FragMapViewModel	mMapViewModel;
 
 	@Override
 	public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -27,6 +28,7 @@ public class FragBle extends Fragment {
 	@Override
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
+		mMapViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
 		mViewModel = new ViewModelProvider(requireActivity()).get(FragBleViewModel.class);
 		mViewModel.NotifyDataSetChanged().observe(getViewLifecycleOwner(), upd -> {
 			mViewModel.getDeviceListAdapter().notifyDataSetChanged();
@@ -43,7 +45,8 @@ public class FragBle extends Fragment {
 			mViewModel.getDeviceListAdapter().notifyItemChanged(pos);
 		});
 		mViewModel.setDeviceListAdapter(new DeviceListAdapter(getActivity().getApplicationContext(),
-															  (seekerid, isChecked) -> mViewModel.setChecked(seekerid, isChecked),
+															  (seekerid, isChecked) -> {mViewModel.setChecked(seekerid, isChecked);
+															  							mMapViewModel.setChecked(seekerid, isChecked);},
 															  (seekerid, isChecked) -> mViewModel.setBuoy(seekerid, isChecked)
 															));
 

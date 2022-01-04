@@ -141,6 +141,8 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		holder.mTxtLongitude.setText(String.valueOf(model.mLongitude));
 		holder.mTxtLatitude .setText(String.valueOf(model.mLatitude));
 		if(seekerid == -1) {
+			holder.mSwhSelected.setOnCheckedChangeListener(null);
+			holder.mSwhSelected.setChecked(model.mSelected);
 			holder.mSwhSelected.setEnabled(false);
 		}
 		else {
