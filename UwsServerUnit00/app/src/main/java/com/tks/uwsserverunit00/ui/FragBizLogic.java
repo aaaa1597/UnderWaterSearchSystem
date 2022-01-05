@@ -16,7 +16,8 @@ import com.tks.uwsserverunit00.R;
 import com.tks.uwsserverunit00.TLog;
 
 public class FragBizLogic extends Fragment {
-	private FragBizLogicViewModel mBizLogicViewModel;
+	private FragMapViewModel		mMapLogicViewModel;
+	private FragBizLogicViewModel	mBizLogicViewModel;
 
 	@Override
 	public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -26,6 +27,7 @@ public class FragBizLogic extends Fragment {
 	@Override
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
+		mMapLogicViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
 		mBizLogicViewModel = new ViewModelProvider(requireActivity()).get(FragBizLogicViewModel.class);
 
 		view.findViewById(R.id.btnSelectMember).setOnClickListener(v -> {
@@ -44,6 +46,12 @@ public class FragBizLogic extends Fragment {
 				mBizLogicViewModel.setSerchStatus(true);
 				btnStartStop.setText("検索終了");
 			}
+		});
+
+		/*　検索矩形の塗りつぶし色変更 */
+		view.findViewById(R.id.btnCngSerchColor).setOnClickListener(v -> {
+			mMapLogicViewModel.incrementFillColorCnt();
+			view.findViewById(R.id.btnCngSerchColor).setBackgroundColor(mMapLogicViewModel.getFillColor());
 		});
 	}
 }
