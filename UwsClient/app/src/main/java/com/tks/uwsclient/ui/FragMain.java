@@ -131,15 +131,27 @@ public class FragMain extends Fragment {
 		recyclerView.smoothScrollToPosition(0);
 		recyclerView.setAdapter(new SeekerIdAdapter());
 		/* SeekerIDのlistView(子の中心で収束する設定) */
-		new LinearSnapHelper().attachToRecyclerView(recyclerView);
-		/* SeekerIDのlistView(端の子も中心で収束する様に調整) */
-		recyclerView.addItemDecoration(new RecyclerView.ItemDecoration() {
+		LinearSnapHelper linearSnapHelper = new LinearSnapHelper();
+		linearSnapHelper.attachToRecyclerView(recyclerView);
+		recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
 			@Override
-			public void getItemOffsets(@NonNull Rect outRect, @NonNull View view, @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
-				int position = parent.getChildAdapterPosition(view);
-				recyclerView.smoothScrollToPosition(position);
-				mViewModel.setSeekerID(position);
+			public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+				super.onScrollStateChanged(recyclerView, newState);
+				if(newState == RecyclerView.SCROLL_STATE_IDLE) {
+					View lview = linearSnapHelper.findSnapView(recyclerView.getLayoutManager());
+					int pos =  recyclerView.getChildAdapterPosition(lview);
+					mViewModel.setSeekerID(pos);
+				}
 			}
 		});
+//		/* SeekerIDのlistView(端の子も中心で収束する様に調整) */
+//		recyclerView.addItemDecoration(new RecyclerView.ItemDecoration() {
+//			@Override
+//			public void getItemOffsets(@NonNull Rect outRect, @NonNull View view, @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
+//				int position = parent.getChildAdapterPosition(view);
+//				recyclerView.smoothScrollToPosition(position);
+//				mViewModel.setSeekerID(position);
+//			}
+//		});
 	}
 }
