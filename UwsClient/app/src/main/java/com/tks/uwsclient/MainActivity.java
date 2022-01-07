@@ -61,11 +61,11 @@ public class MainActivity extends AppCompatActivity {
 		LocationManager lm = (LocationManager)getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
 		final boolean gpsEnabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
 		final boolean wifiEnabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-		TLog.d("TODO1 gpsEnabled={0} wifiEnabled={1}", gpsEnabled, wifiEnabled);
+		TLog.d("gpsEnabled={0} wifiEnabled={1}", gpsEnabled, wifiEnabled);
 
 		/* Bluetoothのサポート状況チェック 未サポート端末なら起動しない */
-		if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-			ErrPopUp.create(MainActivity.this).setErrMsg("Bluetoothが、未サポートの端末です。").Show(MainActivity.this);
+		if( !getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+			ErrDialog.create(MainActivity.this, "Bluetoothが、未サポートの端末です。").show();
 		}
 
 		/* Bluetooth権限が許可されていない場合はリクエスト. */
@@ -98,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
 							}
 							break;
 						case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
-							ErrPopUp.create(MainActivity.this).setErrMsg("このアプリには位置情報をOnにする必要があります。\n再起動後にOnにしてください。\n終了します。").Show(MainActivity.this);
+							ErrDialog.create(MainActivity.this, "このアプリには位置情報をOnにする必要があります。\n再起動後にOnにしてください。\n終了します。").show();
 							break;
 					}
 				});
@@ -107,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
 		BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
 		/* Bluetooth未サポート判定 未サポートならエラーpopupで終了 */
 		if (bluetoothAdapter == null) {
-			ErrPopUp.create(MainActivity.this).setErrMsg("Bluetoothが、未サポートの端末です。").Show(MainActivity.this);
+			ErrDialog.create(MainActivity.this, "Bluetoothが、未サポートの端末です。").show();
 		}
 		/* Bluetooth ON/OFF判定 -> OFFならONにするようにリクエスト */
 		else if( !bluetoothAdapter.isEnabled()) {
@@ -115,7 +115,7 @@ public class MainActivity extends AppCompatActivity {
 			ActivityResultLauncher<Intent> startForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
 					result -> {
 						if(result.getResultCode() != Activity.RESULT_OK) {
-							ErrPopUp.create(MainActivity.this).setErrMsg("BluetoothがOFFです。ONにして操作してください。\n終了します。").Show(MainActivity.this);
+							ErrDialog.create(MainActivity.this, "BluetoothがOFFです。ONにして操作してください。\n終了します。").show();
 						}
 						else {
 							/* Bleサーバへの接続処理開始 */
@@ -142,7 +142,7 @@ public class MainActivity extends AppCompatActivity {
 		/* 権限リクエストの結果を取得する. */
 		long ngcnt = Arrays.stream(grantResults).filter(value -> value != PackageManager.PERMISSION_GRANTED).count();
 		if (ngcnt > 0) {
-			ErrPopUp.create(MainActivity.this).setErrMsg("このアプリには必要な権限です。\n再起動後に許可してください。\n終了します。").Show(MainActivity.this);
+			ErrDialog.create(MainActivity.this, "このアプリには必要な権限です。\n再起動後に許可してください。\n終了します。").show();
 			return;
 		}
 		else {
@@ -162,7 +162,7 @@ public class MainActivity extends AppCompatActivity {
 				mViewModel.bindBleService(getApplicationContext(), mCon);
 				break;
 			case Activity.RESULT_CANCELED:
-				ErrPopUp.create(MainActivity.this).setErrMsg("このアプリには位置情報をOnにする必要があります。\n再起動後にOnにしてください。\n終了します。").Show(MainActivity.this);
+				ErrDialog.create(MainActivity.this, "このアプリには位置情報をOnにする必要があります。\n再起動後にOnにしてください。\n終了します。").show();
 				break;
 		}
 	}
@@ -172,17 +172,17 @@ public class MainActivity extends AppCompatActivity {
 		public void onServiceConnected(ComponentName name, IBinder service) {
 			int ret = mViewModel.onServiceConnected(IBleClientService.Stub.asInterface(service));
 			if(ret == UWS_NG_AIDL_REMOTE_ERROR)
-				ErrPopUp.create(MainActivity.this).setErrMsg("システム異常!! サービスとの接続に異常が発生しました。!\nシステム異常なので、終了します。").Show(MainActivity.this);
+				ErrDialog.create(MainActivity.this, "システム異常!! サービスとの接続に異常が発生しました。!\nシステム異常なので、終了します。").show();
 			else if(ret == UWS_NG_PERMISSION_DENIED)
-				ErrPopUp.create(MainActivity.this).setErrMsg("このアプリに権限がありません!!\n終了します。").Show(MainActivity.this);
+				ErrDialog.create(MainActivity.this, "このアプリに権限がありません!!\n終了します。").show();
 			else if(ret == UWS_NG_SERVICE_NOTFOUND)
-				ErrPopUp.create(MainActivity.this).setErrMsg("この端末はBluetoothに対応していません!!\n終了します。").Show(MainActivity.this);
+				ErrDialog.create(MainActivity.this, "この端末はBluetoothに対応していません!!\n終了します。").show();
 			else if(ret == UWS_NG_ADAPTER_NOTFOUND)
-				ErrPopUp.create(MainActivity.this).setErrMsg("この端末はBluetoothに対応していません!!\n終了します。").Show(MainActivity.this);
+				ErrDialog.create(MainActivity.this, "この端末はBluetoothに対応していません!!\n終了します。").show();
 			else if(ret == UWS_NG_GATTSERVER_NOTFOUND)
-				ErrPopUp.create(MainActivity.this).setErrMsg("Ble初期化に失敗!!\n終了します。再起動で直る可能性があります。").Show(MainActivity.this);
+				ErrDialog.create(MainActivity.this, "Ble初期化に失敗!!\n終了します。再起動で直る可能性があります。").show();
 			else if(ret != UWS_NG_SUCCESS)
-				ErrPopUp.create(MainActivity.this).setErrMsg("原因不明のエラーが発生しました!!\n終了します。").Show(MainActivity.this);
+				ErrDialog.create(MainActivity.this, "原因不明のエラーが発生しました!!\n終了します。").show();
 
 			/* 監視イベント一括登録 */
 			setObserve();
@@ -229,12 +229,12 @@ public class MainActivity extends AppCompatActivity {
 				if(advertisingFlg) {
 					int ret = mViewModel.startAdvertising();
 					if(ret != UWS_NG_SUCCESS)
-						ErrPopUp.create(MainActivity.this).setErrMsg("システム異常!! アドバタイズ開始に失敗!!\nシステム異常なので、終了します。").Show(MainActivity.this);
+						ErrDialog.create(MainActivity.this, "システム異常!! アドバタイズ開始に失敗!!\nシステム異常なので、終了します。").show();
 				}
 				else {
 					int ret = mViewModel.stopAdvertising();
 					if(ret != UWS_NG_SUCCESS)
-						ErrPopUp.create(MainActivity.this).setErrMsg("システム異常!! アドバタイズ開始に失敗!!\nシステム異常なので、終了します。").Show(MainActivity.this);
+						ErrDialog.create(MainActivity.this, "システム異常!! アドバタイズ開始に失敗!!\nシステム異常なので、終了します。").show();
 				}
 			}
 		});
@@ -245,7 +245,7 @@ public class MainActivity extends AppCompatActivity {
 		/* エラーメッセージ表示要求 */
 		mViewModel.ShowErrMsg().observe(this, showMsg -> {
 			new Throwable().printStackTrace();
-			ErrPopUp.create(MainActivity.this).setErrMsg(showMsg).Show(MainActivity.this);
+			ErrDialog.create(MainActivity.this, showMsg).show();
 		});
 	}
 
