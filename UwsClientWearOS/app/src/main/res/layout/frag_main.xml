@@ -28,12 +28,15 @@
             android:layout_height="wrap_content"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
+            android:paddingStart="0dp"
+            android:paddingEnd="50dp"
             android:checked="true"
             android:text="Lock"
             tools:ignore="HardcodedText" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <!-- 情報表示 -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -41,9 +44,11 @@
         <GridLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="#992f4f4f"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
+            android:paddingStart="40dp"
+            android:paddingEnd="0dp"
+            android:background="#992f4f4f"
             android:columnCount="1">
 
             <TextView
