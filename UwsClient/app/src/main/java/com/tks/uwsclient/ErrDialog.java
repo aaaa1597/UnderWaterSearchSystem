@@ -4,7 +4,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 
 public class ErrDialog {
-	/* windows生成 */
+	/* AlertDialog生成 */
 	public static AlertDialog.Builder create(Context context, String ErrStr) {
 		return new AlertDialog.Builder(context)
 				.setMessage(ErrStr)
@@ -13,7 +13,7 @@ public class ErrDialog {
 				});
 	}
 
-	/* windows生成 */
+	/* AlertDialog生成 */
 	public static AlertDialog.Builder create(Context context, int resid) {
 		return new AlertDialog.Builder(context)
 				.setMessage(context.getString(resid))

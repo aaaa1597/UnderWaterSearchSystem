@@ -31,10 +31,15 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.location.SettingsClient;
-import com.google.android.material.snackbar.Snackbar;
-import com.tks.uwsclient.ui.FragMainViewModel;
 import com.google.android.gms.location.LocationCallback;
+import com.google.android.material.snackbar.Snackbar;
 
+import java.util.Arrays;
+import java.util.Date;
+import java.util.Locale;
+import java.util.Random;
+
+import com.tks.uwsclient.ui.FragMainViewModel;
 import static com.tks.uwsclient.Constants.UWS_NG_SUCCESS;
 import static com.tks.uwsclient.Constants.UWS_NG_AIDL_REMOTE_ERROR;
 import static com.tks.uwsclient.Constants.UWS_NG_ADAPTER_NOTFOUND;
@@ -42,13 +47,26 @@ import static com.tks.uwsclient.Constants.UWS_NG_PERMISSION_DENIED;
 import static com.tks.uwsclient.Constants.UWS_NG_SERVICE_NOTFOUND;
 import static com.tks.uwsclient.Constants.UWS_NG_GATTSERVER_NOTFOUND;
 
-import java.util.Arrays;
-import java.util.Date;
-import java.util.Random;
-
 public class MainActivity extends AppCompatActivity {
 	private	FragMainViewModel	mViewModel;
 	private final static int	REQUEST_LOCATION_SETTINGS	= 1111;
+	private final static int	REQUEST_PERMISSIONS	= 2222;
+	private final static int	LOC_UPD_INTERVAL	= 2500;
+	private FusedLocationProviderClient	mFusedLocationClient;
+	private final LocationRequest		mLocationRequest = LocationRequest.create().setInterval(LOC_UPD_INTERVAL)
+																					.setFastestInterval(LOC_UPD_INTERVAL/2)
+																					.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+	private final LocationCallback		mLocationCallback = new LocationCallback() {
+		@Override
+		public void onLocationResult(@NonNull LocationResult locationResult) {
+			super.onLocationResult(locationResult);
+			Location location = locationResult.getLastLocation();
+			TLog.d("1秒定期 (緯度:{0} 経度:{1})", String.format(Locale.JAPAN, "%1$.12f", location.getLatitude()), String.format(Locale.JAPAN, "%1$.12f", location.getLongitude()));
+			mViewModel.Longitude().setValue(location.getLongitude());
+			mViewModel.Latitude().setValue(location.getLatitude());
+			mViewModel.HearBeat().setValue((short)(mRandom.nextInt(40)+30));
+		}
+	};
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -94,11 +112,21 @@ public class MainActivity extends AppCompatActivity {
 								rae.startResolutionForResult(MainActivity.this, REQUEST_LOCATION_SETTINGS);
 							}
 							catch (SendIntentException sie) {
-								TLog.d("PendingIntent unable to execute request.");
+								ErrDialog.create(MainActivity.this, "システムエラー!\n再起動で直ることがあります。\n終了します。").show();
 							}
 							break;
 						case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
 							ErrDialog.create(MainActivity.this, "このアプリには位置情報をOnにする必要があります。\n再起動後にOnにしてください。\n終了します。").show();
+							break;
+						case LocationSettingsStatusCodes.DEVELOPER_ERROR:
+							if(((ApiException)exception).getMessage().contains("Not implemented")) {
+								/* checkLocationSettings()の実装がない=常にONと想定する。 */
+								/* Bleサーバへの接続処理開始 */
+								mViewModel.mIsSettedLocationON = true;
+								mViewModel.bindBleService(getApplicationContext(), mCon);
+								break;
+							}
+							ErrDialog.create(MainActivity.this, "位置情報の機能が存在しない端末です。\n動作しないので、終了します。").show();
 							break;
 					}
 				});
@@ -107,7 +135,7 @@ public class MainActivity extends AppCompatActivity {
 		BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
 		/* Bluetooth未サポート判定 未サポートならエラーpopupで終了 */
 		if (bluetoothAdapter == null) {
-			ErrDialog.create(MainActivity.this, "Bluetoothが、未サポートの端末です。").show();
+			ErrDialog.create(MainActivity.this, "Bluetooth未サポートの端末です。\n終了します。").show();
 		}
 		/* Bluetooth ON/OFF判定 -> OFFならONにするようにリクエスト */
 		else if( !bluetoothAdapter.isEnabled()) {
@@ -205,7 +233,7 @@ public class MainActivity extends AppCompatActivity {
 
 	/** **************************************************************************************
 	 * LiveDataのObserve一括設定
-	 * onCreate()で実行すると、初期化が完了してない状態で、動き始めるてエラーになるので、初期化完了語に実行する。
+	 * onCreate()で実行すると、初期化が完了してない状態で、動き始めてエラーになるので、初期化完了後に実行する。
 	 ** **************************************************************************************/
 	private void setObserve() {
 		/* Lock ON/OFF */
@@ -250,21 +278,4 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	private Random						mRandom = new Random(new Date().getTime());
-	private final static int			REQUEST_PERMISSIONS	= 2222;
-	private final static int			LOC_UPD_INTERVAL	= 2500;
-	private FusedLocationProviderClient	mFusedLocationClient;
-	private final LocationRequest		mLocationRequest = LocationRequest.create().setInterval(LOC_UPD_INTERVAL)
-																					.setFastestInterval(LOC_UPD_INTERVAL/2)
-																					.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-	private final LocationCallback		mLocationCallback = new LocationCallback() {
-		@Override
-		public void onLocationResult(@NonNull LocationResult locationResult) {
-			super.onLocationResult(locationResult);
-			Location location = locationResult.getLastLocation();
-			TLog.d("1秒定期 (経度:{0} 緯度:{1})", locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude());
-			mViewModel.Longitude().setValue(location.getLongitude());
-			mViewModel.Latitude().setValue(location.getLatitude());
-			mViewModel.HearBeat().setValue((short)(mRandom.nextInt(40)+30));
-		}
-	};
 }

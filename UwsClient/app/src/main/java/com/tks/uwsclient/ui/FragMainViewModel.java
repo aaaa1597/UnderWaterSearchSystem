@@ -1,5 +1,6 @@
 package com.tks.uwsclient.ui;
 
+import java.text.MessageFormat;
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
@@ -12,11 +13,11 @@ import android.os.RemoteException;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
+
 import com.tks.uwsclient.BleClientService;
 import com.tks.uwsclient.IBleClientService;
 import com.tks.uwsclient.IBleClientServiceCallback;
 import com.tks.uwsclient.TLog;
-
 import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_ALREADY_STARTED;
 import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_DATA_TOO_LARGE;
 import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_FEATURE_UNSUPPORTED;
@@ -28,8 +29,6 @@ import static com.tks.uwsclient.Constants.UWS_NG_ALREADY_ADVERTISED;
 import static com.tks.uwsclient.Constants.UWS_NG_ALREADY_SCANNED;
 import static com.tks.uwsclient.Constants.UWS_NG_SUCCESS;
 import static com.tks.uwsclient.Constants.UWS_NG_AIDL_REMOTE_ERROR;
-
-import java.text.MessageFormat;
 
 public class FragMainViewModel extends ViewModel {
 	private final MutableLiveData<String>			mDeviceAddress	= new MutableLiveData<>("");
@@ -53,11 +52,11 @@ public class FragMainViewModel extends ViewModel {
 		ERROR,			/* エラー発生!! */
 	}
 
-	private final MutableLiveData<Boolean>			mAdvertisingFlg	= new MutableLiveData<>(false);
-	private int										mSeekerID		= 0;
-	public MutableLiveData<Boolean>		AdvertisingFlg()	{ return mAdvertisingFlg; }
-	public void							setSeekerID(int id)	{ mSeekerID = id; }
-	public int							getSeekerID()		{ return mSeekerID; }
+	private final MutableLiveData<Boolean>	mAdvertisingFlg	= new MutableLiveData<>(false);
+	public MutableLiveData<Boolean>			AdvertisingFlg()	{ return mAdvertisingFlg; }
+	private int		mSeekerID		= 0;
+	public void		setSeekerID(int id)	{ mSeekerID = id; }
+	public int		getSeekerID()		{ return mSeekerID; }
 
 	private final MutableLiveData<String>	mShowSnacbar			= new MutableLiveData<>();
 	public LiveData<String>					ShowSnacbar()			{ return mShowSnacbar; }

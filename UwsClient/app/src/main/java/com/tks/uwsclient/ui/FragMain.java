@@ -51,35 +51,15 @@ public class FragMain extends Fragment {
 				RecyclerView rvw = getActivity().findViewById(R.id.rvw_seekerid);
 				if(isUnLock) {
 					rvw.removeOnItemTouchListener(mOnItemTouchListener);
-					getActivity().findViewById(R.id.swhAdvertise).setEnabled(false);
-					((SwitchCompat)getActivity().findViewById(R.id.swhAdvertise)).setChecked(false);
-					getActivity().findViewById(R.id.glyOnOff).setBackgroundColor(getResources().getColor(R.color.disable_gray, getActivity().getTheme()));
 				}
 				else {
 					rvw.addOnItemTouchListener(mOnItemTouchListener);
-					getActivity().findViewById(R.id.swhAdvertise).setEnabled(true);
-					getActivity().findViewById(R.id.glyOnOff).setBackgroundColor(getResources().getColor(R.color.white, getActivity().getTheme()));
 				}
 			}
 		});
 		((SwitchCompat)view.findViewById(R.id.swhUnLock)).setOnCheckedChangeListener((buttonView, isChecked) -> {
 			TLog.d("UnLock isChecked={0}", isChecked);
 			mViewModel.UnLock().setValue(isChecked);
-		});
-		/* アドバタイズON/OFF切替え */
-		mViewModel.AdvertisingFlg().observe(getActivity(), new Observer<Boolean>() {
-			@Override
-			public void onChanged(Boolean advertisingFlg) {
-				TLog.d("アドバタイズSwh 切替 advertisingFlg={0}", advertisingFlg);
-				if(advertisingFlg != null && advertisingFlg)
-					((SwitchCompat)view.findViewById(R.id.swhAdvertise)).setChecked(true);
-				else
-					((SwitchCompat)view.findViewById(R.id.swhAdvertise)).setChecked(false);
-			}
-		});
-		((SwitchCompat)view.findViewById(R.id.swhAdvertise)).setOnCheckedChangeListener((buttonView, isChecked) -> {
-			TLog.d("アドバタイズSwh 切替 isChecked={0}", isChecked);
-			mViewModel.AdvertisingFlg().setValue(isChecked);
 		});
 		/* 情報表示(アドレス) */
 		mViewModel.DeviceAddress().observe(getActivity(), new Observer<String>() {
@@ -140,6 +120,7 @@ public class FragMain extends Fragment {
 				if(newState == RecyclerView.SCROLL_STATE_IDLE) {
 					View lview = linearSnapHelper.findSnapView(recyclerView.getLayoutManager());
 					int pos =  recyclerView.getChildAdapterPosition(lview);
+					TLog.d("aaaaa pos={0}", pos);
 					mViewModel.setSeekerID(pos);
 				}
 			}
