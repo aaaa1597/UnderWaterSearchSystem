@@ -1,28 +1,25 @@
 package com.tks.uwsclientwearos;
 
 import android.app.Activity;
-import android.graphics.Canvas;
-import android.graphics.Rect;
+import android.app.AlertDialog;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.LinearSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.tks.uwsclientwearos.databinding.ActivityMainBinding;
-
 public class MainActivity extends Activity {
-
-	private TextView mTextView;
-	private ActivityMainBinding binding;
-
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+
+		/* Bluetoothのサポート状況チェック 未サポート端末なら起動しない */
+		if(getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+			ErrDialog.create(MainActivity.this.getApplicationContext(), R.string.error_notsupported).show();
+		}
 
 		/* SeekerIDのlistView定義 */
 		RecyclerView recyclerView = findViewById(R.id.rvw_seekerid);
