@@ -1,19 +1,5 @@
 package com.tks.uwsclientwearos;
 
-import android.Manifest;
-import android.app.Activity;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothManager;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentSender;
-import android.content.pm.PackageManager;
-import android.location.Location;
-import android.location.LocationManager;
-import android.os.Build;
-import android.os.Bundle;
-import android.os.Looper;
-import android.view.View;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -22,6 +8,20 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.LinearSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
+import android.Manifest;
+import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentSender.SendIntentException;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Looper;
+import android.view.View;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -32,16 +32,18 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.location.SettingsClient;
-import com.tks.uwsclientwearos.ui.FragMainViewModel;
 
 import java.util.Arrays;
 import java.util.Locale;
 
+import com.tks.uwsclientwearos.ui.FragMainViewModel;
+
 public class MainActivity extends AppCompatActivity {
+	private	FragMainViewModel	mViewModel;
 	private final static int	REQUEST_LOCATION_SETTINGS	= 1111;
 	private final static int	REQUEST_PERMISSIONS	= 2222;
 	private final static int	LOC_UPD_INTERVAL	= 2500;
-	private FusedLocationProviderClient mFusedLocationClient;
+	private FusedLocationProviderClient	mFusedLocationClient;
 	private final LocationRequest		mLocationRequest = LocationRequest.create().setInterval(LOC_UPD_INTERVAL)
 																					.setFastestInterval(LOC_UPD_INTERVAL/2)
 																					.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
@@ -56,7 +58,6 @@ public class MainActivity extends AppCompatActivity {
 //			mViewModel.HearBeat().setValue((short)(mRandom.nextInt(40)+30));
 		}
 	};
-	private FragMainViewModel			mViewModel;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -73,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
 
 		/* Bluetoothのサポート状況チェック 未サポート端末なら起動しない */
 		if( !getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-			ErrDialog.create(MainActivity.this.getApplicationContext(), R.string.error_notsupported).show();
+			ErrDialog.create(MainActivity.this, R.string.error_notsupported).show();
 		}
 
 		/* Bluetooth権限が許可されていない場合はリクエスト. */
@@ -84,13 +85,11 @@ public class MainActivity extends AppCompatActivity {
 				requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_PERMISSIONS);
 		}
 
-		TLog.d("aaaaa ここまで");
 		/* 設定の位置情報ON/OFFチェック */
 		LocationSettingsRequest locationSettingsRequest = new LocationSettingsRequest.Builder().addLocationRequest(mLocationRequest).build();
 		SettingsClient settingsClient = LocationServices.getSettingsClient(this);
 		settingsClient.checkLocationSettings(locationSettingsRequest)
 				.addOnSuccessListener(this, locationSettingsResponse -> {
-					TLog.d("aaaaa ここまで来たOK........2");
 //					mViewModel.mIsSettedLocationON = true;
 //					/* Bleサーバへの接続処理開始 */
 //					mViewModel.bindBleService(getApplicationContext(), mCon);
@@ -103,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
 								ResolvableApiException rae = (ResolvableApiException)exception;
 								rae.startResolutionForResult(MainActivity.this, REQUEST_LOCATION_SETTINGS);
 							}
-							catch (IntentSender.SendIntentException sie) {
+							catch (SendIntentException sie) {
 								ErrDialog.create(MainActivity.this, "システムエラー!\n再起動で直ることがあります。\n終了します。").show();
 							}
 							break;
@@ -128,7 +127,6 @@ public class MainActivity extends AppCompatActivity {
 							ErrDialog.create(MainActivity.this, "BluetoothがOFFです。ONにして操作してください。\n終了します。").show();
 						}
 						else {
-							TLog.d("aaaaa ここまで来たOK........4");
 //							/* Bleサーバへの接続処理開始 */
 //							mViewModel.bindBleService(getApplicationContext(), mCon);
 						}
@@ -139,29 +137,7 @@ public class MainActivity extends AppCompatActivity {
 		mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 		mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
 
-		TLog.d("aaaaa ここまで");
-		/* SeekerIDのlistView定義 */
-		RecyclerView recyclerView = findViewById(R.id.rvw_seekerid);
-		recyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext(), LinearLayoutManager.VERTICAL, false));
-		recyclerView.setAdapter(new SeekerIdAdapter());
-		/* SeekerIDのlistView(子の中心で収束する設定) */
-		LinearSnapHelper linearSnapHelper = new LinearSnapHelper();
-		linearSnapHelper.attachToRecyclerView(recyclerView);
-		recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
-			@Override
-			public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
-				super.onScrollStateChanged(recyclerView, newState);
-				if(newState == RecyclerView.SCROLL_STATE_IDLE) {
-					View lview = linearSnapHelper.findSnapView(recyclerView.getLayoutManager());
-					int pos =  recyclerView.getChildAdapterPosition(lview);
-					TLog.d("aaaaa ここまで来たOK........3");
-//					mViewModel.setSeekerID(pos);
-				}
-			}
-		});
-
-		TLog.d("aaaaa ここまで");
-		TLog.d("aaaaa ここまで来たOK........5");
+		TLog.d("aaaaa ここまで来たOK........");
 //		/* Bleサーバへの接続処理開始 */
 //		mViewModel.bindBleService(getApplicationContext(), mCon);
 	}
@@ -184,6 +160,13 @@ public class MainActivity extends AppCompatActivity {
 //			/* Bleサーバへの接続処理開始 */
 //			mViewModel.bindBleService(getApplicationContext(), mCon);
 		}
+	}
+
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		mFusedLocationClient.removeLocationUpdates(mLocationCallback);
+//		unbindService(mCon);
 	}
 
 }
