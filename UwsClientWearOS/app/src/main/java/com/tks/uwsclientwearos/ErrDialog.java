@@ -1,12 +1,7 @@
 package com.tks.uwsclientwearos;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
-import android.util.TypedValue;
-import android.view.View;
-import android.view.WindowManager;
-import androidx.core.content.res.ResourcesCompat;
 
 public class ErrDialog {
 	/* AlertDialog生成 */

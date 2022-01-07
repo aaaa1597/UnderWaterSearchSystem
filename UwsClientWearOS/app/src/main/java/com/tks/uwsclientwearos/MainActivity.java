@@ -48,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
 	private	FragMainViewModel	mViewModel;
 	private final static int	REQUEST_LOCATION_SETTINGS	= 1111;
 	private final static int	REQUEST_PERMISSIONS	= 2222;
-	private final static int	LOC_UPD_INTERVAL	= 2500;
+	private final static int	LOC_UPD_INTERVAL	= 1000;
 	private FusedLocationProviderClient	mFusedLocationClient;
 	private final LocationRequest		mLocationRequest = LocationRequest.create().setInterval(LOC_UPD_INTERVAL)
 																					.setFastestInterval(LOC_UPD_INTERVAL/2)
@@ -115,6 +115,16 @@ public class MainActivity extends AppCompatActivity {
 							break;
 						case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
 							ErrDialog.create(MainActivity.this, "このアプリには位置情報をOnにする必要があります。\n再起動後にOnにしてください。\n終了します。").show();
+							break;
+						case LocationSettingsStatusCodes.DEVELOPER_ERROR:
+							if(((ApiException)exception).getMessage().contains("Not implemented")) {
+								/* checkLocationSettings()の実装がない=常にONと想定する。 */
+								/* Bleサーバへの接続処理開始 */
+								mViewModel.mIsSettedLocationON = true;
+								mViewModel.bindBleService(getApplicationContext(), mCon);
+								break;
+							}
+							ErrDialog.create(MainActivity.this, "位置情報の機能が存在しない端末です。\n動作しないので、終了します。").show();
 							break;
 					}
 				});

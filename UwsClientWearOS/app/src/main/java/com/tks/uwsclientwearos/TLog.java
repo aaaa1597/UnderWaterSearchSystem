@@ -1,7 +1,6 @@
 package com.tks.uwsclientwearos;
 
 import android.util.Log;
-
 import java.text.MessageFormat;
 
 public class TLog {
