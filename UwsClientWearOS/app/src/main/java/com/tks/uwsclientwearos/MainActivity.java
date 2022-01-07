@@ -238,7 +238,6 @@ public class MainActivity extends AppCompatActivity {
 		mViewModel.UnLock().observe(this, new Observer<Boolean>() {
 			@Override
 			public void onChanged(Boolean isUnLock) {
-				TLog.d("UnLock isLock={0}", isUnLock);
 				if(isUnLock) {
 					mViewModel.AdvertisingFlg().postValue(false);
 				}
