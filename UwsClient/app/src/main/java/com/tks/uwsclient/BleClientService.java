@@ -107,7 +107,7 @@ public class BleClientService extends Service {
 	/** **********************************************************************
 	 * アドバタイズ
 	 ** **********************************************************************/
-	private BluetoothLeAdvertiser		mBluetoothLeAdvertiser;
+	private BluetoothLeAdvertiser	mBluetoothLeAdvertiser;
 
 	/** ************
 	 * アドバタイズ開始

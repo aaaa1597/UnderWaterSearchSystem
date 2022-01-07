@@ -31,13 +31,11 @@ import static com.tks.uwsclient.Constants.UWS_NG_SUCCESS;
 import static com.tks.uwsclient.Constants.UWS_NG_AIDL_REMOTE_ERROR;
 
 public class FragMainViewModel extends ViewModel {
-	private final MutableLiveData<String>			mDeviceAddress	= new MutableLiveData<>("");
 	private final MutableLiveData<Double>			mLatitude		= new MutableLiveData<>(0.0);
 	private final MutableLiveData<Double>			mLongitude		= new MutableLiveData<>(0.0);
 	private final MutableLiveData<Short>			mHearBeat		= new MutableLiveData<>((short)0);
 	private final MutableLiveData<Boolean>			mUnLock			= new MutableLiveData<>(true);
 	private final MutableLiveData<ConnectStatus>	mStatus			= new MutableLiveData<>(ConnectStatus.NONE);
-	public MutableLiveData<String>			DeviceAddress()	{ return mDeviceAddress; }
 	public MutableLiveData<Double>			Latitude()		{ return mLatitude; }
 	public MutableLiveData<Double>			Longitude()		{ return mLongitude; }
 	public MutableLiveData<Short>			HearBeat()		{ return mHearBeat; }
