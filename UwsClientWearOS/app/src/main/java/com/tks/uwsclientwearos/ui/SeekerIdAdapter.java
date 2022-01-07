@@ -1,15 +1,15 @@
-package com.tks.uwsclientwearos;
+package com.tks.uwsclientwearos.ui;
 
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
 import java.util.Arrays;
 import java.util.List;
+
+import com.tks.uwsclientwearos.R;
 
 public class SeekerIdAdapter extends RecyclerView.Adapter<SeekerIdAdapter.ViewHolder> {
 	static class ViewHolder extends RecyclerView.ViewHolder {

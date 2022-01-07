@@ -20,7 +20,6 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.tks.uwsclientwearos.R;
-import com.tks.uwsclientwearos.SeekerIdAdapter;
 import com.tks.uwsclientwearos.TLog;
 import com.tks.uwsclientwearos.ui.FragMainViewModel.ConnectStatus;
 

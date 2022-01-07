@@ -4,39 +4,45 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.LinearSnapHelper;
-import androidx.recyclerview.widget.RecyclerView;
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender.SendIntentException;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.os.Looper;
-import android.view.View;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.location.SettingsClient;
-
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.material.snackbar.Snackbar;
 import java.util.Arrays;
 import java.util.Locale;
 
 import com.tks.uwsclientwearos.ui.FragMainViewModel;
+import static com.tks.uwsclientwearos.Constants.UWS_NG_SUCCESS;
+import static com.tks.uwsclientwearos.Constants.UWS_NG_AIDL_REMOTE_ERROR;
+import static com.tks.uwsclientwearos.Constants.UWS_NG_ADAPTER_NOTFOUND;
+import static com.tks.uwsclientwearos.Constants.UWS_NG_PERMISSION_DENIED;
+import static com.tks.uwsclientwearos.Constants.UWS_NG_SERVICE_NOTFOUND;
+import static com.tks.uwsclientwearos.Constants.UWS_NG_GATTSERVER_NOTFOUND;
 
 public class MainActivity extends AppCompatActivity {
 	private	FragMainViewModel	mViewModel;
@@ -53,11 +59,12 @@ public class MainActivity extends AppCompatActivity {
 			super.onLocationResult(locationResult);
 			Location location = locationResult.getLastLocation();
 			TLog.d("1秒定期 (緯度:{0} 経度:{1})", String.format(Locale.JAPAN, "%1$.12f", location.getLatitude()), String.format(Locale.JAPAN, "%1$.12f", location.getLongitude()));
-//			mViewModel.Longitude().setValue(location.getLongitude());
-//			mViewModel.Latitude().setValue(location.getLatitude());
-//			mViewModel.HearBeat().setValue((short)(mRandom.nextInt(40)+30));
+			mViewModel.Longitude().setValue(location.getLongitude());
+			mViewModel.Latitude().setValue(location.getLatitude());
+			mViewModel.HearBeat().setValue((short)(mDmyHeartBeat++));
 		}
 	};
+	private int mDmyHeartBeat = 30;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -90,9 +97,9 @@ public class MainActivity extends AppCompatActivity {
 		SettingsClient settingsClient = LocationServices.getSettingsClient(this);
 		settingsClient.checkLocationSettings(locationSettingsRequest)
 				.addOnSuccessListener(this, locationSettingsResponse -> {
-//					mViewModel.mIsSettedLocationON = true;
-//					/* Bleサーバへの接続処理開始 */
-//					mViewModel.bindBleService(getApplicationContext(), mCon);
+					mViewModel.mIsSettedLocationON = true;
+					/* Bleサーバへの接続処理開始 */
+					mViewModel.bindBleService(getApplicationContext(), mCon);
 				})
 				.addOnFailureListener(this, exception -> {
 					int statusCode = ((ApiException)exception).getStatusCode();
@@ -127,8 +134,8 @@ public class MainActivity extends AppCompatActivity {
 							ErrDialog.create(MainActivity.this, "BluetoothがOFFです。ONにして操作してください。\n終了します。").show();
 						}
 						else {
-//							/* Bleサーバへの接続処理開始 */
-//							mViewModel.bindBleService(getApplicationContext(), mCon);
+							/* Bleサーバへの接続処理開始 */
+							mViewModel.bindBleService(getApplicationContext(), mCon);
 						}
 					});
 			startForResult.launch(enableBtIntent);
@@ -137,9 +144,8 @@ public class MainActivity extends AppCompatActivity {
 		mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 		mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
 
-		TLog.d("aaaaa ここまで来たOK........");
-//		/* Bleサーバへの接続処理開始 */
-//		mViewModel.bindBleService(getApplicationContext(), mCon);
+		/* Bleサーバへの接続処理開始 */
+		mViewModel.bindBleService(getApplicationContext(), mCon);
 	}
 
 	@Override
@@ -156,17 +162,106 @@ public class MainActivity extends AppCompatActivity {
 			return;
 		}
 		else {
-			TLog.d("aaaaa ここまで来たOK........");
-//			/* Bleサーバへの接続処理開始 */
-//			mViewModel.bindBleService(getApplicationContext(), mCon);
+			/* Bleサーバへの接続処理開始 */
+			mViewModel.bindBleService(getApplicationContext(), mCon);
 		}
 	}
+
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+		if (requestCode != REQUEST_LOCATION_SETTINGS) return;	/* 対象外 */
+		switch (resultCode) {
+			case Activity.RESULT_OK:
+				mViewModel.mIsSettedLocationON = true;
+				/* Bleサーバへの接続処理開始 */
+				mViewModel.bindBleService(getApplicationContext(), mCon);
+				break;
+			case Activity.RESULT_CANCELED:
+				ErrDialog.create(MainActivity.this, "このアプリには位置情報をOnにする必要があります。\n再起動後にOnにしてください。\n終了します。").show();
+				break;
+		}
+	}
+
+	private final ServiceConnection mCon = new ServiceConnection() {
+		@Override
+		public void onServiceConnected(ComponentName name, IBinder service) {
+			int ret = mViewModel.onServiceConnected(IBleClientService.Stub.asInterface(service));
+			if(ret == UWS_NG_AIDL_REMOTE_ERROR)
+				ErrDialog.create(MainActivity.this, "システム異常!! サービスとの接続に異常が発生しました。!\nシステム異常なので、終了します。").show();
+			else if(ret == UWS_NG_PERMISSION_DENIED)
+				ErrDialog.create(MainActivity.this, "このアプリに権限がありません!!\n終了します。").show();
+			else if(ret == UWS_NG_SERVICE_NOTFOUND)
+				ErrDialog.create(MainActivity.this, "この端末はBluetoothに対応していません!!\n終了します。").show();
+			else if(ret == UWS_NG_ADAPTER_NOTFOUND)
+				ErrDialog.create(MainActivity.this, "この端末はBluetoothに対応していません!!\n終了します。").show();
+			else if(ret == UWS_NG_GATTSERVER_NOTFOUND)
+				ErrDialog.create(MainActivity.this, "Ble初期化に失敗!!\n終了します。再起動で直る可能性があります。").show();
+			else if(ret != UWS_NG_SUCCESS)
+				ErrDialog.create(MainActivity.this, "原因不明のエラーが発生しました!!\n終了します。").show();
+
+			/* 監視イベント一括登録 */
+			setObserve();
+
+			return;
+		}
+
+		@Override
+		public void onServiceDisconnected(ComponentName name) {
+			mViewModel.onServiceDisconnected();
+		}
+	};
 
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
 		mFusedLocationClient.removeLocationUpdates(mLocationCallback);
-//		unbindService(mCon);
+		unbindService(mCon);
 	}
 
+	/** **************************************************************************************
+	 * LiveDataのObserve一括設定
+	 * onCreate()で実行すると、初期化が完了してない状態で、動き始めてエラーになるので、初期化完了後に実行する。
+	 ** **************************************************************************************/
+	private void setObserve() {
+		/* Lock ON/OFF */
+		mViewModel.UnLock().observe(this, new Observer<Boolean>() {
+			@Override
+			public void onChanged(Boolean isUnLock) {
+				TLog.d("UnLock isLock={0}", isUnLock);
+				if(isUnLock) {
+					mViewModel.AdvertisingFlg().postValue(false);
+				}
+				else {
+					/* アドバタイズ開始 */
+					mViewModel.AdvertisingFlg().setValue(true);
+				}
+			}
+		});
+		/* アドバタイズON/OFF */
+		mViewModel.AdvertisingFlg().observe(this, new Observer<Boolean>() {
+			@Override
+			public void onChanged(Boolean advertisingFlg) {
+				if(advertisingFlg) {
+					int ret = mViewModel.startAdvertising();
+					if(ret != UWS_NG_SUCCESS)
+						ErrDialog.create(MainActivity.this, "システム異常!! アドバタイズ開始に失敗!!\nシステム異常なので、終了します。").show();
+				}
+				else {
+					int ret = mViewModel.stopAdvertising();
+					if(ret != UWS_NG_SUCCESS)
+						ErrDialog.create(MainActivity.this, "システム異常!! アドバタイズ開始に失敗!!\nシステム異常なので、終了します。").show();
+				}
+			}
+		});
+		/* Snackbar表示要求 */
+		mViewModel.ShowSnacbar().observe(this, showMsg -> {
+			Snackbar.make(findViewById(R.id.root_view), showMsg, Snackbar.LENGTH_LONG).show();
+		});
+		/* エラーメッセージ表示要求 */
+		mViewModel.ShowErrMsg().observe(this, showMsg -> {
+			new Throwable().printStackTrace();
+			ErrDialog.create(MainActivity.this, showMsg).show();
+		});
+	}
 }
