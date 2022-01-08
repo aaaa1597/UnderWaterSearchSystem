@@ -151,7 +151,7 @@ public class BleServerService extends Service {
 
 		Date	nowtime = new Date();
 		short	seekerid = -1;
-		String	name	= result.getDevice().getName();
+		String	name	= result.getScanRecord().getDeviceName();
 		String	address = result.getDevice().getAddress();
 		int		rssi	= result.getRssi();
 		byte	seqno = 0;
