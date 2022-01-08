@@ -271,9 +271,9 @@ public class FragMap extends SupportMapFragment {
 					/* 矩形追加 */
 					Polygon polygon = googleMap.addPolygon(new PolygonOptions()
 //												.fillColor(mMapViewModel.getFillColor())
-//												.strokeColor(mMapViewModel.getFillColor())
+												.strokeColor(mMapViewModel.getFillColor())
 												.fillColor(Color.CYAN)
-												.strokeColor(Color.BLUE)
+//												.strokeColor(Color.BLUE)
 												.add(square[0], square[1], square[3], square[2]));
 					drawinfo.polygon = polygon;
 				}
