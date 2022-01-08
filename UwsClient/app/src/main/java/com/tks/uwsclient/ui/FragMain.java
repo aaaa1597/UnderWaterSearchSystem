@@ -61,13 +61,6 @@ public class FragMain extends Fragment {
 			TLog.d("UnLock isChecked={0}", isChecked);
 			mViewModel.UnLock().setValue(isChecked);
 		});
-		/* 情報表示(アドレス) */
-		mViewModel.DeviceAddress().observe(getActivity(), new Observer<String>() {
-			@Override
-			public void onChanged(String address) {
-				((TextView)view.findViewById(R.id.txtAddress)).setText(address);
-			}
-		});
 		/* 情報表示(経度) */
 		mViewModel.Longitude().observe(getActivity(), new Observer<Double>() {
 			@Override
