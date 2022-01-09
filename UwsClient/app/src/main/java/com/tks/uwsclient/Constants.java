@@ -1,11 +1,15 @@
 package com.tks.uwsclient;
 
 import android.bluetooth.BluetoothGatt;
-
 import java.text.MessageFormat;
 import java.util.UUID;
 
 public class Constants {
+	/* ベース位置(小城消防署(33.29333107719108, 130.19189394973347)) */
+	public final static double	UWS_LOC_BASE_LONGITUDE	= 130.19189394973347;
+	public final static double	UWS_LOC_BASE_LATITUDE	= 33.29333107719108;
+	public final static int 	UWS_OWNDATA_KEY			= 0xffff;
+
 	/* エラーコード */
 	public final static int UWS_NG_SUCCESS				= 0;	/* OK */
 	public final static int UWS_NG_GATT_SUCCESS			= BluetoothGatt.GATT_SUCCESS;
@@ -16,15 +20,16 @@ public class Constants {
 	public final static int UWS_NG_BT_OFF				= -5;	/* Bluetooth機能がOFF */
 	public final static int UWS_NG_ALREADY_SCANNED		= -6;	/* 既にscan中 */
 	public final static int UWS_NG_PERMISSION_DENIED	= -7;	/* 権限なし */
-	public final static int UWS_NG_ALREADY_SCANSTOPEDNED= -8;	/* 既にscan停止中 */
-	public final static int UWS_NG_ILLEGALARGUMENT		= -9;	/* 引数不正 */
-	public final static int UWS_NG_DEVICE_NOTFOUND		= -10;	/* デバイスが見つからない。 */
-	public final static int UWS_NG_AIDL_REMOTE_ERROR	= -11;	/* AIDL-RemoteException発生 */
-	public final static int UWS_NG_GATTSERVER_NOTFOUND	= -16;	/* Gattサーバがない */
+	public final static int UWS_NG_ALREADY_ADVERTISED	= -8;	/* 既にアドバタイズ中 */
+	public final static int UWS_NG_ALREADY_SCANSTOPEDNED= -9;	/* 既にscan停止中 */
+	public final static int UWS_NG_ILLEGALARGUMENT		= -10;	/* 引数不正 */
+	public final static int UWS_NG_DEVICE_NOTFOUND		= -11;	/* デバイスが見つからない。 */
+	public final static int UWS_NG_AIDL_REMOTE_ERROR	= -12;	/* AIDL-RemoteException発生 */
+	public final static int UWS_NG_GATTSERVER_NOTFOUND	= -13;	/* Gattサーバがない */
 
 	/* ServiceUUIDは0000xxxx-0000-1000-8000-00805f9b34fbの形を守る必要がある。CharacteristicUUIDはなんでもOK.*/
-//	public static final UUID UWS_SERVICE_UUID							= UUID.fromString("00002c00-0000-1000-8000-00805f9b34fb");
-	public static final UUID UWS_CHARACTERISTIC_SAMLE_UUID				= UUID.fromString("29292c2c-728c-4a2b-81cb-7b4d884adb04");
+//	public static final UUID UWS_UUID_SERVICE					= UUID.fromString("00002c2c-0000-1000-8000-00805f9b34fb");
+	public static final UUID UWS_UUID_CHARACTERISTIC_HRATBEAT	= UUID.fromString("29292c2c-728c-4a2b-81cb-7b4d884adb04");
 
 	public static String createServiceUuid(int seqno) {
 		String ret = MessageFormat.format("00002c{0}-0000-1000-8000-00805f9b34fb", String.format("%02x", (byte)(seqno & 0xff)));
@@ -39,4 +44,11 @@ public class Constants {
 		long value = i & 0xFFFFFFFF;
 		return new UUID(MSB | (value << 32), LSB);
 	}
+//	public static String getShortUuid(String uuid) {
+//		return uuid.substring(4,8);
+//	}
+//
+//	public static String getShortUuid(UUID uuid) {
+//		return uuid.toString().substring(4,8);
+//	}
 }

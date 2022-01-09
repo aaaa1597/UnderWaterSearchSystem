@@ -1,25 +1,24 @@
 package com.tks.uwsserverunit00.ui;
 
 import androidx.lifecycle.ViewModelProvider;
-
 import android.os.Bundle;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import com.tks.uwsserverunit00.ui.DeviceListAdapter.OnCheckedChangeListener;
 
 import com.tks.uwsserverunit00.R;
 import com.tks.uwsserverunit00.TLog;
 
 public class FragBle extends Fragment {
 	private FragBleViewModel	mViewModel;
+	private FragMapViewModel	mMapViewModel;
 
 	@Override
 	public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -29,6 +28,7 @@ public class FragBle extends Fragment {
 	@Override
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
+		mMapViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
 		mViewModel = new ViewModelProvider(requireActivity()).get(FragBleViewModel.class);
 		mViewModel.NotifyDataSetChanged().observe(getViewLifecycleOwner(), upd -> {
 			mViewModel.getDeviceListAdapter().notifyDataSetChanged();
@@ -44,15 +44,15 @@ public class FragBle extends Fragment {
 			}
 			mViewModel.getDeviceListAdapter().notifyItemChanged(pos);
 		});
-		mViewModel.setDeviceListAdapter(new DeviceListAdapter(getActivity().getApplicationContext(), (view1, sUuid, address, isChecked) -> {
-			int pos = mViewModel.getDeviceListAdapter().setChecked(sUuid, address, isChecked);
-			mViewModel.NotifyItemChanged().postValue(pos);
+		mViewModel.setDeviceListAdapter(new DeviceListAdapter(getActivity().getApplicationContext(),
+															  (seekerid, isChecked) -> {mViewModel.setChecked(seekerid, isChecked);
+															  							mMapViewModel.setChecked(seekerid, isChecked);},
+															  (seekerid, isChecked) -> mViewModel.setBuoy(seekerid, isChecked)
+															));
 
-			if(isChecked)
-				mViewModel.startPeriodicRead(sUuid, address);
-			else
-				mViewModel.stopPeriodicRead(sUuid, address);
-		}));
+		view.findViewById(R.id.btnClear).setOnClickListener(lview -> {
+			mViewModel.clearDeviceWithoutAppliciated();
+		});
 
 		/* BLEデバイスリストの初期化 */
 		RecyclerView deviceListRvw = getActivity().findViewById(R.id.rvw_devices);

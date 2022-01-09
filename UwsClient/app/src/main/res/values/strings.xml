@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">水中検索(子)</string>
     <string name="status_error_when_connecting">An error occurred when connecting to a device. Error Code</string>
+    <string name="error_end">終了</string>
 </resources>

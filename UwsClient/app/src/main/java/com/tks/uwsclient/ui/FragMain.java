@@ -51,42 +51,15 @@ public class FragMain extends Fragment {
 				RecyclerView rvw = getActivity().findViewById(R.id.rvw_seekerid);
 				if(isUnLock) {
 					rvw.removeOnItemTouchListener(mOnItemTouchListener);
-					getActivity().findViewById(R.id.swhAdvertise).setEnabled(false);
-					((SwitchCompat)getActivity().findViewById(R.id.swhAdvertise)).setChecked(false);
-					getActivity().findViewById(R.id.glyOnOff).setBackgroundColor(getResources().getColor(R.color.disable_gray, getActivity().getTheme()));
 				}
 				else {
 					rvw.addOnItemTouchListener(mOnItemTouchListener);
-					getActivity().findViewById(R.id.swhAdvertise).setEnabled(true);
-					getActivity().findViewById(R.id.glyOnOff).setBackgroundColor(getResources().getColor(R.color.white, getActivity().getTheme()));
 				}
 			}
 		});
 		((SwitchCompat)view.findViewById(R.id.swhUnLock)).setOnCheckedChangeListener((buttonView, isChecked) -> {
 			TLog.d("UnLock isChecked={0}", isChecked);
 			mViewModel.UnLock().setValue(isChecked);
-		});
-		/* アドバタイズON/OFF切替え */
-		mViewModel.AdvertisingFlg().observe(getActivity(), new Observer<Boolean>() {
-			@Override
-			public void onChanged(Boolean advertisingFlg) {
-				TLog.d("アドバタイズSwh 切替 advertisingFlg={0}", advertisingFlg);
-				if(advertisingFlg != null && advertisingFlg)
-					((SwitchCompat)view.findViewById(R.id.swhAdvertise)).setChecked(true);
-				else
-					((SwitchCompat)view.findViewById(R.id.swhAdvertise)).setChecked(false);
-			}
-		});
-		((SwitchCompat)view.findViewById(R.id.swhAdvertise)).setOnCheckedChangeListener((buttonView, isChecked) -> {
-			TLog.d("アドバタイズSwh 切替 isChecked={0}", isChecked);
-			mViewModel.AdvertisingFlg().setValue(isChecked);
-		});
-		/* 情報表示(アドレス) */
-		mViewModel.DeviceAddress().observe(getActivity(), new Observer<String>() {
-			@Override
-			public void onChanged(String address) {
-				((TextView)view.findViewById(R.id.txtAddress)).setText(address);
-			}
 		});
 		/* 情報表示(経度) */
 		mViewModel.Longitude().observe(getActivity(), new Observer<Double>() {
@@ -103,9 +76,9 @@ public class FragMain extends Fragment {
 			}
 		});
 		/* 情報表示(脈拍) */
-		mViewModel.HearBeat().observe(getActivity(), new Observer<Integer>() {
+		mViewModel.HearBeat().observe(getActivity(), new Observer<Short>() {
 			@Override
-			public void onChanged(Integer heartbeat) {
+			public void onChanged(Short heartbeat) {
 				((TextView)view.findViewById(R.id.txtHeartbeat)).setText(String.valueOf(heartbeat));
 			}
 		});
@@ -117,11 +90,9 @@ public class FragMain extends Fragment {
 				switch (status) {
 					case NONE:				txtStatus.setText("-- none --");			break;
 					case SETTING_ID:		txtStatus.setText("ID設定中...");			break;
-					case START_ADVERTISE:	txtStatus.setText("アドバタイズ開始");			break;
-					case ADVERTISING:		txtStatus.setText("アドバタイズ中... 接続待ち");break;
-					case CONNECTED:			txtStatus.setText("接続確立");				break;
-					case DISCONNECTED:		txtStatus.setText("接続断");					break;
-					case ERROR:				txtStatus.setText("エラーが発生しました。");	break;
+					case START_ADVERTISE:	txtStatus.setText("アドバタイズ開始");		break;
+					case ADVERTISING:		txtStatus.setText("アドバタイズ中...");		break;
+					case ERROR:				txtStatus.setText("エラーが発生しました。");break;
 				}
 			}
 		});
@@ -133,15 +104,28 @@ public class FragMain extends Fragment {
 		recyclerView.smoothScrollToPosition(0);
 		recyclerView.setAdapter(new SeekerIdAdapter());
 		/* SeekerIDのlistView(子の中心で収束する設定) */
-		new LinearSnapHelper().attachToRecyclerView(recyclerView);
-		/* SeekerIDのlistView(端の子も中心で収束する様に調整) */
-		recyclerView.addItemDecoration(new RecyclerView.ItemDecoration() {
+		LinearSnapHelper linearSnapHelper = new LinearSnapHelper();
+		linearSnapHelper.attachToRecyclerView(recyclerView);
+		recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
 			@Override
-			public void getItemOffsets(@NonNull Rect outRect, @NonNull View view, @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
-				int position = parent.getChildAdapterPosition(view);
-				recyclerView.smoothScrollToPosition(position);
-				mViewModel.setSeekerID(position);
+			public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+				super.onScrollStateChanged(recyclerView, newState);
+				if(newState == RecyclerView.SCROLL_STATE_IDLE) {
+					View lview = linearSnapHelper.findSnapView(recyclerView.getLayoutManager());
+					int pos =  recyclerView.getChildAdapterPosition(lview);
+					TLog.d("aaaaa pos={0}", pos);
+					mViewModel.setSeekerID(pos);
+				}
 			}
 		});
+//		/* SeekerIDのlistView(端の子も中心で収束する様に調整) */
+//		recyclerView.addItemDecoration(new RecyclerView.ItemDecoration() {
+//			@Override
+//			public void getItemOffsets(@NonNull Rect outRect, @NonNull View view, @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
+//				int position = parent.getChildAdapterPosition(view);
+//				recyclerView.smoothScrollToPosition(position);
+//				mViewModel.setSeekerID(position);
+//			}
+//		});
 	}
 }

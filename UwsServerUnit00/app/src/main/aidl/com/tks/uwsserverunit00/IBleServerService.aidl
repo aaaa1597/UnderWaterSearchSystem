@@ -8,6 +8,4 @@ interface IBleServerService {
     /* Scan処理 */
     int startScan();
     int stopScan();
-    /* 接続処理 */
-    int readData(String address);
 }

@@ -1,5 +1,6 @@
 package com.tks.uwsclient.ui;
 
+import java.text.MessageFormat;
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
@@ -7,34 +8,37 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.os.Handler;
 import android.os.RemoteException;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
+
 import com.tks.uwsclient.BleClientService;
 import com.tks.uwsclient.IBleClientService;
 import com.tks.uwsclient.IBleClientServiceCallback;
 import com.tks.uwsclient.TLog;
-
 import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_ALREADY_STARTED;
 import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_DATA_TOO_LARGE;
 import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_FEATURE_UNSUPPORTED;
 import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_INTERNAL_ERROR;
 import static android.bluetooth.le.AdvertiseCallback.ADVERTISE_FAILED_TOO_MANY_ADVERTISERS;
+import static com.tks.uwsclient.Constants.UWS_LOC_BASE_LATITUDE;
+import static com.tks.uwsclient.Constants.UWS_LOC_BASE_LONGITUDE;
+import static com.tks.uwsclient.Constants.UWS_NG_ALREADY_ADVERTISED;
+import static com.tks.uwsclient.Constants.UWS_NG_ALREADY_SCANNED;
 import static com.tks.uwsclient.Constants.UWS_NG_SUCCESS;
 import static com.tks.uwsclient.Constants.UWS_NG_AIDL_REMOTE_ERROR;
 
 public class FragMainViewModel extends ViewModel {
-	private final MutableLiveData<String>			mDeviceAddress	= new MutableLiveData<>("");
 	private final MutableLiveData<Double>			mLatitude		= new MutableLiveData<>(0.0);
 	private final MutableLiveData<Double>			mLongitude		= new MutableLiveData<>(0.0);
-	private final MutableLiveData<Integer>			mHearBeat		= new MutableLiveData<>(0);
+	private final MutableLiveData<Short>			mHearBeat		= new MutableLiveData<>((short)0);
 	private final MutableLiveData<Boolean>			mUnLock			= new MutableLiveData<>(true);
 	private final MutableLiveData<ConnectStatus>	mStatus			= new MutableLiveData<>(ConnectStatus.NONE);
-	public MutableLiveData<String>			DeviceAddress()	{ return mDeviceAddress; }
 	public MutableLiveData<Double>			Latitude()		{ return mLatitude; }
 	public MutableLiveData<Double>			Longitude()		{ return mLongitude; }
-	public MutableLiveData<Integer>			HearBeat()		{ return mHearBeat; }
+	public MutableLiveData<Short>			HearBeat()		{ return mHearBeat; }
 	public MutableLiveData<Boolean>			UnLock()		{ return mUnLock; }
 	public MutableLiveData<ConnectStatus>	ConnectStatus()	{ return mStatus; }
 
@@ -42,18 +46,15 @@ public class FragMainViewModel extends ViewModel {
 		NONE,
 		SETTING_ID,		/* ID設定中 */
 		START_ADVERTISE,/* アドバタイズ開始 */
-		ADVERTISING,	/* アドバタイズ中... 接続開始 */
-		CONNECTED,		/* 接続確立 */
-		DISCONNECTED,	/* 接続断 */
+		ADVERTISING,	/* アドバタイズ中... */
 		ERROR,			/* エラー発生!! */
 	}
 
-	private final MutableLiveData<Boolean>			mAdvertisingFlg	= new MutableLiveData<>(false);
-	private final MutableLiveData<Boolean>			m1sNotifyFlg	= new MutableLiveData<>(false);
-	private int										mSeekerID		= 0;
-	public MutableLiveData<Boolean>		AdvertisingFlg()	{ return mAdvertisingFlg; }
-	public void							setSeekerID(int id)	{ mSeekerID = id; }
-	public int							getSeekerID()		{ return mSeekerID; }
+	private final MutableLiveData<Boolean>	mAdvertisingFlg	= new MutableLiveData<>(false);
+	public MutableLiveData<Boolean>			AdvertisingFlg()	{ return mAdvertisingFlg; }
+	private int		mSeekerID		= 0;
+	public void		setSeekerID(int id)	{ mSeekerID = id; }
+	public int		getSeekerID()		{ return mSeekerID; }
 
 	private final MutableLiveData<String>	mShowSnacbar			= new MutableLiveData<>();
 	public LiveData<String>					ShowSnacbar()			{ return mShowSnacbar; }
@@ -65,7 +66,7 @@ public class FragMainViewModel extends ViewModel {
 	/** ********
 	 *  Location
 	 *  ********/
-	public boolean	mIsSettingLocationON = false;
+	public boolean mIsSettedLocationON = false;
 
 	/** **********
 	 * Service接続
@@ -96,9 +97,36 @@ public class FragMainViewModel extends ViewModel {
 	/** ************
 	 * アドバタイズ開始
 	 ** ***********/
+	Handler mHandler = new Handler();
+	Runnable mAdvertiseRunner = null;
 	public int startAdvertising() {
-		try { mBleServiceIf.startAdvertising(mSeekerID); }
-		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_REMOTE_ERROR;}
+		if(mAdvertiseRunner != null) {
+			String log = "すでにアドバタイズ中...続行します。";
+			TLog.d(log);
+			showSnacbar(log);
+			return UWS_NG_ALREADY_ADVERTISED;
+		}
+		mAdvertiseRunner = new Runnable() {
+			@Override
+			public void run() {
+				/* 一旦、アドバタイズ停止 */
+				try { mBleServiceIf.stopAdvertising(); }
+				catch (RemoteException e) { e.printStackTrace(); throw new RuntimeException("起きないはず.");}
+
+				/* 新データでアドバタイズ開始 */
+				float difflong = (float)(Longitude().getValue() - UWS_LOC_BASE_LONGITUDE);
+				float difflat  = (float)(Latitude().getValue() - UWS_LOC_BASE_LATITUDE);
+				short heartbeat= HearBeat().getValue();
+				try { mBleServiceIf.startAdvertising(mSeekerID, difflong, difflat, heartbeat); }
+				catch (RemoteException e) { e.printStackTrace(); throw new RuntimeException("起きないはず.");}
+
+				/* 3秒後再開 */
+				mHandler.postDelayed(this, 3000);
+			}
+		};
+
+		mHandler.post(mAdvertiseRunner);
+
 		return UWS_NG_SUCCESS;
 	}
 
@@ -106,8 +134,8 @@ public class FragMainViewModel extends ViewModel {
 	 * アドバタイズ終了
 	 ** ***********/
 	public int stopAdvertising() {
-		try { mBleServiceIf.stopAdvertising(); }
-		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_REMOTE_ERROR;}
+		mHandler.removeCallbacks(mAdvertiseRunner);
+		mAdvertiseRunner = null;
 		return UWS_NG_SUCCESS;
 	}
 
@@ -148,7 +176,7 @@ public class FragMainViewModel extends ViewModel {
 		}
 
 		/* 設定の位置情報ON/OFF判定 */
-		if( !mIsSettingLocationON) {
+		if( !mIsSettedLocationON) {
 			TLog.d("設定の位置情報がOFFのまま.何もしない.");
 			return;
 		}
@@ -158,15 +186,6 @@ public class FragMainViewModel extends ViewModel {
 		context.bindService(intent, con, Context.BIND_AUTO_CREATE);
 		TLog.d("Bluetooth使用クリア -> Bluetoothサービス起動");
 	}
-
-//	/** *************
-//	 * 1秒周期通知 開始
-//	 ** ************/
-//	public int notifyOneShot() {
-//		try { mBleServiceIf.notifyOneShot(); }
-//		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_REMOTE_ERROR;}
-//		return UWS_NG_SUCCESS;
-//	}
 
 	/** *****************
 	 * AIDLコールバック
@@ -211,27 +230,6 @@ public class FragMainViewModel extends ViewModel {
 				showErrMsg(errstr);
 			}
 			return;
-		}
-
-		@Override
-		public void notifyConnect() {
-			TLog.d("接続確立");
-			ConnectStatus().postValue(ConnectStatus.CONNECTED);
-		}
-
-		@Override
-		public void notifyDisConnect() {
-			TLog.d("切断");
-			ConnectStatus().postValue(ConnectStatus.NONE);
-		}
-
-		@Override
-		public void notifyErrorConnect(int status) {
-			TLog.d("接続失敗!!");
-			ConnectStatus().postValue(ConnectStatus.ERROR);
-			String errstr = "アドバタイズに失敗。再度、実施してみてください。code="+status;
-			TLog.d(errstr);
-			showErrMsg(errstr);
 		}
 
 		@Override

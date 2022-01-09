@@ -63,7 +63,7 @@
                 android:src="@drawable/wifi_level_3"/>
 
             <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/swhConnect"
+                android:id="@+id/swhSelected"
                 android:layout_width="60dp"
                 android:layout_height="20dp"
                 android:layout_gravity="center"/>
@@ -122,6 +122,7 @@
                 android:id="@+id/txtLatitude"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:ems="13"
                 android:textSize="8dp"
                 android:text="cccccccc"/>
 
@@ -136,6 +137,7 @@
                 android:id="@+id/txtLongitude"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:ems="13"
                 android:textSize="8dp"
                 android:text="dddddddddd"/>
         </LinearLayout>
@@ -156,7 +158,14 @@
                 android:layout_marginStart="10dp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="aaaaaaaaa"/>
+                android:text="ffffffff"/>
+
+            <TextView
+                android:id="@+id/txtDatetime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:text="ggggggg"/>
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>
