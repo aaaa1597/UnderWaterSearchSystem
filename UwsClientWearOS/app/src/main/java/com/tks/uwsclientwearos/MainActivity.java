@@ -6,6 +6,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.wear.ambient.AmbientModeSupport;
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -44,7 +45,7 @@ import static com.tks.uwsclientwearos.Constants.UWS_NG_PERMISSION_DENIED;
 import static com.tks.uwsclientwearos.Constants.UWS_NG_SERVICE_NOTFOUND;
 import static com.tks.uwsclientwearos.Constants.UWS_NG_GATTSERVER_NOTFOUND;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements AmbientModeSupport.AmbientCallbackProvider {
 	private	FragMainViewModel	mViewModel;
 	private final static int	REQUEST_LOCATION_SETTINGS	= 1111;
 	private final static int	REQUEST_PERMISSIONS	= 2222;
@@ -70,6 +71,7 @@ public class MainActivity extends AppCompatActivity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+		AmbientModeSupport.attach(this);
 
 		/* ViewModelインスタンス取得 */
 		mViewModel = new ViewModelProvider(this).get(FragMainViewModel.class);
@@ -99,6 +101,7 @@ public class MainActivity extends AppCompatActivity {
 				.addOnSuccessListener(this, locationSettingsResponse -> {
 					mViewModel.mIsSettedLocationON = true;
 					/* Bleサーバへの接続処理開始 */
+					TLog.d("bindService(cb={0})", mCon);
 					mViewModel.bindBleService(getApplicationContext(), mCon);
 				})
 				.addOnFailureListener(this, exception -> {
@@ -121,6 +124,7 @@ public class MainActivity extends AppCompatActivity {
 								/* checkLocationSettings()の実装がない=常にONと想定する。 */
 								/* Bleサーバへの接続処理開始 */
 								mViewModel.mIsSettedLocationON = true;
+								TLog.d("bindService(cb={0})", mCon);
 								mViewModel.bindBleService(getApplicationContext(), mCon);
 								break;
 							}
@@ -145,6 +149,7 @@ public class MainActivity extends AppCompatActivity {
 						}
 						else {
 							/* Bleサーバへの接続処理開始 */
+							TLog.d("bindService(cb={0})", mCon);
 							mViewModel.bindBleService(getApplicationContext(), mCon);
 						}
 					});
@@ -155,6 +160,7 @@ public class MainActivity extends AppCompatActivity {
 		mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
 
 		/* Bleサーバへの接続処理開始 */
+		TLog.d("bindService(cb={0})", mCon);
 		mViewModel.bindBleService(getApplicationContext(), mCon);
 	}
 
@@ -173,6 +179,7 @@ public class MainActivity extends AppCompatActivity {
 		}
 		else {
 			/* Bleサーバへの接続処理開始 */
+			TLog.d("bindService(cb={0})", mCon);
 			mViewModel.bindBleService(getApplicationContext(), mCon);
 		}
 	}
@@ -185,6 +192,7 @@ public class MainActivity extends AppCompatActivity {
 			case Activity.RESULT_OK:
 				mViewModel.mIsSettedLocationON = true;
 				/* Bleサーバへの接続処理開始 */
+				TLog.d("bindService(cb={0})", mCon);
 				mViewModel.bindBleService(getApplicationContext(), mCon);
 				break;
 			case Activity.RESULT_CANCELED:
@@ -226,6 +234,7 @@ public class MainActivity extends AppCompatActivity {
 	protected void onDestroy() {
 		super.onDestroy();
 		mFusedLocationClient.removeLocationUpdates(mLocationCallback);
+		TLog.d("unbindService(cb={0})", mCon);
 		unbindService(mCon);
 	}
 
@@ -272,5 +281,25 @@ public class MainActivity extends AppCompatActivity {
 			new Throwable().printStackTrace();
 			ErrDialog.create(MainActivity.this, showMsg).show();
 		});
+	}
+
+	@Override
+	public AmbientModeSupport.AmbientCallback getAmbientCallback() {
+		return new AmbientModeSupport.AmbientCallback() {
+			@Override
+			public void onEnterAmbient(Bundle ambientDetails) {
+				super.onEnterAmbient(ambientDetails);
+			}
+
+			@Override
+			public void onUpdateAmbient() {
+				super.onUpdateAmbient();
+			}
+
+			@Override
+			public void onExitAmbient() {
+				super.onExitAmbient();
+			}
+		};
 	}
 }

@@ -12,7 +12,6 @@ import android.os.RemoteException;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
-
 import com.tks.uwsclientwearos.BleClientService;
 import com.tks.uwsclientwearos.IBleClientService;
 import com.tks.uwsclientwearos.IBleClientServiceCallback;
@@ -28,6 +27,7 @@ import static com.tks.uwsclientwearos.Constants.UWS_NG_ALREADY_ADVERTISED;
 import static com.tks.uwsclientwearos.Constants.UWS_NG_ALREADY_SCANNED;
 import static com.tks.uwsclientwearos.Constants.UWS_NG_SUCCESS;
 import static com.tks.uwsclientwearos.Constants.UWS_NG_AIDL_REMOTE_ERROR;
+import java.util.Date;
 
 public class FragMainViewModel extends ViewModel {
 	private final MutableLiveData<Double>			mLatitude		= new MutableLiveData<>(0.0);
@@ -35,11 +35,13 @@ public class FragMainViewModel extends ViewModel {
 	private final MutableLiveData<Short>			mHearBeat		= new MutableLiveData<>((short)0);
 	private final MutableLiveData<Boolean>			mUnLock			= new MutableLiveData<>(true);
 	private final MutableLiveData<ConnectStatus>	mStatus			= new MutableLiveData<>(ConnectStatus.NONE);
+	private final Date								mStartTime		= new Date();
 	public MutableLiveData<Double>			Latitude()		{ return mLatitude; }
 	public MutableLiveData<Double>			Longitude()		{ return mLongitude; }
 	public MutableLiveData<Short>			HearBeat()		{ return mHearBeat; }
 	public MutableLiveData<Boolean>			UnLock()		{ return mUnLock; }
 	public MutableLiveData<ConnectStatus>	ConnectStatus()	{ return mStatus; }
+	public Date								getStartTime()	{ return mStartTime; }
 
 	public enum ConnectStatus {
 		NONE,
@@ -183,7 +185,7 @@ public class FragMainViewModel extends ViewModel {
 		/* Bluetoothサービス起動 */
 		Intent intent = new Intent(context.getApplicationContext(), BleClientService.class);
 		context.bindService(intent, con, Context.BIND_AUTO_CREATE);
-		TLog.d("Bluetooth使用クリア -> Bluetoothサービス起動");
+		TLog.d("Bluetooth使用クリア -> Bluetoothサービス起動 bindService(cb={0})", con);
 	}
 
 	/** *****************

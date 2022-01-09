@@ -38,7 +38,6 @@ public class BleClientService extends Service {
 
 	@Override
 	public boolean onUnbind(Intent intent) {
-		TLog.d("");
 		return super.onUnbind(intent);
 	}
 

@@ -3,25 +3,25 @@ package com.tks.uwsclientwearos.ui;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
-
 import android.os.Bundle;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.LinearSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
-
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-
 import com.tks.uwsclientwearos.R;
 import com.tks.uwsclientwearos.TLog;
 import com.tks.uwsclientwearos.ui.FragMainViewModel.ConnectStatus;
+import java.text.MessageFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 public class FragMain extends Fragment {
 	private FragMainViewModel mViewModel;
@@ -80,7 +80,14 @@ public class FragMain extends Fragment {
 		mViewModel.HearBeat().observe(getActivity(), new Observer<Short>() {
 			@Override
 			public void onChanged(Short heartbeat) {
-				((TextView)view.findViewById(R.id.txtHeartbeat)).setText(String.valueOf(heartbeat));
+				long difftime =  new Date().getTime() - mViewModel.getStartTime().getTime();
+				long now_ss = difftime / 1000;
+				long now_mm = now_ss / 60;
+				long now_hh = now_mm / 60;
+				now_ss = now_ss<60					? now_ss:
+						(now_hh*60*60+now_mm*60)==0	? 0		: now_ss % (now_hh*60*60+now_mm*60);
+				String elapsedtimestr = MessageFormat.format("{0,number,00}:{1,number,00}:{2,number,00}", now_hh, now_mm, now_ss);
+				((TextView)view.findViewById(R.id.txtHeartbeat)).setText(String.valueOf(heartbeat) + "   " +  elapsedtimestr);
 			}
 		});
 		/* 情報表示(状態) */
