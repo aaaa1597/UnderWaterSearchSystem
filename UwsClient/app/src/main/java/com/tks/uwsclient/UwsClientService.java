@@ -55,17 +55,6 @@ public class UwsClientService extends Service {
 				stopForeground(true);
 				stopSelf();
 				break;
-//			case Constants.ACTION.STARTLOC:
-//				TLog.d("aaaaaaaaaaaa 位置情報start.");
-//				startLoc();
-//				break;
-//			case Constants.ACTION.STOPLOC:
-//				TLog.d("aaaaaaaaaaaa 位置情報stop.");
-//				stoptLoc();
-//				break;
-//			default:
-//				stopForeground(true);
-//				stopSelf();
 		}
 
 		return START_NOT_STICKY;
@@ -83,7 +72,7 @@ public class UwsClientService extends Service {
 
 		/* 停止ボタン押下の処理実装 */
 		Intent stopIntent = new Intent(this, UwsClientService.class)
-				.setAction(Constants.ACTION.FINALIZE);
+								.setAction(Constants.ACTION.FINALIZE);
 		PendingIntent pendingStopIntent = PendingIntent.getService(this, 2222, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 		RemoteViews remoteViews = new RemoteViews(getPackageName(), R.layout.notification);
 		remoteViews.setOnClickPendingIntent(R.id.btnStop, pendingStopIntent);
@@ -116,7 +105,6 @@ public class UwsClientService extends Service {
 	/* 位置情報 機能 */
 	/***************/
 	private final static int			LOC_UPD_INTERVAL = 2500;
-	//	private int							mFlcCnt = 0;
 	private FusedLocationProviderClient mFusedLocationClient;
 	private final LocationRequest mLocationRequest = LocationRequest.create()
 																	.setInterval(LOC_UPD_INTERVAL)

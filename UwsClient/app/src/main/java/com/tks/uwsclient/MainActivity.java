@@ -141,7 +141,6 @@ public class MainActivity extends AppCompatActivity {
 					});
 			startForResult.launch(enableBtIntent);
 		}
-
 	}
 
 	@Override
@@ -226,5 +225,4 @@ public class MainActivity extends AppCompatActivity {
 
 		return true;
 	}
-
 }
