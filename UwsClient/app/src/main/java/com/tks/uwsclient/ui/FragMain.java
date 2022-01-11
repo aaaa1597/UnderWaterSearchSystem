@@ -1,25 +1,27 @@
 package com.tks.uwsclient.ui;
 
-import android.graphics.Rect;
-import android.os.Bundle;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SwitchCompat;
-import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.LinearSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
+import android.content.Intent;
+import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CompoundButton;
 import android.widget.TextView;
 
+import com.tks.uwsclient.Constants;
+import com.tks.uwsclient.MainActivity;
 import com.tks.uwsclient.R;
 import com.tks.uwsclient.TLog;
+import com.tks.uwsclient.UwsClientService;
 import com.tks.uwsclient.ui.FragMainViewModel.ConnectStatus;
 
 public class FragMain extends Fragment {
@@ -47,7 +49,8 @@ public class FragMain extends Fragment {
 		mViewModel.UnLock().observe(getActivity(), new Observer<Boolean>() {
 			@Override
 			public void onChanged(Boolean isUnLock) {
-				TLog.d("UnLock isLock={0}", isUnLock);
+				TLog.d("UI周りの処理 UnLock isUnLock={0}", isUnLock);
+				/* ClickListnerの処理はMainActivityで実行している。 */
 				RecyclerView rvw = getActivity().findViewById(R.id.rvw_seekerid);
 				if(isUnLock) {
 					rvw.removeOnItemTouchListener(mOnItemTouchListener);
@@ -118,14 +121,5 @@ public class FragMain extends Fragment {
 				}
 			}
 		});
-//		/* SeekerIDのlistView(端の子も中心で収束する様に調整) */
-//		recyclerView.addItemDecoration(new RecyclerView.ItemDecoration() {
-//			@Override
-//			public void getItemOffsets(@NonNull Rect outRect, @NonNull View view, @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
-//				int position = parent.getChildAdapterPosition(view);
-//				recyclerView.smoothScrollToPosition(position);
-//				mViewModel.setSeekerID(position);
-//			}
-//		});
 	}
 }
