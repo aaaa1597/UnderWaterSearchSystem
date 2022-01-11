@@ -160,22 +160,13 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		return mDeviceList.size();
 	}
 
-	public void addDevice(List<DeviceInfo> deviceInfos) {
-		if (deviceInfos != null) {
-			for (DeviceInfo deviceInfo : deviceInfos) {
-				addDevice(deviceInfo);
-			}
-//			notifyDataSetChanged();
-		}
-	}
-
-//	public void addDevice(DeviceInfo deviceInfo) {
-//		addDevice(deviceInfo, true);
-//	}
-
 	/** * @return 新データかどうかのフラグ */
-	public boolean addDevice(DeviceInfo deviceInfo) {
+	public boolean addDevice(DeviceInfo deviceInfo, Boolean isOnlySeeker) {
 		if (deviceInfo == null)
+			return false;
+
+		/* 隊員のみ表示中なら、対象外デバイスは追加しない */
+		if(isOnlySeeker && deviceInfo.getSeekerId()==-1)
 			return false;
 
 		/* リスト済確認 */

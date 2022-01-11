@@ -38,6 +38,7 @@ public class MainActivity extends AppCompatActivity {
 	private boolean				mIsSettingLocationON		= false;
 	private final static int	REQUEST_PERMISSIONS			= 1111;
 	private final static int	REQUEST_LOCATION_SETTINGS	= 2222;
+	private ServiceConnection	mCon = null;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -69,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
 		settingsClient.checkLocationSettings(locationSettingsRequest)
 			.addOnSuccessListener(this, locationSettingsResponse -> {
 				mIsSettingLocationON = true;
-				bindUwsService(mCon);
+				bindUwsService();
 			})
 			.addOnFailureListener(this, exception -> {
 				int statusCode = ((ApiException)exception).getStatusCode();
@@ -104,7 +105,7 @@ public class MainActivity extends AppCompatActivity {
 							ErrDialog.create(MainActivity.this, "BluetoothがOFFです。ONにして操作してください。\n終了します。").show();
 						}
 						else {
-							bindUwsService(mCon);
+							bindUwsService();
 						}
 					});
 			startForResult.launch(enableBtIntent);
@@ -127,7 +128,7 @@ public class MainActivity extends AppCompatActivity {
 		}
 		else {
 			mMapViewModel.Permission().postValue(true);
-			bindUwsService(mCon);
+			bindUwsService();
 		}
 	}
 
@@ -138,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
 		switch (resultCode) {
 			case Activity.RESULT_OK:
 				mIsSettingLocationON = true;
-				bindUwsService(mCon);
+				bindUwsService();
 				break;
 			case Activity.RESULT_CANCELED:
 				ErrDialog.create(MainActivity.this, "このアプリには位置情報をOnにする必要があります。\n再起動後にOnにしてください。\n終了します。").show();
@@ -151,12 +152,18 @@ public class MainActivity extends AppCompatActivity {
 		super.onDestroy();
 		TLog.d("");
 		unbindService(mCon);
+		mCon = null;
 	}
 
 	/** **********
 	 * サービスBind
 	 * **********/
-	private void bindUwsService(ServiceConnection con) {
+	private void bindUwsService() {
+		if(mCon != null) {
+			TLog.d("すでに、Uwsサービス起動済.処理不要.");
+			return;
+		}
+
 		/* Bluetooth未サポート */
 		if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
 			TLog.d("Bluetooth未サポートの端末.何もしない.");
@@ -194,37 +201,41 @@ public class MainActivity extends AppCompatActivity {
 			return;
 		}
 
+		mCon = createServiceConnection();
+
 		/* Bluetoothサービス起動 */
 		Intent intent = new Intent(MainActivity.this, UwsServer.class);
-		bindService(intent, con, Context.BIND_AUTO_CREATE);
-		TLog.d("Bluetooth使用クリア -> Bluetoothサービス起動");
+		bindService(intent, mCon, Context.BIND_AUTO_CREATE);
+		TLog.d("All Green. -> Uwsサービス起動");
 	}
 
 	/* Serviceコールバック */
-	private final ServiceConnection	mCon = new ServiceConnection() {
-		@Override
-		public void onServiceConnected(ComponentName name, IBinder service) {
-//			int ret = mBleViewModel.onServiceConnected(IUwsServerService.Stub.asInterface(service));
-//			TLog.d("Bletooth初期化 ret={0}", ret);
-//
-//			if(ret == Constants.UWS_NG_PERMISSION_DENIED)
-//				ErrDialog.create(MainActivity.this, "このアプリに権限がありません!!\n終了します。").show();
-//			else if(ret == Constants.UWS_NG_SERVICE_NOTFOUND)
-//				ErrDialog.create(MainActivity.this, "この端末はBluetoothに対応していません!!\n終了します。").show();
-//			else if(ret == Constants.UWS_NG_ADAPTER_NOTFOUND)
-//				ErrDialog.create(MainActivity.this, "この端末はBluetoothに対応していません!!\n終了します。").show();
-//			else if(ret == Constants.UWS_NG_BT_OFF)
-//				Snackbar.make(findViewById(R.id.root_view), "BluetoothがOFFです。\nONにして操作してください。", Snackbar.LENGTH_LONG).show();
-//			else if(ret == Constants.UWS_NG_ALREADY_SCANNED)
-//				Snackbar.make(findViewById(R.id.root_view), "すでにscan中です。継続します。", Snackbar.LENGTH_LONG).show();
-//			else if(ret != Constants.UWS_NG_SUCCESS)
-//				ErrDialog.create(MainActivity.this, "原因不明のエラーが発生しました!!\n終了します。").show();
-			return;
-		}
+	private ServiceConnection createServiceConnection() {
+		return new ServiceConnection() {
+			@Override
+			public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+				int ret = mBleViewModel.onServiceConnected(IUwsServer.Stub.asInterface(iBinder));
+				TLog.d("Bletooth初期化 ret={0}", ret);
 
-		@Override
-		public void onServiceDisconnected(ComponentName name) {
-//			mBleViewModel.onServiceDisconnected();
-		}
-	};
+				if(ret == Constants.UWS_NG_PERMISSION_DENIED)
+					ErrDialog.create(MainActivity.this, "このアプリに権限がありません!!\n終了します。").show();
+				else if(ret == Constants.UWS_NG_SERVICE_NOTFOUND)
+					ErrDialog.create(MainActivity.this, "この端末はBluetoothに対応していません!!\n終了します。").show();
+				else if(ret == Constants.UWS_NG_ADAPTER_NOTFOUND)
+					ErrDialog.create(MainActivity.this, "この端末はBluetoothに対応していません!!\n終了します。").show();
+				else if(ret == Constants.UWS_NG_BT_OFF)
+					Snackbar.make(findViewById(R.id.root_view), "BluetoothがOFFです。\nONにして操作してください。", Snackbar.LENGTH_LONG).show();
+				else if(ret == Constants.UWS_NG_ALREADY_SCANNED)
+					Snackbar.make(findViewById(R.id.root_view), "すでにscan中です。継続します。", Snackbar.LENGTH_LONG).show();
+				else if(ret != Constants.UWS_NG_SUCCESS)
+					ErrDialog.create(MainActivity.this, "原因不明のエラーが発生しました!!\n終了します。").show();
+				return;
+			}
+
+			@Override
+			public void onServiceDisconnected(ComponentName componentName) {
+				mBleViewModel.onServiceDisconnected();
+			}
+		};
+	}
 }

@@ -2,8 +2,6 @@
 package com.tks.uwsserverunit00;
 import com.tks.uwsserverunit00.DeviceInfo;
 
-interface IUwsServerCallback {
-    /* Scan処理 */
-    void notifyDeviceInfolist(in List<DeviceInfo> devices);
+interface IUwsScanCallback {
     void notifyDeviceInfo(in DeviceInfo device);
 }

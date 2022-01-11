@@ -1,11 +1,9 @@
 // IUwsServer.aidl
 package com.tks.uwsserverunit00;
-import com.tks.uwsserverunit00.IUwsServerCallback;
+import com.tks.uwsserverunit00.IUwsScanCallback;
 
 interface IUwsServer {
-    void setCallback(IUwsServerCallback callback);	/* 常に後勝ち */
     int initBle();
-    /* Scan処理 */
-    int startScan();
-    int stopScan();
+    int startScan(IUwsScanCallback callback);	/* 常に後勝ち */
+    void stopScan();
 }

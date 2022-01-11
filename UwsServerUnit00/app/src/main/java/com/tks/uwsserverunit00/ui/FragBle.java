@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 
 import com.tks.uwsserverunit00.R;
 import com.tks.uwsserverunit00.TLog;
@@ -51,7 +52,12 @@ public class FragBle extends Fragment {
 															));
 
 		view.findViewById(R.id.btnClear).setOnClickListener(lview -> {
-			mViewModel.clearDeviceWithoutAppliciated();
+			mViewModel.clearAll();
+		});
+		((CheckBox)view.findViewById(R.id.cbxMember)).setOnCheckedChangeListener((btn, isChecked) -> {
+			if(isChecked)
+				mViewModel.clearDeviceWithoutAppliciated();
+			mViewModel.OnlySeeker().setValue(isChecked);
 		});
 
 		/* BLEデバイスリストの初期化 */
