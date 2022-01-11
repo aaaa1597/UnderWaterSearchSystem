@@ -42,6 +42,7 @@ public class FragMain extends Fragment {
 	@Override
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
+
 		/* ViewModelインスタンス取得 */
 		mViewModel = new ViewModelProvider(requireActivity()).get(FragMainViewModel.class);
 		/* Lock/Lock解除 設定 */
