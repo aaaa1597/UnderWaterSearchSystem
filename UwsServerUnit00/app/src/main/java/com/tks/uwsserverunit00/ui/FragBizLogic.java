@@ -2,11 +2,11 @@ package com.tks.uwsserverunit00.ui;
 
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
-import android.os.Bundle;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.ViewModelProvider;
+import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,14 +27,15 @@ public class FragBizLogic extends Fragment {
 	@Override
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
+
 		mMapLogicViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
 		mBizLogicViewModel = new ViewModelProvider(requireActivity()).get(FragBizLogicViewModel.class);
-
+		/* メンバ選択ボタン */
 		view.findViewById(R.id.btnSelectMember).setOnClickListener(v -> {
 			DrawerLayout naviview = getActivity().findViewById(R.id.root_view);
 			naviview.openDrawer(GravityCompat.START);
 		});
-
+		/* 検索開始/終了ボタン */
 		view.findViewById(R.id.btnSerchStartStop).setOnClickListener(v -> {
 			Button btnStartStop = (Button)v;
 			TLog.d("mBizLogicViewModel.getSerchStatus() = {0}", mBizLogicViewModel.getSerchStatus());

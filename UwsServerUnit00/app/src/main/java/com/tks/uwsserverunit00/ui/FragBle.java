@@ -11,7 +11,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import com.tks.uwsserverunit00.ui.DeviceListAdapter.OnCheckedChangeListener;
 
 import com.tks.uwsserverunit00.R;
 import com.tks.uwsserverunit00.TLog;
@@ -28,6 +27,7 @@ public class FragBle extends Fragment {
 	@Override
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
+
 		mMapViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
 		mViewModel = new ViewModelProvider(requireActivity()).get(FragBleViewModel.class);
 		mViewModel.NotifyDataSetChanged().observe(getViewLifecycleOwner(), upd -> {
@@ -46,7 +46,7 @@ public class FragBle extends Fragment {
 		});
 		mViewModel.setDeviceListAdapter(new DeviceListAdapter(getActivity().getApplicationContext(),
 															  (seekerid, isChecked) -> {mViewModel.setChecked(seekerid, isChecked);
-															  							mMapViewModel.setChecked(seekerid, isChecked);},
+																						mMapViewModel.setChecked(seekerid, isChecked);},
 															  (seekerid, isChecked) -> mViewModel.setBuoy(seekerid, isChecked)
 															));
 

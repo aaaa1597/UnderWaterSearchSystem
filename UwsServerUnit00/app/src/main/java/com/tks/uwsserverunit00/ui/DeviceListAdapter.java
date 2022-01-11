@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.tks.uwsserverunit00.DeviceInfo;
 import com.tks.uwsserverunit00.R;
-
 import static com.tks.uwsserverunit00.Constants.UWS_NG_DEVICE_NOTFOUND;
 
 /**
@@ -111,7 +110,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 								model.mDeviceRssi > -70 ? R.drawable.wifi_level_2 :
 								model.mDeviceRssi > -80 ? R.drawable.wifi_level_1 : R.drawable.wifi_level_0;
 		final int constsresid =	seekerid==-1			? R.drawable.statusx_na :
-								model.mSelected		? R.drawable.status5_ready : R.drawable.status0_none;
+								model.mSelected			? R.drawable.status5_ready : R.drawable.status0_none;
 		holder.mtxtDatetime.setText(mDf.format(model.mDatetime));
 		holder.mTxtSeekerId.setText((seekerid==-1) ? " - " : String.valueOf(seekerid));
 		holder.mTxtDeviceName.setText(TextUtils.isEmpty(deviceName) ? "" : deviceName);
@@ -154,7 +153,6 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 				mOnCheckedChangeListener.onCheckedChanged(seekerid, isChecked);
 			});
 		}
-
 	}
 
 	@Override
