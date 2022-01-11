@@ -20,6 +20,38 @@ public class FragBleViewModel extends ViewModel {
 	public void								setDeviceListAdapter(DeviceListAdapter adapter)	{ mDeviceListAdapter = adapter; }
 	public DeviceListAdapter				getDeviceListAdapter()	{ return mDeviceListAdapter; }
 	/* ---------------- */
+	/** *****************
+	 * サービス接続Callback
+	 * *****************/
+//	public int onServiceConnected(IUwsServer service) {
+//		mBleServiceIf = service;
+//
+//		/* コールバック設定 */
+//		try { mBleServiceIf.setCallback(mCb); }
+//		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_REMOTE_ERROR;}
+//
+//		/* BLE初期化 */
+//		int ret;
+//		try { ret = mBleServiceIf.initBle(); }
+//		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_REMOTE_ERROR;}
+//
+//		if(ret != UWS_NG_SUCCESS)
+//			return ret;
+//
+//		/* scan開始 */
+//		int retscan = startScan();
+//		TLog.d("scan開始 ret={0}", retscan);
+//
+//		return retscan;
+//	}
+
+	/** *****************
+	 * サービス接続Callback
+	 * *****************/
+//	public void onServiceDisconnected() {
+//		mBleServiceIf = null;
+//	}
+
 	public void clearDeviceWithoutAppliciated() {
 		mDeviceListAdapter.clearDeviceWithoutAppliciated();
 		mNotifyDataSetChanged.postValue(true);

@@ -3,4 +3,5 @@
     <string name="startscan">Scan開始</string>
     <string name="stopscan">Scan停止</string>
     <string name="connect_device">connect</string>
+    <string name="error_end">終了</string>
 </resources>
