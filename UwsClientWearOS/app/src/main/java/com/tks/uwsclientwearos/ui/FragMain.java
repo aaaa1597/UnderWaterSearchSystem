@@ -3,6 +3,7 @@ package com.tks.uwsclientwearos.ui;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
+import android.content.Intent;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -19,9 +20,7 @@ import com.tks.uwsclientwearos.R;
 import com.tks.uwsclientwearos.TLog;
 import com.tks.uwsclientwearos.ui.FragMainViewModel.ConnectStatus;
 import java.text.MessageFormat;
-import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Locale;
 
 public class FragMain extends Fragment {
 	private FragMainViewModel mViewModel;
@@ -42,6 +41,7 @@ public class FragMain extends Fragment {
 	@Override
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
+
 		/* ViewModelインスタンス取得 */
 		mViewModel = new ViewModelProvider(requireActivity()).get(FragMainViewModel.class);
 		/* Lock/Lock解除 設定 */
@@ -125,5 +125,4 @@ public class FragMain extends Fragment {
 			}
 		});
 	}
-
 }
