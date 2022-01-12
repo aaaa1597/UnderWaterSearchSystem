@@ -6,27 +6,33 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.RecyclerView;
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentSender;
 import android.content.IntentSender.SendIntentException;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.IBinder;
+import android.os.RemoteException;
+import android.util.Pair;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
-import com.google.android.gms.common.internal.TelemetryLogging;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.location.SettingsClient;
 import com.tks.uwsclient.ui.FragMainViewModel;
 import java.util.Arrays;
+
+import static com.tks.uwsclient.Constants.Sender;
+import static com.tks.uwsclient.Constants.SERVICE_STATUS_AD_LOC_BEAT;
+import static com.tks.uwsclient.Constants.SERVICE_STATUS_CON_LOC_BEAT;
 
 public class MainActivity extends AppCompatActivity {
 	private final static int	REQUEST_LOCATION_SETTINGS	= 1111;
@@ -40,12 +46,20 @@ public class MainActivity extends AppCompatActivity {
 		setContentView(R.layout.activity_main);
 		TLog.d("aaaaaaa MainActivity.class={0}", MainActivity.class);
 
+		/* サービスBind */
+		Intent intent = new Intent(getApplicationContext(), UwsClientService.class);
+		bindService(intent, mCon, Context.BIND_AUTO_CREATE);
+		TLog.d("サービスBind");
+
 		/* ViewModelインスタンス取得 */
 		mViewModel = new ViewModelProvider(this).get(FragMainViewModel.class);
 		/* Lock/Lock解除 設定 */
-		mViewModel.UnLock().observe(this, new Observer<Boolean>() {
+		mViewModel.UnLock().observe(this, new Observer<Pair<Sender, Boolean>>() {
 			@Override
-			public void onChanged(Boolean isUnLock) {
+			public void onChanged(Pair<Sender, Boolean> pair) {
+				if(pair.first == Sender.Service) return;
+				boolean isUnLock = pair.second;
+
 				TLog.d("Listner周りの処理 UnLock isUnLock={0}", isUnLock);
 				/* UIの処理はFragMainで実行している。 */
 				if( !isUnLock) {
@@ -143,6 +157,29 @@ public class MainActivity extends AppCompatActivity {
 		}
 	}
 
+	private final ServiceConnection mCon = new ServiceConnection() {
+		@Override public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+			IClientService ServiceIf = IClientService.Stub.asInterface(iBinder);
+			mViewModel.setClientServiceIf(ServiceIf);
+
+			/* サービス状態を取得 */
+			StatusInfo si;
+			try { si = ServiceIf.getServiceStatus(); }
+			catch (RemoteException e) { e.printStackTrace(); throw new RuntimeException(e.getMessage()); }
+
+			/* サービス状態が、アドバタイズ中/接続中 */
+			if(si.getStatus() == SERVICE_STATUS_AD_LOC_BEAT || si.getStatus() == SERVICE_STATUS_CON_LOC_BEAT) {
+				/* SeekerIdを設定 */
+				mViewModel.setSeekerIdSmoothScrollToPosition(si.getSeekerId());
+				/* 画面をアドバタイズ中/接続中に更新 */
+				mViewModel.UnLock().postValue(Pair.create(Sender.Service, false));
+			}
+		}
+		@Override public void onServiceDisconnected(ComponentName componentName) {
+			mViewModel.setClientServiceIf(null);
+		}
+	};
+
 	@Override
 	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
 		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -180,6 +217,7 @@ public class MainActivity extends AppCompatActivity {
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
+		unbindService(mCon);
 		TLog.d("");
 	}
 
