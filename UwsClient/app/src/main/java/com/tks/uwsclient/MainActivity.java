@@ -44,12 +44,7 @@ public class MainActivity extends AppCompatActivity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-		TLog.d("aaaaaaa MainActivity.class={0}", MainActivity.class);
-
-		/* サービスBind */
-		Intent intent = new Intent(getApplicationContext(), UwsClientService.class);
-		bindService(intent, mCon, Context.BIND_AUTO_CREATE);
-		TLog.d("サービスBind");
+		TLog.d("xxxxx MainActivity.class={0}", MainActivity.class);
 
 		/* ViewModelインスタンス取得 */
 		mViewModel = new ViewModelProvider(this).get(FragMainViewModel.class);
@@ -210,15 +205,17 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	@Override
-	protected void onResume() {
-		super.onResume();
+	protected void onStart() {
+		super.onStart();
+		TLog.d("xxxxx");
+		bindService(new Intent(getApplicationContext(), UwsClientService.class), mCon, Context.BIND_AUTO_CREATE);
 	}
 
 	@Override
-	protected void onDestroy() {
-		super.onDestroy();
+	protected void onStop() {
+		super.onStop();
 		unbindService(mCon);
-		TLog.d("");
+		TLog.d("xxxxx");
 	}
 
 	/* 実行前の権限/条件チェック */
