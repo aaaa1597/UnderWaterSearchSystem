@@ -17,8 +17,6 @@ import androidx.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Date;
 
-import static com.tks.uwsserverunit00.Constants.UWS_LOC_BASE_LATITUDE;
-import static com.tks.uwsserverunit00.Constants.UWS_LOC_BASE_LONGITUDE;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_SUCCESS;
 import static com.tks.uwsserverunit00.Constants.UWS_OWNDATA_KEY;
 
@@ -117,8 +115,8 @@ public class UwsServer extends Service {
 			/* 経度/緯度 脈拍を取得 */
 			byte[] rcvdata = result.getScanRecord().getManufacturerSpecificData(UWS_OWNDATA_KEY);
 			seqno		= rcvdata[0];
-			longitude	= ByteBuffer.wrap(rcvdata).getFloat(1)+ UWS_LOC_BASE_LONGITUDE;
-			latitude	= ByteBuffer.wrap(rcvdata).getFloat(5)+ UWS_LOC_BASE_LATITUDE;
+			longitude	= ByteBuffer.wrap(rcvdata).getFloat(1);
+			latitude	= ByteBuffer.wrap(rcvdata).getFloat(5);
 			heartbeat	= ByteBuffer.wrap(rcvdata).getShort(9);
 		}
 
