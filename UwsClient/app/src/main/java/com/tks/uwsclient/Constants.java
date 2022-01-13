@@ -8,11 +8,11 @@ public class Constants {
 	public final static String	NOTIFICATION_CHANNEL_STARTSTOP = "NOTIFICATION_CHANNEL_STARTSTOP";
 
 	public static class ACTION {
-		public final static String INITIALIZE = "uws.action.initialize";
-		public final static String FINALIZE = "uws.action.finalize";
-		public final static String FINALIZEFROMS = "uws.action.finalizefromservice";
-		public final static String STARTLOC = "uws.action.startloc";
-		public final static String STOPLOC = "uws.action.stoploc";
+		public final static String INITIALIZE	= "uws.action.initialize";
+		public final static String FINALIZE		= "uws.action.finalize";
+		public final static String FINALIZEFROMS= "uws.action.finalizefromservice";
+		public final static String STARTLOC		= "uws.action.startloc";
+		public final static String STOPLOC		= "uws.action.stoploc";
 	}
 
 	public static class STATE_SERVICE {
