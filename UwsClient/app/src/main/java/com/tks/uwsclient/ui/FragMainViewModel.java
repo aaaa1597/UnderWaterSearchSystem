@@ -1,5 +1,7 @@
 package com.tks.uwsclient.ui;
 
+import android.os.IBinder;
+import android.os.RemoteException;
 import android.util.Pair;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -7,6 +9,8 @@ import androidx.lifecycle.ViewModel;
 
 import com.tks.uwsclient.Constants.Sender;
 import com.tks.uwsclient.IClientService;
+import com.tks.uwsclient.IOnStatusChangeListner;
+import com.tks.uwsclient.TLog;
 
 public class FragMainViewModel extends ViewModel {
 	private final MutableLiveData<Double>					mLatitude		= new MutableLiveData<>(0.0);
@@ -35,7 +39,7 @@ public class FragMainViewModel extends ViewModel {
 	private short	mSeekerId = 0;
 	public void		setSeekerId(short id)	{ mSeekerId = id; }
 	public short	getSeekerId()			{ return mSeekerId; }
-	public MutableLiveData<Object>	UpdDisplaySeerkerId = new MutableLiveData<>((short)0);
+	public MutableLiveData<Object>			UpdDisplaySeerkerId = new MutableLiveData<>();
 
 	private final MutableLiveData<String>	mShowSnacbar			= new MutableLiveData<>();
 	public LiveData<String>					ShowSnacbar()			{ return mShowSnacbar; }

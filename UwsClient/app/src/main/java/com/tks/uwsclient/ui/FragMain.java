@@ -47,6 +47,9 @@ public class FragMain extends Fragment {
 		mViewModel.UnLock().observe(getActivity(), new Observer<Pair<Sender, Boolean>>() {
 			@Override
 			public void onChanged(Pair<Sender, Boolean> pair) {
+				if(pair.first == Sender.Service)
+					((SwitchCompat)getActivity().findViewById(R.id.swhUnLock)).setChecked(false);
+
 				boolean isUnLock = pair.second;
 				TLog.d("UI周りの処理 UnLock isUnLock={0}", isUnLock);
 				/* ClickListnerの処理はMainActivityで実行している。 */
