@@ -1,5 +1,7 @@
 package com.tks.uwsclient;
 
+import java.nio.ByteBuffer;
+import java.text.MessageFormat;
 import java.util.Locale;
 import android.Manifest;
 import android.app.Notification;
@@ -9,6 +11,9 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
+import android.bluetooth.le.AdvertiseCallback;
+import android.bluetooth.le.AdvertiseData;
+import android.bluetooth.le.AdvertiseSettings;
 import android.bluetooth.le.BluetoothLeAdvertiser;
 import android.content.Context;
 import android.content.Intent;
@@ -17,6 +22,7 @@ import android.location.Location;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.ParcelUuid;
 import android.os.RemoteException;
 import android.widget.RemoteViews;
 import androidx.annotation.NonNull;
@@ -35,10 +41,26 @@ import static com.tks.uwsclient.Constants.NOTIFICATION_CHANNEL_STARTSTOP;
 import static com.tks.uwsclient.Constants.SERVICE_STATUS_AD_LOC_BEAT;
 import static com.tks.uwsclient.Constants.SERVICE_STATUS_INITIALIZING;
 import static com.tks.uwsclient.Constants.SERVICE_STATUS_IDLE;
+import static com.tks.uwsclient.Constants.UWS_OWNDATA_KEY;
 
 public class UwsClientService extends Service {
 	private int mStatus = SERVICE_STATUS_INITIALIZING;
 	private IOnStatusChangeListner mOnStatusChangeListner;
+
+	@Override
+	public void onCreate() {
+		super.onCreate();
+		uwsInit();
+		mStatus = SERVICE_STATUS_IDLE;
+		TLog.d("xxxxx");
+	}
+
+	@Override
+	public void onDestroy() {
+		super.onDestroy();
+		uwsFin();
+		TLog.d("xxxxx");
+	}
 
 	@Nullable
 	@Override
@@ -55,15 +77,14 @@ public class UwsClientService extends Service {
 		@Override
 		public int startUws(int seekerid, IOnStatusChangeListner listner) {
 			mStatus = SERVICE_STATUS_AD_LOC_BEAT;
-			mSeekerId = (short)seekerid;
-			mOnStatusChangeListner = listner;
-			startLoc();
+			uwsStart((short)seekerid, listner);
 			return 0;
 		}
 
 		@Override
 		public void stopUws() {
-			stoptLoc();
+			mStatus = SERVICE_STATUS_IDLE;
+			uwsStop();
 		}
 	};
 
@@ -71,21 +92,6 @@ public class UwsClientService extends Service {
 	public boolean onUnbind(Intent intent) {
 		TLog.d("xxxxx");
 		return super.onUnbind(intent);
-	}
-
-	@Override
-	public void onCreate() {
-		super.onCreate();
-		uwsInit();
-		mStatus = SERVICE_STATUS_IDLE;
-		TLog.d("xxxxx");
-	}
-
-	@Override
-	public void onDestroy() {
-		super.onDestroy();
-		uwsFin();
-		TLog.d("xxxxx");
 	}
 
 	@Override
@@ -168,6 +174,27 @@ public class UwsClientService extends Service {
 		mBluetoothLeAdvertiser = null;
 	}
 
+	/* ***************/
+	/* 開始/停止処理 */
+	/* ***************/
+	private void uwsStart(short seekerid, IOnStatusChangeListner listner) {
+		mSeekerId = seekerid;
+		mOnStatusChangeListner = listner;
+		/* 位置情報 取得開始 */
+		startLoc();
+
+		/* BLEアドバタイズ 開始 */
+		startAdvertise(seekerid);
+	}
+
+	private void uwsStop() {
+		/* 位置情報 停止 */
+		stoptLoc();
+
+		/* BLE停止 */
+		stopAdvertise();
+	}
+
 	/* *************/
 	/* 位置情報 機能 */
 	/* *************/
@@ -177,12 +204,16 @@ public class UwsClientService extends Service {
 															.setInterval(LOC_UPD_INTERVAL)
 															.setFastestInterval(LOC_UPD_INTERVAL)
 															.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+	private double mLongitude;
+	private double mLatitude;
 	private final LocationCallback		mLocationCallback = new LocationCallback() {
 		@Override
 		public void onLocationResult(@NonNull LocationResult locationResult) {
 			super.onLocationResult(locationResult);
 			Location location = locationResult.getLastLocation();
-			TLog.d("1秒定期 (緯度:{0} 経度:{1})", String.format(Locale.JAPAN, "%1$.12f", location.getLatitude()), String.format(Locale.JAPAN, "%1$.12f", location.getLongitude()));
+			mLongitude = location.getLongitude();
+			mLatitude  = location.getLatitude();
+			TLog.d("1秒定期 (緯度:{0} 経度:{1})", String.format(Locale.JAPAN, "%1$.12f", mLatitude), String.format(Locale.JAPAN, "%1$.12f", mLongitude));
 
 			/* 毎回OFF->ONにすることで、更新間隔が1秒になるようにしている。 */
 			stoptLoc();
@@ -210,4 +241,82 @@ public class UwsClientService extends Service {
 	private short					mSeekerId = 0;
 	private BluetoothLeAdvertiser	mBluetoothLeAdvertiser;
 
+	/* アドバタイズ開始 */
+	private void startAdvertise(short seekerid) {
+		boolean ret = BluetoothAdapter.getDefaultAdapter().setName(MessageFormat.format("消防士{0}", seekerid));
+		TLog.d("デバイス名変更 ret={0}", ret);
+		AdvertiseSettings settings	= buildAdvertiseSettings();
+		AdvertiseData data			= buildAdvertiseData(seekerid, (float)mLongitude, (float)mLatitude, mHeartbeat);
+		mBluetoothLeAdvertiser.startAdvertising(settings, data, mAdvertiseCallback);
+	}
+
+	/* アドバタイズ終了 */
+	private void stopAdvertise() {
+		TLog.d("アドバタイズ停止 {0}", mBluetoothLeAdvertiser);
+		if (mBluetoothLeAdvertiser != null) {
+			mBluetoothLeAdvertiser.stopAdvertising(mAdvertiseCallback);
+		}
+	}
+
+	/* アドバタイズ設定生成 */
+	private AdvertiseSettings buildAdvertiseSettings() {
+		AdvertiseSettings.Builder settingsBuilder = new AdvertiseSettings.Builder();
+		settingsBuilder.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY);
+		settingsBuilder.setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
+		settingsBuilder.setTimeout(0);  /* タイムアウトは自前で管理する。 */
+		return settingsBuilder.build();
+	}
+
+	/* アドバタイズのデータ生成 */
+	private byte mSeqNo = 0;
+	private AdvertiseData buildAdvertiseData(short seekerid, float longitude, float latitude, short heartbeat) {
+		AdvertiseData.Builder dataBuilder = new AdvertiseData.Builder();
+		dataBuilder.addServiceUuid(ParcelUuid.fromString(Constants.createServiceUuid(seekerid)));
+		dataBuilder.setIncludeDeviceName(true);
+
+		/* 拡張データ生成 */
+		byte[] sndBin = new byte[12];	/* 全部で12byteまでは送信可 */
+		int spos = 0;
+		/* SeqNo(1byte) */
+		sndBin[0] = mSeqNo++;
+		spos += 1;
+		/* 経度(4byte) */
+		byte[] bdifflong = f2bs(longitude);
+		System.arraycopy(bdifflong, 0, sndBin, spos, bdifflong.length);
+		spos += bdifflong.length;
+		/* 緯度(4byte) */
+		byte[] bdifflat = f2bs(latitude);
+		System.arraycopy(bdifflat, 0, sndBin, spos, bdifflat.length);
+		spos += bdifflat.length;
+		/* 脈拍(2byte) */
+		byte[] bheartbeat = s2bs(heartbeat);
+		System.arraycopy(bheartbeat, 0, sndBin, spos, bheartbeat.length);
+		/* 拡張データ設定 */
+		dataBuilder.addManufacturerData(UWS_OWNDATA_KEY, sndBin);
+
+		return dataBuilder.build();
+	}
+	private byte[] s2bs(short value) {
+		return ByteBuffer.allocate(2).putShort(value).array();
+	}
+	private byte[] f2bs(float value) {
+		return ByteBuffer.allocate(4).putFloat(value).array();
+	}
+
+	private final AdvertiseCallback mAdvertiseCallback = new AdvertiseCallback() {
+		@Override
+		public void onStartSuccess(AdvertiseSettings settingsInEffect) {
+			TLog.d("アドバタイズ開始OK.");
+		}
+
+		@Override
+		public void onStartFailure(int errorCode) {
+			TLog.d("アドバタイズ開始失敗 error={0}", errorCode);
+		}
+	};
+
+	/* *********/
+	/* 脈拍機能 */
+	/* *********/
+	private short mHeartbeat;
 }
