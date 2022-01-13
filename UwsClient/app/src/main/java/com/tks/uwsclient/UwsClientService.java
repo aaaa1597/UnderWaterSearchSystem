@@ -57,12 +57,13 @@ public class UwsClientService extends Service {
 			mStatus = SERVICE_STATUS_AD_LOC_BEAT;
 			mSeekerId = (short)seekerid;
 			mOnStatusChangeListner = listner;
+			startLoc();
 			return 0;
 		}
 
 		@Override
 		public void stopUws() {
-
+			stoptLoc();
 		}
 	};
 
@@ -159,12 +160,10 @@ public class UwsClientService extends Service {
 		if (mBluetoothLeAdvertiser == null)
 			throw new RuntimeException("Bluetooth未サポート.使用不可3!!");
 
-//		startLoc();
 		TLog.d( "アドバタイズの最大サイズ={0}", bluetoothAdapter.getLeMaximumAdvertisingDataLength());
 	}
 
 	private void uwsFin() {
-//		stoptLoc();
 		mFlc = null;
 		mBluetoothLeAdvertiser = null;
 	}
