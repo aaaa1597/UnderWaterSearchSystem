@@ -1,25 +1,25 @@
 package com.tks.uwsclient.ui;
 
-import android.graphics.Rect;
-import android.os.Bundle;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SwitchCompat;
-import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.LinearSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
+import android.os.Bundle;
+import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CompoundButton;
 import android.widget.TextView;
 
 import com.tks.uwsclient.R;
 import com.tks.uwsclient.TLog;
+import com.tks.uwsclient.Constants.Sender;
 import com.tks.uwsclient.ui.FragMainViewModel.ConnectStatus;
 
 public class FragMain extends Fragment {
@@ -44,10 +44,15 @@ public class FragMain extends Fragment {
 		/* ViewModelインスタンス取得 */
 		mViewModel = new ViewModelProvider(requireActivity()).get(FragMainViewModel.class);
 		/* Lock/Lock解除 設定 */
-		mViewModel.UnLock().observe(getActivity(), new Observer<Boolean>() {
+		mViewModel.UnLock().observe(getActivity(), new Observer<Pair<Sender, Boolean>>() {
 			@Override
-			public void onChanged(Boolean isUnLock) {
-				TLog.d("UnLock isLock={0}", isUnLock);
+			public void onChanged(Pair<Sender, Boolean> pair) {
+				if(pair.first == Sender.Service)
+					((SwitchCompat)getActivity().findViewById(R.id.swhUnLock)).setChecked(false);
+
+				boolean isUnLock = pair.second;
+				TLog.d("UI周りの処理 UnLock isUnLock={0}", isUnLock);
+				/* ClickListnerの処理はMainActivityで実行している。 */
 				RecyclerView rvw = getActivity().findViewById(R.id.rvw_seekerid);
 				if(isUnLock) {
 					rvw.removeOnItemTouchListener(mOnItemTouchListener);
@@ -57,9 +62,9 @@ public class FragMain extends Fragment {
 				}
 			}
 		});
-		((SwitchCompat)view.findViewById(R.id.swhUnLock)).setOnCheckedChangeListener((buttonView, isChecked) -> {
+		((SwitchCompat)view.findViewById(R.id.swhUnLock)).setOnCheckedChangeListener((btnView, isChecked) -> {
 			TLog.d("UnLock isChecked={0}", isChecked);
-			mViewModel.UnLock().setValue(isChecked);
+			mViewModel.UnLock().setValue(Pair.create(Sender.App, isChecked));
 		});
 		/* 情報表示(経度) */
 		mViewModel.Longitude().observe(getActivity(), new Observer<Double>() {
@@ -96,6 +101,15 @@ public class FragMain extends Fragment {
 				}
 			}
 		});
+		/* SeekerId表示更新 */
+		mViewModel.UpdDisplaySeerkerId.observe(getActivity(), new Observer<Object>() {
+			@Override
+			public void onChanged(Object objpos) {
+				short pos = (short)objpos;
+				RecyclerView rvw = getActivity().findViewById(R.id.rvw_seekerid);
+				rvw.smoothScrollToPosition(pos);
+			}
+		});
 
 		/* SeekerIDのlistView定義 */
 		RecyclerView recyclerView = getActivity().findViewById(R.id.rvw_seekerid);
@@ -114,18 +128,9 @@ public class FragMain extends Fragment {
 					View lview = linearSnapHelper.findSnapView(recyclerView.getLayoutManager());
 					int pos =  recyclerView.getChildAdapterPosition(lview);
 					TLog.d("aaaaa pos={0}", pos);
-					mViewModel.setSeekerID(pos);
+					mViewModel.setSeekerId((short)pos);
 				}
 			}
 		});
-//		/* SeekerIDのlistView(端の子も中心で収束する様に調整) */
-//		recyclerView.addItemDecoration(new RecyclerView.ItemDecoration() {
-//			@Override
-//			public void getItemOffsets(@NonNull Rect outRect, @NonNull View view, @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
-//				int position = parent.getChildAdapterPosition(view);
-//				recyclerView.smoothScrollToPosition(position);
-//				mViewModel.setSeekerID(position);
-//			}
-//		});
 	}
 }

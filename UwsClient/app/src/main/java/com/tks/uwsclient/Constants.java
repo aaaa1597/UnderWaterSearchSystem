@@ -1,32 +1,44 @@
 package com.tks.uwsclient;
 
-import android.bluetooth.BluetoothGatt;
 import java.text.MessageFormat;
 import java.util.UUID;
 
 public class Constants {
-	/* ベース位置(小城消防署(33.29333107719108, 130.19189394973347)) */
-	public final static double	UWS_LOC_BASE_LONGITUDE	= 130.19189394973347;
-	public final static double	UWS_LOC_BASE_LATITUDE	= 33.29333107719108;
+	/* *****/
+	/* 通知 */
+	/*******/
+	public final static int		NOTIFICATION_ID_FOREGROUND_SERVICE = 1231234;
+	public final static String	NOTIFICATION_CHANNEL_STARTSTOP = "NOTIFICATION_CHANNEL_STARTSTOP";
+
+	public static class ACTION {
+		public final static String INITIALIZE	= "uws.action.initialize";
+		public final static String FINALIZE		= "uws.action.finalize";
+		public final static String FINALIZEFROMS= "uws.action.finalizefromservice";
+		public final static String STARTLOC		= "uws.action.startloc";
+		public final static String STOPLOC		= "uws.action.stoploc";
+	}
+
+	public static class STATE_SERVICE {
+		public static final int CONNECTED = 10;
+		public static final int NOT_CONNECTED = 0;
+	}
+
+	/* ***************/
+	/* 状態(Service) */
+	/* ***************/
+	public final static int SERVICE_STATUS_INITIALIZING	= 0;	/* 初期化中 */
+	public final static int SERVICE_STATUS_IDLE			= 1;	/* IDLE */
+	public final static int SERVICE_STATUS_AD_LOC_BEAT	= 2;	/* アドバタイズ中かつ位置情報取得中かつ脈拍取得中 */
+	public final static int SERVICE_STATUS_CON_LOC_BEAT	= 3;	/* BLE接続中かつ位置情報取得中かつ脈拍取得中 */
+
+	public enum Sender {
+		App, Service,
+	}
+
+	/* *****/
+	/* BLE */
+	/* *****/
 	public final static int 	UWS_OWNDATA_KEY			= 0xffff;
-
-	/* エラーコード */
-	public final static int UWS_NG_SUCCESS				= 0;	/* OK */
-	public final static int UWS_NG_GATT_SUCCESS			= BluetoothGatt.GATT_SUCCESS;
-	public final static int UWS_NG_ALREADY_CONNECTED	= -1;	/* 既に接続済 */
-	public final static int UWS_NG_SERVICE_NOTFOUND		= -2;	/* サービスが見つからない(=Bluetooth未サポ－ト) */
-	public final static int UWS_NG_ADAPTER_NOTFOUND		= -3;	/* BluetoothAdapterがnull(=Bluetooth未サポ－ト) */
-	public final static int UWS_NG_ADVERTISER_NOTFOUND	= -4;	/* BluetoothAdvertiserがnull(=Bluetooth未サポ－ト) */
-	public final static int UWS_NG_BT_OFF				= -5;	/* Bluetooth機能がOFF */
-	public final static int UWS_NG_ALREADY_SCANNED		= -6;	/* 既にscan中 */
-	public final static int UWS_NG_PERMISSION_DENIED	= -7;	/* 権限なし */
-	public final static int UWS_NG_ALREADY_ADVERTISED	= -8;	/* 既にアドバタイズ中 */
-	public final static int UWS_NG_ALREADY_SCANSTOPEDNED= -9;	/* 既にscan停止中 */
-	public final static int UWS_NG_ILLEGALARGUMENT		= -10;	/* 引数不正 */
-	public final static int UWS_NG_DEVICE_NOTFOUND		= -11;	/* デバイスが見つからない。 */
-	public final static int UWS_NG_AIDL_REMOTE_ERROR	= -12;	/* AIDL-RemoteException発生 */
-	public final static int UWS_NG_GATTSERVER_NOTFOUND	= -13;	/* Gattサーバがない */
-
 	/* ServiceUUIDは0000xxxx-0000-1000-8000-00805f9b34fbの形を守る必要がある。CharacteristicUUIDはなんでもOK.*/
 //	public static final UUID UWS_UUID_SERVICE					= UUID.fromString("00002c2c-0000-1000-8000-00805f9b34fb");
 	public static final UUID UWS_UUID_CHARACTERISTIC_HRATBEAT	= UUID.fromString("29292c2c-728c-4a2b-81cb-7b4d884adb04");

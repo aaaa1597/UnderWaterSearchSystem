@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DesignSurface">
+    <option name="filePathToZoomLevelMap">
+      <map>
+        <entry key="..\:/OwnBiz/Uws/UnderWaterSearchSystem_BLE/UwsClient/app/src/main/res/layout/frag_main.xml" value="0.2199798183652876" />
+        <entry key="..\:/OwnBiz/Uws/UnderWaterSearchSystem_BLE/UwsClient/app/src/main/res/layout/notification.xml" value="0.2081231079717457" />
+      </map>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_11" default="true" project-jdk-name="Android Studio default JDK" project-jdk-type="JavaSDK" />
+</project>

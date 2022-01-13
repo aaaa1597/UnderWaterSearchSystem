@@ -5,7 +5,6 @@ import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.ScanCallback;
-import android.bluetooth.le.ScanRecord;
 import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.Intent;
@@ -16,13 +15,8 @@ import android.os.IBinder;
 import android.os.RemoteException;
 import androidx.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
-import java.util.stream.Collectors;
 
-import static com.tks.uwsserverunit00.Constants.UWS_LOC_BASE_LATITUDE;
-import static com.tks.uwsserverunit00.Constants.UWS_LOC_BASE_LONGITUDE;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_SUCCESS;
 import static com.tks.uwsserverunit00.Constants.UWS_OWNDATA_KEY;
 
@@ -34,9 +28,8 @@ import static com.tks.uwsserverunit00.Constants.UWS_OWNDATA_KEY;
  * -90 dBm	使用不可	ノイズレベルに近いかそれ以下の信号強度。殆ど機能しない	N/A
  **/
 
-public class BleServerService extends Service {
+public class UwsServer extends Service {
 	private BluetoothAdapter			mBluetoothAdapter;
-	private IBleServerServiceCallback	mCb;	/* 常に後発優先 */
 	private final Handler				mHandler = new Handler();
 
 	@Nullable
@@ -46,34 +39,23 @@ public class BleServerService extends Service {
 		return mBinder;
 	}
 
-	@Override
-	public boolean onUnbind(Intent intent) {
-		BsvClearDevice();
-		return super.onUnbind(intent);
-	}
-
 	/** *****
 	 * Binder
 	 * ******/
-	private Binder mBinder = new IBleServerService.Stub() {
-		@Override
-		public void setCallback(IBleServerServiceCallback callback) {
-			mCb = callback;
-		}
-
+	private Binder mBinder = new IUwsServer.Stub() {
 		@Override
 		public int initBle() {
 			return BsvInit();
 		}
 
 		@Override
-		public int startScan() {
-			return BsvStartScan();
+		public int startScan(IUwsScanCallback callback) {
+			return BsvStartScan(callback);
 		}
 
 		@Override
-		public int stopScan() {
-			return BsvStopScan();
+		public void stopScan() {
+			BsvStopScan();
 		}
 	};
 
@@ -105,42 +87,10 @@ public class BleServerService extends Service {
 		return UWS_NG_SUCCESS;
 	}
 
-	/** *******
-	 * BLEクリア
-	 * ********/
-	private void BsvClearDevice() {
-	}
-
 	/* ********************************************************************************
 	 * Scan処理
 	 * ********************************************************************************/
-	private final ScanCallback	mScanCallback = new ScanCallback() {
-		@Override
-		public void onBatchScanResults(List<ScanResult> results) {
-			super.onBatchScanResults(results);
-			List<DeviceInfo> deviceInfoList = results.stream().map(ret -> {
-				return parseScanResult(ret);
-			}).collect(Collectors.toList());
-			try { mCb.notifyDeviceInfolist(deviceInfoList);}
-			catch (RemoteException e) {e.printStackTrace();}
-		}
-
-		@Override
-		public void onScanResult(int callbackType, ScanResult result) {
-			super.onScanResult(callbackType, result);
-
-			DeviceInfo deviceInfo = parseScanResult(result);
-//			TLog.d("発見!! {0}({1}):Rssi({2}) ScanRecord={3}", result.getDevice().getAddress(), result.getDevice().getName(), result.getRssi(), result.getScanRecord());
-			try { mCb.notifyDeviceInfo(deviceInfo);}
-			catch (RemoteException e) {e.printStackTrace();}
-		}
-
-		@Override
-		public void onScanFailed(int errorCode) {
-			super.onScanFailed(errorCode);
-			TLog.d("scan失敗!! errorCode=" + errorCode);
-		}
-	};
+	private ScanCallback mScanCallbackFromDtoS;
 
 	/** ************
 	 * Scanデータ展開
@@ -158,15 +108,15 @@ public class BleServerService extends Service {
 		double	longitude = 0;
 		double	latitude = 0;
 		short	heartbeat = 0;
-		String deviceName = result.getScanRecord().getDeviceName();
-		if (deviceName != null && deviceName.startsWith("消防士")) {
+		String	deviceName = result.getScanRecord().getDeviceName();
+		if(deviceName != null && deviceName.startsWith("消防士")) {
 			/* 対象デバイスを発見 */
 			seekerid= Short.parseShort(deviceName.substring("消防士".length()));
 			/* 経度/緯度 脈拍を取得 */
 			byte[] rcvdata = result.getScanRecord().getManufacturerSpecificData(UWS_OWNDATA_KEY);
 			seqno		= rcvdata[0];
-			longitude	= ByteBuffer.wrap(rcvdata).getFloat(1)+ UWS_LOC_BASE_LONGITUDE;
-			latitude	= ByteBuffer.wrap(rcvdata).getFloat(5)+ UWS_LOC_BASE_LATITUDE;
+			longitude	= ByteBuffer.wrap(rcvdata).getFloat(1);
+			latitude	= ByteBuffer.wrap(rcvdata).getFloat(5);
 			heartbeat	= ByteBuffer.wrap(rcvdata).getShort(9);
 		}
 
@@ -177,12 +127,16 @@ public class BleServerService extends Service {
 	/** *******
 	 * Scan開始
 	 * ********/
-	private int BsvStartScan() {
+	private int BsvStartScan(IUwsScanCallback cb) {
 		/* Bluetooth機能がOFF */
 		if( !mBluetoothAdapter.isEnabled())
 			return Constants.UWS_NG_BT_OFF;
 
 		TLog.d("Bluetooth ON.");
+
+		if(mScanCallbackFromDtoS != null)
+			return Constants.UWS_NG_ALREADY_SCANNED;
+
 		TLog.d("scan開始");
 
 //		/* scanフィルタ */
@@ -192,39 +146,64 @@ public class BleServerService extends Service {
 //		/* scan設定 */
 //		ScanSettings.Builder scansetting = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_POWER);
 
+		/* scan Callback設定 */
+		mScanCallbackFromDtoS = new ScanCallback() {
+			@Override
+			public void onScanResult(int callbackType, ScanResult result) {
+				super.onScanResult(callbackType, result);
+				DeviceInfo deviceInfo = parseScanResult(result);
+//			TLog.d("発見!! {0}({1}):Rssi({2}) ScanRecord={3}", result.getDevice().getAddress(), result.getDevice().getName(), result.getRssi(), result.getScanRecord());
+				try { cb.notifyDeviceInfo(deviceInfo);}
+				catch (RemoteException e) {e.printStackTrace();}
+			}
+
+			@Override
+			public void onScanFailed(int errorCode) {
+				super.onScanFailed(errorCode);
+				/* TODO */throw new RuntimeException("scan失敗!! errorCode=" + errorCode);
+			}
+		};
+
 		/* scan開始 */
-		mBluetoothAdapter.getBluetoothLeScanner().startScan(mScanCallback);
+		mBluetoothAdapter.getBluetoothLeScanner().startScan(mScanCallbackFromDtoS);
 
 		/* 30秒後 Scan停止 */
-		mHandler.postDelayed(new Runnable() {
-			@Override
-			public void run() {
-				/* scan停止 */
-				TLog.d("30秒経過 scan停止.");
-				BsvStopScan();
-			}
+		mHandler.postDelayed(() -> {
+			/* scan停止 */
+			TLog.d("30秒経過 3秒後 Scan再開する.");
+			BsvRestartScan(cb);
 		},30000/* 30秒後scan停止する */);
 
 		return UWS_NG_SUCCESS;
 	}
 
 	/** *******
+	 * 再Scan
+	 * ********/
+	private boolean mScanStopFlg = false;
+	private void BsvRestartScan(IUwsScanCallback cb) {
+		mBluetoothAdapter.getBluetoothLeScanner().stopScan(mScanCallbackFromDtoS);
+		mScanCallbackFromDtoS = null;
+		TLog.d("scan停止.3描画再開.");
+
+		/* Scan停止なら再開しない。 */
+		if(mScanStopFlg) {
+			mScanStopFlg = false;
+			return;
+		}
+
+		/* 3秒後 Scan開始 */
+		mHandler.postDelayed(() -> {
+			/* scan停止 */
+			TLog.d("3秒経過 Scan再開.");
+			BsvStartScan(cb);
+		},3000/* 30秒後scan停止する */);
+	}
+
+	/** *******
 	 * Scan終了
 	 * ********/
-	private int BsvStopScan() {
-		mBluetoothAdapter.getBluetoothLeScanner().stopScan(mScanCallback);
-		TLog.d("scan終了");
-
-		/* 1秒後 Scan開始 */
-		mHandler.postDelayed(new Runnable() {
-			@Override
-			public void run() {
-				/* scan停止 */
-				TLog.d("1秒経過 Scan開始.");
-				BsvStartScan();
-			}
-		},1000/* 30秒後scan停止する */);
-
-		return UWS_NG_SUCCESS;
+	private void BsvStopScan() {
+		mScanStopFlg = true;
 	}
 }
