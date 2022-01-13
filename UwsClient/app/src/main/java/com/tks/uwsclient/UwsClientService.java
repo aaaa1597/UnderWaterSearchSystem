@@ -22,12 +22,14 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 
+import static com.tks.uwsclient.Constants.ACTION.FINALIZEFROMS;
 import static com.tks.uwsclient.Constants.NOTIFICATION_CHANNEL_STARTSTOP;
 import static com.tks.uwsclient.Constants.SERVICE_STATUS_INITIALIZING;
 import static com.tks.uwsclient.Constants.SERVICE_STATUS_IDLE;
@@ -77,16 +79,16 @@ public class UwsClientService extends Service {
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		switch (intent.getAction()) {
 			case Constants.ACTION.INITIALIZE:
-				TLog.d("aaaaaaaaaaaa 初期化.");
+				TLog.d("xxxxx startForeground.");
 				startForeground(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
 				break;
 			case Constants.ACTION.FINALIZE:
-				TLog.d("aaaaaaaaaaaa 終了.");
+				TLog.d("xxxxx stopForeground.");
 				stopForeground(true);
 				stopSelf();
+				reqAppFinish();
 				break;
 		}
-
 		return START_NOT_STICKY;
 	}
 
@@ -118,6 +120,12 @@ public class UwsClientService extends Service {
 //				.setContentIntent(pendingIntent);
 //				.setVisibility(Notification.VISIBILITY_PUBLIC)
 				.build();
+	}
+
+	/* アプリ終了要求 */
+	private void reqAppFinish() {
+		Intent intent = new Intent(FINALIZEFROMS);
+		LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcastSync(intent);
 	}
 
 	/* ***************/

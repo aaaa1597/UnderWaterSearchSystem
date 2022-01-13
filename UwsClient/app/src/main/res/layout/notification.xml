@@ -11,13 +11,14 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="3"
-        android:gravity="center">
+        android:layout_marginStart="10dp"
+        android:gravity="start">
 
         <TextView
             android:id="@+id/txtState"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="STATES" />
+            android:text="位置情報とBLEを頑張って、実行中..." />
     </LinearLayout>
 
     <LinearLayout

@@ -6,13 +6,16 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.IntentSender.SendIntentException;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
@@ -30,6 +33,7 @@ import com.google.android.gms.location.SettingsClient;
 import com.tks.uwsclient.ui.FragMainViewModel;
 import java.util.Arrays;
 
+import static com.tks.uwsclient.Constants.ACTION.FINALIZEFROMS;
 import static com.tks.uwsclient.Constants.Sender;
 import static com.tks.uwsclient.Constants.SERVICE_STATUS_AD_LOC_BEAT;
 import static com.tks.uwsclient.Constants.SERVICE_STATUS_CON_LOC_BEAT;
@@ -55,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
 				if(pair.first == Sender.Service) return;
 				boolean isUnLock = pair.second;
 
-				TLog.d("Listner周りの処理 UnLock isUnLock={0}", isUnLock);
+				TLog.d("Service要求の処理 UnLock isUnLock={0}", isUnLock);
 				/* UIの処理はFragMainで実行している。 */
 				if( !isUnLock) {
 					/* 実行前チェック */
@@ -64,26 +68,8 @@ public class MainActivity extends AppCompatActivity {
 						TLog.d("実行前チェックError!! 条件が揃ってない。 ret={0}", ret);
 						return;
 					}
-					else if(mStartServiceintent != null) {
-						TLog.d("サービス起動済。処理不要.");
-						return;
-					}
-					/* サービス起動 */
-					mStartServiceintent = new Intent(MainActivity.this, UwsClientService.class);
-					mStartServiceintent.setAction(Constants.ACTION.INITIALIZE);
-					startForegroundService(mStartServiceintent);
 				}
 				else {
-					/* サービス起動済チェック */
-					if(mStartServiceintent == null) {
-						TLog.d("サービス起動してないので終了処理不要。");
-						return;
-					}
-					/* サービス終了 */
-					mStartServiceintent = null;
-					Intent intent = new Intent(MainActivity.this, UwsClientService.class);
-					intent.setAction(Constants.ACTION.FINALIZE);
-					startService(intent);
 				}
 			}
 		});
@@ -133,6 +119,7 @@ public class MainActivity extends AppCompatActivity {
 					}
 				});
 
+		/* BluetoothManager取得 */
 		final BluetoothManager bluetoothManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
 		BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
 		/* Bluetooth未サポート判定 未サポートならエラーpopupで終了 */
@@ -150,6 +137,8 @@ public class MainActivity extends AppCompatActivity {
 					});
 			startForResult.launch(enableBtIntent);
 		}
+
+		mFilter.addAction(FINALIZEFROMS);
 	}
 
 	private final ServiceConnection mCon = new ServiceConnection() {
@@ -172,6 +161,7 @@ public class MainActivity extends AppCompatActivity {
 		}
 		@Override public void onServiceDisconnected(ComponentName componentName) {
 			mViewModel.setClientServiceIf(null);
+			TLog.d("aaaaaaaaaaaaaa");
 		}
 	};
 
@@ -208,6 +198,8 @@ public class MainActivity extends AppCompatActivity {
 	protected void onStart() {
 		super.onStart();
 		TLog.d("xxxxx");
+		LocalBroadcastManager.getInstance(getApplicationContext()).registerReceiver(mReceiver, mFilter);
+		startForeServ();
 		bindService(new Intent(getApplicationContext(), UwsClientService.class), mCon, Context.BIND_AUTO_CREATE);
 	}
 
@@ -215,7 +207,35 @@ public class MainActivity extends AppCompatActivity {
 	protected void onStop() {
 		super.onStop();
 		unbindService(mCon);
+//		stopForeServ();			通知からの終了だけをサポートする。
+		LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mReceiver);
 		TLog.d("xxxxx");
+	}
+
+	/* フォアグランドサービス起動 */
+	private void startForeServ() {
+		if(mStartServiceintent != null) {
+			TLog.d("サービス起動済。処理不要.");
+			return;
+		}
+		/* サービス起動 */
+		mStartServiceintent = new Intent(MainActivity.this, UwsClientService.class);
+		mStartServiceintent.setAction(Constants.ACTION.INITIALIZE);
+		startForegroundService(mStartServiceintent);
+	}
+
+	/* フォアグランドサービス終了 */
+	private void stopForeServ() {
+		/* サービス起動済チェック */
+		if(mStartServiceintent == null) {
+			TLog.d("サービス起動してないので終了処理不要。");
+			return;
+		}
+		/* サービス終了 */
+		mStartServiceintent = null;
+		Intent intent = new Intent(MainActivity.this, UwsClientService.class);
+		intent.setAction(Constants.ACTION.FINALIZE);
+		startService(intent);
 	}
 
 	/* 実行前の権限/条件チェック */
@@ -260,4 +280,15 @@ public class MainActivity extends AppCompatActivity {
 
 		return true;
 	}
+
+	/* Serviceからの終了要求 受信設定 */
+	BroadcastReceiver mReceiver = new BroadcastReceiver() {
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			unbindService(mCon);
+			LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mReceiver);
+			ErrDialog.create(MainActivity.this, "裏で動作している位置情報/BLEが終了しました。\nアプリも終了します。").show();
+		}
+	};
+	IntentFilter mFilter = new IntentFilter();
 }
