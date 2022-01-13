@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.tks.uwsserverunit00.DeviceInfo;
 import com.tks.uwsserverunit00.R;
-
 import static com.tks.uwsserverunit00.Constants.UWS_NG_DEVICE_NOTFOUND;
 
 /**
@@ -111,7 +110,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 								model.mDeviceRssi > -70 ? R.drawable.wifi_level_2 :
 								model.mDeviceRssi > -80 ? R.drawable.wifi_level_1 : R.drawable.wifi_level_0;
 		final int constsresid =	seekerid==-1			? R.drawable.statusx_na :
-								model.mSelected		? R.drawable.status5_ready : R.drawable.status0_none;
+								model.mSelected			? R.drawable.status5_ready : R.drawable.status0_none;
 		holder.mtxtDatetime.setText(mDf.format(model.mDatetime));
 		holder.mTxtSeekerId.setText((seekerid==-1) ? " - " : String.valueOf(seekerid));
 		holder.mTxtDeviceName.setText(TextUtils.isEmpty(deviceName) ? "" : deviceName);
@@ -154,7 +153,6 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 				mOnCheckedChangeListener.onCheckedChanged(seekerid, isChecked);
 			});
 		}
-
 	}
 
 	@Override
@@ -162,22 +160,13 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		return mDeviceList.size();
 	}
 
-	public void addDevice(List<DeviceInfo> deviceInfos) {
-		if (deviceInfos != null) {
-			for (DeviceInfo deviceInfo : deviceInfos) {
-				addDevice(deviceInfo);
-			}
-//			notifyDataSetChanged();
-		}
-	}
-
-//	public void addDevice(DeviceInfo deviceInfo) {
-//		addDevice(deviceInfo, true);
-//	}
-
 	/** * @return 新データかどうかのフラグ */
-	public boolean addDevice(DeviceInfo deviceInfo) {
+	public boolean addDevice(DeviceInfo deviceInfo, Boolean isOnlySeeker) {
 		if (deviceInfo == null)
+			return false;
+
+		/* 隊員のみ表示中なら、対象外デバイスは追加しない */
+		if(isOnlySeeker && deviceInfo.getSeekerId()==-1)
 			return false;
 
 		/* リスト済確認 */
