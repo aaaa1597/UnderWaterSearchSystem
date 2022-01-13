@@ -20,6 +20,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.ParcelUuid;
@@ -242,20 +243,40 @@ public class UwsClientService extends Service {
 	private BluetoothLeAdvertiser	mBluetoothLeAdvertiser;
 
 	/* アドバタイズ開始 */
+	Handler mHandler = new Handler();
+	Runnable mAdvertiseRunner = null;
 	private void startAdvertise(short seekerid) {
-		boolean ret = BluetoothAdapter.getDefaultAdapter().setName(MessageFormat.format("消防士{0}", seekerid));
-		TLog.d("デバイス名変更 ret={0}", ret);
-		AdvertiseSettings settings	= buildAdvertiseSettings();
-		AdvertiseData data			= buildAdvertiseData(seekerid, (float)mLongitude, (float)mLatitude, mHeartbeat);
-		mBluetoothLeAdvertiser.startAdvertising(settings, data, mAdvertiseCallback);
+		if(mAdvertiseRunner != null) {
+			TLog.d("すでにアドバタイズ中...続行します。");
+			return;
+		}
+		mAdvertiseRunner = new Runnable() {
+			@Override
+			public void run() {
+				/* 一旦、アドバタイズ停止 */
+				mBluetoothLeAdvertiser.stopAdvertising(mAdvertiseCallback);
+				try { Thread.sleep(100); }
+				catch (InterruptedException e) { e.printStackTrace(); }
+
+				/* 新データでアドバタイズ開始 */
+				boolean ret = BluetoothAdapter.getDefaultAdapter().setName(MessageFormat.format("消防士{0}", seekerid));
+				TLog.d("デバイス名変更 {0} ret={1}", MessageFormat.format("消防士{0}", seekerid), ret);
+				AdvertiseSettings settings	= buildAdvertiseSettings();
+				AdvertiseData data			= buildAdvertiseData(seekerid, (float)mLongitude, (float)mLatitude, mHeartbeat);
+				mBluetoothLeAdvertiser.startAdvertising(settings, data, mAdvertiseCallback);
+
+				/* 3秒後再開 */
+				mHandler.postDelayed(this, 5000);
+			}
+		};
+		mHandler.post(mAdvertiseRunner);
 	}
 
 	/* アドバタイズ終了 */
 	private void stopAdvertise() {
-		TLog.d("アドバタイズ停止 {0}", mBluetoothLeAdvertiser);
-		if (mBluetoothLeAdvertiser != null) {
-			mBluetoothLeAdvertiser.stopAdvertising(mAdvertiseCallback);
-		}
+		mHandler.removeCallbacks(mAdvertiseRunner);
+		mAdvertiseRunner = null;
+		mBluetoothLeAdvertiser.stopAdvertising(mAdvertiseCallback);
 	}
 
 	/* アドバタイズ設定生成 */
