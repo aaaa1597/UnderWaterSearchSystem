@@ -68,8 +68,10 @@ public class MainActivity extends AppCompatActivity {
 						TLog.d("実行前チェックError!! 条件が揃ってない。 ret={0}", ret);
 						return;
 					}
+					mViewModel.startUws(mViewModel.getSeekerId());
 				}
 				else {
+					mViewModel.stopUws();
 				}
 			}
 		});
@@ -141,30 +143,6 @@ public class MainActivity extends AppCompatActivity {
 		mFilter.addAction(FINALIZEFROMS);
 	}
 
-	private final ServiceConnection mCon = new ServiceConnection() {
-		@Override public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-			IClientService ServiceIf = IClientService.Stub.asInterface(iBinder);
-			mViewModel.setClientServiceIf(ServiceIf);
-
-			/* サービス状態を取得 */
-			StatusInfo si;
-			try { si = ServiceIf.getServiceStatus(); }
-			catch (RemoteException e) { e.printStackTrace(); throw new RuntimeException(e.getMessage()); }
-
-			/* サービス状態が、アドバタイズ中/接続中 */
-			if(si.getStatus() == SERVICE_STATUS_AD_LOC_BEAT || si.getStatus() == SERVICE_STATUS_CON_LOC_BEAT) {
-				/* SeekerIdを設定 */
-				mViewModel.setSeekerIdSmoothScrollToPosition(si.getSeekerId());
-				/* 画面をアドバタイズ中/接続中に更新 */
-				mViewModel.UnLock().postValue(Pair.create(Sender.Service, false));
-			}
-		}
-		@Override public void onServiceDisconnected(ComponentName componentName) {
-			mViewModel.setClientServiceIf(null);
-			TLog.d("aaaaaaaaaaaaaa");
-		}
-	};
-
 	@Override
 	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
 		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -211,6 +189,31 @@ public class MainActivity extends AppCompatActivity {
 		LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mReceiver);
 		TLog.d("xxxxx");
 	}
+
+	private final ServiceConnection mCon = new ServiceConnection() {
+		@Override public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+			IClientService ServiceIf = IClientService.Stub.asInterface(iBinder);
+			mViewModel.setClientServiceIf(ServiceIf);
+
+			/* サービス状態を取得 */
+			StatusInfo si;
+			try { si = ServiceIf.getServiceStatus(); }
+			catch (RemoteException e) { e.printStackTrace(); throw new RuntimeException(e.getMessage()); }
+
+			TLog.d("si=(seekerid={0} Status={1})", si.getSeekerId(), si.getStatus());
+
+			/* サービス状態が、アドバタイズ中/接続中 */
+			if(si.getStatus() == SERVICE_STATUS_AD_LOC_BEAT || si.getStatus() == SERVICE_STATUS_CON_LOC_BEAT) {
+				/* SeekerIdを設定 */
+				mViewModel.setSeekerIdSmoothScrollToPosition(si.getSeekerId());
+				/* 画面をアドバタイズ中/接続中に更新 */
+				mViewModel.UnLock().postValue(Pair.create(Sender.Service, false));
+			}
+		}
+		@Override public void onServiceDisconnected(ComponentName componentName) {
+			mViewModel.setClientServiceIf(null);
+		}
+	};
 
 	/* フォアグランドサービス起動 */
 	private void startForeServ() {

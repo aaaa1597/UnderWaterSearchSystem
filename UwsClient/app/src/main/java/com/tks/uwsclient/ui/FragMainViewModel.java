@@ -62,4 +62,26 @@ public class FragMainViewModel extends ViewModel {
 		mSeekerId = seekerId;
 		UpdDisplaySeerkerId.postValue(seekerId);
 	}
+
+	/* ****************************/
+	/* 業務プロセス(BLE,位置情報,脈拍) */
+	/* ****************************/
+	/* 開始 */
+	public void startUws(short seekerId) {
+		if(mClientServiceIf == null) return;
+		try { mClientServiceIf.startUws(seekerId, new IOnStatusChangeListner.Stub() {
+				@Override
+				public void OnStatusChange(int oldStatus, int newStatus) {
+				}
+			});
+		}
+		catch (RemoteException e) { e.printStackTrace(); }
+	}
+	/* 終了 */
+	public void stopUws() {
+		if(mClientServiceIf == null) return;
+		try { mClientServiceIf.stopUws(); }
+		catch (RemoteException e) { e.printStackTrace(); }
+	}
+
 }

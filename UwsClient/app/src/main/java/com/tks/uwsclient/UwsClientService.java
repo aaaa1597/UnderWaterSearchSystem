@@ -17,6 +17,7 @@ import android.location.Location;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.RemoteException;
 import android.widget.RemoteViews;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -31,11 +32,13 @@ import com.google.android.gms.location.LocationServices;
 
 import static com.tks.uwsclient.Constants.ACTION.FINALIZEFROMS;
 import static com.tks.uwsclient.Constants.NOTIFICATION_CHANNEL_STARTSTOP;
+import static com.tks.uwsclient.Constants.SERVICE_STATUS_AD_LOC_BEAT;
 import static com.tks.uwsclient.Constants.SERVICE_STATUS_INITIALIZING;
 import static com.tks.uwsclient.Constants.SERVICE_STATUS_IDLE;
 
 public class UwsClientService extends Service {
 	private int mStatus = SERVICE_STATUS_INITIALIZING;
+	private IOnStatusChangeListner mOnStatusChangeListner;
 
 	@Nullable
 	@Override
@@ -50,7 +53,16 @@ public class UwsClientService extends Service {
 		}
 
 		@Override
-		public void setOnStatusChangeListner(IOnStatusChangeListner listner) {
+		public int startUws(int seekerid, IOnStatusChangeListner listner) {
+			mStatus = SERVICE_STATUS_AD_LOC_BEAT;
+			mSeekerId = (short)seekerid;
+			mOnStatusChangeListner = listner;
+			return 0;
+		}
+
+		@Override
+		public void stopUws() {
+
 		}
 	};
 
@@ -157,9 +169,9 @@ public class UwsClientService extends Service {
 		mBluetoothLeAdvertiser = null;
 	}
 
-	/***************/
+	/* *************/
 	/* 位置情報 機能 */
-	/***************/
+	/* *************/
 	private final static int			LOC_UPD_INTERVAL = 2500;
 	private FusedLocationProviderClient mFlc;
 	private final LocationRequest		mLocationRequest = LocationRequest.create()
@@ -193,9 +205,9 @@ public class UwsClientService extends Service {
 		mFlc.removeLocationUpdates(mLocationCallback);
 	}
 
-	/**********/
+	/* ********/
 	/* BLE機能 */
-	/**********/
+	/* ********/
 	private short					mSeekerId = 0;
 	private BluetoothLeAdvertiser	mBluetoothLeAdvertiser;
 

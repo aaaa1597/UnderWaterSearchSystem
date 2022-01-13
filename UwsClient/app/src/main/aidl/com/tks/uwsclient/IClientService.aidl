@@ -5,5 +5,6 @@ import com.tks.uwsclient.IOnStatusChangeListner;
 
 interface IClientService {
 	StatusInfo getServiceStatus();
-	void setOnStatusChangeListner(IOnStatusChangeListner listner);
+	int startUws(int seekerid, IOnStatusChangeListner listner);
+	void stopUws();
 }
