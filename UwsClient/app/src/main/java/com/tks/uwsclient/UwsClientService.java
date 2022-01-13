@@ -59,6 +59,8 @@ public class UwsClientService extends Service {
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
+		stoptLoc();
+		stopAdvertise();
 		uwsFin();
 		TLog.d("xxxxx");
 	}
@@ -152,6 +154,7 @@ public class UwsClientService extends Service {
 	/* 初期化/終了処理 */
 	/* ***************/
 	private void uwsInit() {
+		TLog.d("");
 		/* 位置情報初期化 */
 		mFlc = LocationServices.getFusedLocationProviderClient(this);
 		/* Bluetooth初期化 */
@@ -171,6 +174,7 @@ public class UwsClientService extends Service {
 	}
 
 	private void uwsFin() {
+		TLog.d("");
 		mFlc = null;
 		mBluetoothLeAdvertiser = null;
 	}
