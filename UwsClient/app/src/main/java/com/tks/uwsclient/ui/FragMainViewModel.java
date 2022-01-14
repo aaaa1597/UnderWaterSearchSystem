@@ -37,8 +37,10 @@ public class FragMainViewModel extends ViewModel {
 	private final MutableLiveData<Boolean>	mAdvertisingFlg	= new MutableLiveData<>(false);
 	public MutableLiveData<Boolean>			AdvertisingFlg()	{ return mAdvertisingFlg; }
 	private short	mSeekerId = 0;
-	public void		setSeekerId(short id)	{ mSeekerId = id; }
-	public short	getSeekerId()			{ return mSeekerId; }
+	public void		setSeekerId(short id)	{
+		/*TODO*/TLog.d("mSeekerId={0}", id); mSeekerId = id; }
+	public short	getSeekerId()			{
+		/*TODO*/TLog.d("mSeekerId={0}", mSeekerId); return mSeekerId; }
 	public MutableLiveData<Object>			UpdDisplaySeerkerId = new MutableLiveData<>();
 
 	private final MutableLiveData<String>	mShowSnacbar			= new MutableLiveData<>();
@@ -68,6 +70,7 @@ public class FragMainViewModel extends ViewModel {
 	/* ****************************/
 	/* 開始 */
 	public void startUws(short seekerId) {
+		TLog.d("seekerid={0}", seekerId);
 		if(mClientServiceIf == null) return;
 		try { mClientServiceIf.startUws(seekerId, new IOnStatusChangeListner.Stub() {
 				@Override

@@ -68,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
 						TLog.d("実行前チェックError!! 条件が揃ってない。 ret={0}", ret);
 						return;
 					}
+					TLog.d("mViewModel.getSeekerId()={0}", mViewModel.getSeekerId());
 					mViewModel.startUws(mViewModel.getSeekerId());
 				}
 				else {
