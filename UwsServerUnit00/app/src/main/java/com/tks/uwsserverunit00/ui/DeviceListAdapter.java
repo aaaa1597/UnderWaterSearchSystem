@@ -21,6 +21,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.tks.uwsserverunit00.DeviceInfo;
 import com.tks.uwsserverunit00.R;
+import com.tks.uwsserverunit00.UwsInfo;
+
 import static com.tks.uwsserverunit00.Constants.UWS_NG_DEVICE_NOTFOUND;
 
 /**
@@ -265,5 +267,23 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		DevicveInfoModel nowbuoy = mDeviceList.stream().filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
 		if(nowbuoy!=null)
 			nowbuoy.mIsBuoy = isChecked;
+	}
+
+	public int setUwsInfo(UwsInfo uwsInfo) {
+		AtomicInteger index = new AtomicInteger(-1);
+		DevicveInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mSeekerId==uwsInfo.getSeekerId()).findAny().orElse(null);
+		if(device == null) return UWS_NG_DEVICE_NOTFOUND;	/* 対象外デバイスが存在しない。ありえないはず。 */
+
+		device.mDatetime = uwsInfo.getDate();
+		device.mSeekerId = uwsInfo.getSeekerId();
+		device.mLongitude= uwsInfo.getLongitude();
+		device.mLatitude = uwsInfo.getLatitude();
+		device.mHertBeat = uwsInfo.getHeartbeat();
+		return index.get();
+	}
+
+	public String getAddress(short seekerid) {
+		DevicveInfoModel di = mDeviceList.stream().filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
+		return di==null ? "" : di.mDeviceAddress;
 	}
 }

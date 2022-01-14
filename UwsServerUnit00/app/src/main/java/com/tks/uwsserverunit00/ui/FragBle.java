@@ -17,7 +17,7 @@ import com.tks.uwsserverunit00.R;
 import com.tks.uwsserverunit00.TLog;
 
 public class FragBle extends Fragment {
-	private FragBleViewModel	mViewModel;
+	private FragBleViewModel mBleViewModel;
 	private FragMapViewModel	mMapViewModel;
 
 	@Override
@@ -30,34 +30,34 @@ public class FragBle extends Fragment {
 		super.onViewCreated(view, savedInstanceState);
 
 		mMapViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
-		mViewModel = new ViewModelProvider(requireActivity()).get(FragBleViewModel.class);
-		mViewModel.NotifyDataSetChanged().observe(getViewLifecycleOwner(), upd -> {
-			mViewModel.getDeviceListAdapter().notifyDataSetChanged();
+		mBleViewModel = new ViewModelProvider(requireActivity()).get(FragBleViewModel.class);
+		mBleViewModel.NotifyDataSetChanged().observe(getViewLifecycleOwner(), upd -> {
+			mBleViewModel.getDeviceListAdapter().notifyDataSetChanged();
 //			int maxidx = mViewModel.getDeviceListAdapter().getItemCount() - 1;
 //			mViewModel.getDeviceListAdapter().notifyItemRangeInserted(maxidx ,1);
 		});
-		mViewModel.NotifyItemChanged().observe(getViewLifecycleOwner(), pos -> {
+		mBleViewModel.NotifyItemChanged().observe(getViewLifecycleOwner(), pos -> {
 			if(pos ==-1 )
 				TLog.d("Item変更 最初はposが-1になるらしい.)");
-			else if(pos < 0|| pos >= mViewModel.getDeviceListAdapter().getItemCount()) {
-				TLog.w("idx is out of range. pos={0} adapter.size()={1}", pos, mViewModel.getDeviceListAdapter().getItemCount());
+			else if(pos < 0|| pos >= mBleViewModel.getDeviceListAdapter().getItemCount()) {
+				TLog.w("idx is out of range. pos={0} adapter.size()={1}", pos, mBleViewModel.getDeviceListAdapter().getItemCount());
 				return;
 			}
-			mViewModel.getDeviceListAdapter().notifyItemChanged(pos);
+			mBleViewModel.getDeviceListAdapter().notifyItemChanged(pos);
 		});
-		mViewModel.setDeviceListAdapter(new DeviceListAdapter(getActivity().getApplicationContext(),
-															  (seekerid, isChecked) -> {mViewModel.setChecked(seekerid, isChecked);
+		mBleViewModel.setDeviceListAdapter(new DeviceListAdapter(getActivity().getApplicationContext(),
+															  (seekerid, isChecked) -> {mBleViewModel.setChecked(seekerid, isChecked);
 																						mMapViewModel.setChecked(seekerid, isChecked);},
-															  (seekerid, isChecked) -> mViewModel.setBuoy(seekerid, isChecked)
+															  (seekerid, isChecked) -> mBleViewModel.setBuoy(seekerid, isChecked)
 															));
 
 		view.findViewById(R.id.btnClear).setOnClickListener(lview -> {
-			mViewModel.clearAll();
+			mBleViewModel.clearAll();
 		});
 		((CheckBox)view.findViewById(R.id.cbxMember)).setOnCheckedChangeListener((btn, isChecked) -> {
 			if(isChecked)
-				mViewModel.clearDeviceWithoutAppliciated();
-			mViewModel.OnlySeeker().setValue(isChecked);
+				mBleViewModel.clearDeviceWithoutAppliciated();
+			mBleViewModel.OnlySeeker().setValue(isChecked);
 		});
 
 		/* BLEデバイスリストの初期化 */
@@ -67,6 +67,6 @@ public class FragBle extends Fragment {
 		deviceListRvw.addItemDecoration(dividerItemDecoration);
 		deviceListRvw.setHasFixedSize(true);
 		deviceListRvw.setLayoutManager(new LinearLayoutManager(getActivity().getApplicationContext()));
-		deviceListRvw.setAdapter(mViewModel.getDeviceListAdapter());
+		deviceListRvw.setAdapter(mBleViewModel.getDeviceListAdapter());
 	}
 }

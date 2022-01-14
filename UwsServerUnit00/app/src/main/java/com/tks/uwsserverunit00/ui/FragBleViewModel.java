@@ -6,9 +6,11 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 import com.tks.uwsserverunit00.DeviceInfo;
+import com.tks.uwsserverunit00.IUwsInfoCallback;
 import com.tks.uwsserverunit00.IUwsScanCallback;
 import com.tks.uwsserverunit00.IUwsServer;
 import com.tks.uwsserverunit00.TLog;
+import com.tks.uwsserverunit00.UwsInfo;
 
 import static com.tks.uwsserverunit00.Constants.UWS_NG_AIDL_REMOTE_ERROR;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_SUCCESS;
@@ -16,7 +18,7 @@ import static com.tks.uwsserverunit00.Constants.UWS_NG_SUCCESS;
 import java.util.List;
 
 public class FragBleViewModel extends ViewModel {
-	private IUwsServer						mUwsServiceIf;
+	private IUwsServer							mUwsServiceIf;
 	/* ---------------- */
 	private final MutableLiveData<Boolean>		mNotifyDataSetChanged	= new MutableLiveData<>(false);
 	public MutableLiveData<Boolean>				NotifyDataSetChanged()	{ return mNotifyDataSetChanged; }
@@ -114,8 +116,34 @@ public class FragBleViewModel extends ViewModel {
 	}
 
 	public void setChecked(short seekerid, boolean isChecked) {
-		int idx = mDeviceListAdapter.setChecked(seekerid, isChecked);
-		mNotifyItemChanged.postValue(idx);
+		new Thread(() -> {
+			/* メンバ選択Switchに設定 */
+			int idx = mDeviceListAdapter.setChecked(seekerid, isChecked);
+			/* メンバ選択Switch表示更新 */
+			mNotifyItemChanged.postValue(idx);
+
+			/* サービスに通知(開始/終了) */
+			int ret = UWS_NG_SUCCESS;
+			try {
+				if(isChecked)
+					ret = mUwsServiceIf.startPeriodicNotify(seekerid, new IUwsInfoCallback.Stub() {
+							@Override
+							public void notifyUwsData(UwsInfo uwsInfo) {
+								int pos = mDeviceListAdapter.setUwsInfo(uwsInfo);
+								mNotifyItemChanged.postValue(pos);
+							}
+
+						@Override
+						public void notifyStatus(int status) {
+							/* TODO 要実装 */
+						}
+					});
+				else
+					mUwsServiceIf.stopPeriodicNotify(seekerid);
+			}
+			catch (RemoteException e) { e.printStackTrace(); ret = UWS_NG_AIDL_REMOTE_ERROR; }
+			TLog.d("ret={0}", ret);
+		}).start();
 	}
 
 	public void setBuoy(short seekerid, boolean isChecked) {

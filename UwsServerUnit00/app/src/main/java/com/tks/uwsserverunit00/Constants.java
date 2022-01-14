@@ -54,4 +54,7 @@ public class Constants {
 //	public static String getShortUuid(UUID uuid) {
 //		return uuid.toString().substring(4,8);
 //	}
+
+	/* 状態(サービス) */
+	public static final int UWS_SERVICE_STATUS_GATT_DISCONNECT = -1;	/* GATT切断 */
 }
