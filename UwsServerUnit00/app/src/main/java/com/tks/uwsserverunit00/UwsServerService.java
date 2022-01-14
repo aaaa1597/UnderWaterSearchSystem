@@ -47,7 +47,7 @@ import static com.tks.uwsserverunit00.Constants.UWS_SERVICE_STATUS_GATT_DISCONNE
  * -90 dBm	使用不可	ノイズレベルに近いかそれ以下の信号強度。殆ど機能しない	N/A
  **/
 
-public class UwsServer extends Service {
+public class UwsServerService extends Service {
 	private BluetoothAdapter			mBluetoothAdapter;
 	private final Handler				mHandler = new Handler();
 

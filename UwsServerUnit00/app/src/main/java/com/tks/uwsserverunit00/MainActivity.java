@@ -204,7 +204,7 @@ public class MainActivity extends AppCompatActivity {
 		mCon = createServiceConnection();
 
 		/* Bluetoothサービス起動 */
-		Intent intent = new Intent(MainActivity.this, UwsServer.class);
+		Intent intent = new Intent(MainActivity.this, UwsServerService.class);
 		bindService(intent, mCon, Context.BIND_AUTO_CREATE);
 		TLog.d("All Green. -> Uwsサービス起動");
 	}
