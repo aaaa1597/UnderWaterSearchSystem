@@ -109,7 +109,7 @@ public class UwsClientService extends Service {
 		public void onLocationResult(@NonNull LocationResult locationResult) {
 			super.onLocationResult(locationResult);
 			Location location = locationResult.getLastLocation();
-			TLog.d("1秒定期 (緯度:{0} 経度:{1})", String.format(Locale.JAPAN, "%1$.12f", location.getLatitude()), String.format(Locale.JAPAN, "%1$.12f", location.getLongitude()));
+			TLog.d("1秒定期 (緯度:{0} 経度:{1})", d2Str(location.getLatitude()), d2Str(location.getLongitude()));
 
 			/* 毎回OFF->ONにすることで、更新間隔が1秒になるようにしている。 */
 			mFusedLocationClient.removeLocationUpdates(mLocationCallback);
