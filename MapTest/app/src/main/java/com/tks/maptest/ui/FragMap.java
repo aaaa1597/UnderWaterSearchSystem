@@ -162,7 +162,7 @@ public class FragMap extends SupportMapFragment {
 		final double BASE_DISTANCE_X = 40000*1000/*4万*1000m*/ * Math.cos(nowpos.latitude*180/Math.PI) / 360;
 		final double BASE_DISTANCE_Y = 40000*1000/*4万*1000m*/ / 360.0;
 		TLog.d("現在地付近の1°当たりの距離[m]:		{0}	[m]	{1}	[m]", BASE_DISTANCE_X, BASE_DISTANCE_Y);
-		TLog.d("現在地 	緯度:	{0}	経度:	{1}", String.format(Locale.JAPAN, "%.10f", nowpos.latitude), String.format(Locale.JAPAN, "%.10f", nowpos.longitude));
+		TLog.d("現在地 	緯度:	{0}	経度:	{1}", d2Str(nowpos.latitude), d2Str(nowpos.longitude));
 
 		/* p1 */
 		SerchInfo p1info = mSerchInfos.get("p1");
@@ -172,7 +172,7 @@ public class FragMap extends SupportMapFragment {
 			if(p1info.polygon != null) p1info.polygon.remove();
 		}
 		LatLng p1pos = new LatLng(nowpos.latitude-(1/BASE_DISTANCE_Y)*5, nowpos.longitude+(1/BASE_DISTANCE_X)*5);
-		TLog.d("p1	緯度:	{0}	経度:	{1}", String.format(Locale.JAPAN, "%.10f", p1pos.latitude), String.format(Locale.JAPAN, "%.10f", p1pos.longitude));
+		TLog.d("p1	緯度:	{0}	経度:	{1}", d2Str(p1pos.latitude), d2Str(p1pos.longitude));
 		Marker p1marker = googleMap.addMarker(new MarkerOptions()
 												.position(p1pos)
 												.title("p1")
@@ -193,7 +193,7 @@ public class FragMap extends SupportMapFragment {
 			if(p2info.polygon != null) p2info.polygon.remove();
 		}
 		LatLng p2pos = new LatLng(nowpos.latitude-(1/BASE_DISTANCE_Y)*10, nowpos.longitude+(1/BASE_DISTANCE_X)*10);
-		TLog.d("p2	緯度:	{0}	経度:	{1}", String.format(Locale.JAPAN, "%.10f", p2pos.latitude), String.format(Locale.JAPAN, "%.10f", p2pos.longitude));
+		TLog.d("p2	緯度:	{0}	経度:	{1}", d2Str(p2pos.latitude), d2Str(p2pos.longitude));
 		Marker p2marker = googleMap.addMarker(new MarkerOptions()
 												.position(p2pos)
 												.title("p2")
@@ -248,35 +248,35 @@ public class FragMap extends SupportMapFragment {
 		/* 0.準備 */
 		double dx = epos.longitude- spos.longitude;
 		double dy = epos.latitude - spos.latitude;
-		TLog.d("0.準備 dx={0} dy={1}", String.format(Locale.JAPAN, "%.10f", dx), String.format(Locale.JAPAN, "%.10f", dy));
+		TLog.d("0.準備 dx={0} dy={1}", d2Str(dx), d2Str(dy));
 
 //		/* 1.傾きを求める */
 //		double slope = dy / dx;
-//		TLog.d("1.傾きを求める slope={0}", String.format(Locale.JAPAN, "%.10f", slope));
+//		TLog.d("1.傾きを求める slope={0}", d2Str(slope));
 //
 //		/* 2.直行線分の傾きを求める */
 //		double rslope = -1 / slope;
-//		TLog.d("2.直行線分の傾きを求める rslope={0}", String.format(Locale.JAPAN, "%.10f", rslope));
+//		TLog.d("2.直行線分の傾きを求める rslope={0}", d2Str(rslope));
 
 		/* 3.直行線分の傾きの角度(rad)を求める */
 		double rdegree = Math.atan2(dx, -dy);	/* 直交座標なので反転(xy入替え)する */
-		TLog.d("3.直行線分の傾きの角度(°)を求める rdegree={0}", String.format(Locale.JAPAN, "%.10f", rdegree));
+		TLog.d("3.直行線分の傾きの角度(°)を求める rdegree={0}", d2Str(rdegree));
 
 		/* 4. 50cmをx,y成分に分ける1 x成分を求める */
 		double newdx = 50/*cm*/ * Math.cos(rdegree);	/* 引数はすでにrad. */
-		TLog.d("4. 50cmをx,y成分に分ける1 x成分を求める newdx={0}", String.format(Locale.JAPAN, "%.10f", newdx));
+		TLog.d("4. 50cmをx,y成分に分ける1 x成分を求める newdx={0}", d2Str(newdx));
 
 		/* 5. 50cmをx,y成分に分ける2 y成分を求める */
 		double newdy = 50/*cm*/ * Math.sin(rdegree);	/* 引数はすでにrad. */
-		TLog.d("5. 50cmをx,y成分に分ける2 y成分を求める newdy={0}", String.format(Locale.JAPAN, "%.10f", newdy));
+		TLog.d("5. 50cmをx,y成分に分ける2 y成分を求める newdy={0}", d2Str(newdy));
 
 		/* 6. x成分を度分秒に変換 */
 		double difflng = newdx * (1/(BASE_DISTANCE_X*100));
-		TLog.d("6. x成分を度分秒に変換 difflng={0}", String.format(Locale.JAPAN, "%.10f", difflng));
+		TLog.d("6. x成分を度分秒に変換 difflng={0}", d2Str(difflng));
 
 		/* 7. y成分を度分秒に変換 */
 		double difflat = newdx * (1/(BASE_DISTANCE_Y*100));
-		TLog.d("7. y成分を度分秒に変換 difflat={0}", String.format(Locale.JAPAN, "%.10f", difflat));
+		TLog.d("7. y成分を度分秒に変換 difflat={0}", d2Str(difflat));
 
 		/* 8. (左上/右上/左下/右下) 経度/緯度を算出 */
 		LatLng ltpos, rtpos, lbpos, rbpos;
