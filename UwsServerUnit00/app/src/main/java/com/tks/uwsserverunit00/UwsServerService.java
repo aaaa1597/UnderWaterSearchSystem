@@ -202,7 +202,7 @@ public class UwsServerService extends Service {
 						try { isStart = mCb.getStartStopStatus(deviceInfo.getSeekerId()); }
 						catch(RemoteException e) { e.printStackTrace(); }
 
-						if(isStart && mSeekerDevicesReadProc.get(deviceInfo.getSeekerId()) ==null)
+						if(isStart && mSeekerDevicesReadProc.get(deviceInfo.getSeekerId())==null)
 							uwsStartPeriodicNotify(deviceInfo.getSeekerId(), mCallback);
 					}
 					/* TODO ******************/
@@ -272,6 +272,7 @@ public class UwsServerService extends Service {
 	 * BLE接続 処理
 	 * ********************************************************************************/
 	private	IUwsInfoCallback mCallback;
+	private final Runnable mDmmyFunc = () -> {/* 接続処理中を示す空関数 これが設定されている時は、準備中。 */};
 
 	/* 定期通知 開始 */
 	private int uwsStartPeriodicNotify(short seekerid, IUwsInfoCallback callback) {
@@ -298,6 +299,7 @@ public class UwsServerService extends Service {
 			TLog.d("すでに実行中なので処理不要。継続します。", seekerid);
 			return UWS_NG_SUCCESS;
 		}
+		mSeekerDevicesReadProc.put(seekerid, mDmmyFunc);
 
 		/* 実行してた場合は、再度、接続し直す */
 		BluetoothGatt btgatt =mSeekerDevicesGatt.get(seekerid);
@@ -323,7 +325,7 @@ public class UwsServerService extends Service {
 		}
 		else {
 			mSeekerDevicesGatt.put(seekerid, btGatt);
-			TLog.d("ccccc 接続要求OK->接続確立待ち. seekerid={0} address={0}", seekerid, btGatt.getDevice().getAddress());
+			TLog.d("ccccc 接続要求OK->接続確立待ち. seekerid={0} address={1}", seekerid, btGatt.getDevice().getAddress());
 			/* TODO ******************/
 			TLog.d("ccccc 定期通知-this.2 arg(seekerid:{0})", seekerid);
 			for(short lpct = 0; lpct < 10; lpct++) {
@@ -420,12 +422,24 @@ public class UwsServerService extends Service {
 			String addr		= gatt.getDevice().getAddress();
 			short seekerid	= Short.parseShort(suuid.substring(2));
 
+			/* TODO ******************/
+			TLog.d("ccccc  接続要求OK->接続確立OK->DiscoverOK->charac解析開始 arg({0}   seekerid:{1})", gatt.getDevice().getAddress(), seekerid);
+			for(short lpct = 0; lpct < 10; lpct++) {
+				String			laddress= mSeekerDevicesAddress .get(lpct);
+				BluetoothGatt	lgatt	= mSeekerDevicesGatt	.get(lpct);
+				Runnable		lfunc	= mSeekerDevicesReadProc.get(lpct);
+				if(laddress!=null || lgatt!=null || lfunc!=null)
+					TLog.d("ccccc     消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, laddress, lgatt, lfunc);
+			}
+			/* ******************/
 			/* アドレスから検索 */
 			Map.Entry<Short, String> seekeridobj = mSeekerDevicesAddress.entrySet().stream().filter(
 																						o->o.getValue().equals(gatt.getDevice().getAddress())
 																					).findAny().orElse(null);
-			if(seekeridobj == null) return;											/* どうしようもないのでreturn. */
-			if(mSeekerDevicesReadProc.get(seekeridobj.getKey()) != null) return;	/* すでに実行済return. */
+			if(seekeridobj == null)
+				return;	/* どうしようもないのでreturn. */
+			if(mSeekerDevicesReadProc.get(seekeridobj.getKey()) != null && mSeekerDevicesReadProc.get(seekeridobj.getKey()) != mDmmyFunc)
+				return;	/* すでに実行済return. */
 
 			TLog.d("接続要求OK->接続確立OK->DiscoverOK->charac解析中. address={0}", gatt.getDevice().getAddress());
 
