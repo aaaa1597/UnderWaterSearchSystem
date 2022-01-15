@@ -1,6 +1,8 @@
 package com.tks.uwsclient;
 
 import java.text.MessageFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -68,5 +70,10 @@ public class Constants {
 	public static String d2Str(double val) {
 		return String.format(Locale.JAPAN, "%1$.12f", val);
 //		return String.format(Locale.JAPAN, "%.10f", val);
+	}
+
+	private final static SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSSXXX", Locale.JAPAN);
+	public static String d2Str(Date val) {
+		return df.format(val);
 	}
 }
