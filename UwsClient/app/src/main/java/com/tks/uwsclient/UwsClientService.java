@@ -435,7 +435,7 @@ public class UwsClientService extends Service {
 		public void onCharacteristicReadRequest(BluetoothDevice server, int requestId, int offset, BluetoothGattCharacteristic characteristic) {
 			super.onCharacteristicReadRequest(server, requestId, offset, characteristic);
 			/* 初回送信時のみ値設定 */
-			if(requestId == 1) {
+			if(offset == 0) {
 				double longitude = mLongitude;
 				double latitude = mLatitude;
 				int heartbeat = mHeartbeat;
@@ -445,8 +445,8 @@ public class UwsClientService extends Service {
 			byte[] resData = new byte[characteristic.getValue().length-offset];
 			System.arraycopy(characteristic.getValue(), offset, resData, 0, resData.length);
 
-			if(requestId == 1)
-				TLog.d("Server->Read要求(reqid={0}) snd({1}:{2}:{3}) 返却値:(UUID:{4},resData(byte数{5}:データ{6}) org(offset{7},val:{8}))", requestId, mLongitude, mLatitude, mHeartbeat, characteristic.getUuid(), resData.length, Arrays.toString(resData));
+			if(offset == 0)
+				TLog.d("Server->Read要求({0}) snd({1}:{2}:{3}) 返却値:(UUID:{4},resData(byte数{5}:データ{6}) org(offset{7},val:{8}))", requestId, d2Str(mLongitude), d2Str(mLatitude), mHeartbeat, characteristic.getUuid(), resData.length, Arrays.toString(resData), offset, Arrays.toString(characteristic.getValue()));
 			else
 				TLog.d("Server->Read要求({0}) 返却値:(UUID:{1},resData(byte数{2}:データ{3}) org(offset{4},val:{5}))", requestId, characteristic.getUuid(), resData.length, Arrays.toString(resData), offset, Arrays.toString(characteristic.getValue()));
 
