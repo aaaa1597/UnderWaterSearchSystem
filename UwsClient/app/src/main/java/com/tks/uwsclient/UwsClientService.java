@@ -33,8 +33,6 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.os.ParcelUuid;
-import android.os.RemoteException;
 import android.widget.RemoteViews;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -54,6 +52,7 @@ import static com.tks.uwsclient.Constants.SERVICE_STATUS_INITIALIZING;
 import static com.tks.uwsclient.Constants.SERVICE_STATUS_IDLE;
 import static com.tks.uwsclient.Constants.UWS_OWNDATA_KEY;
 import static com.tks.uwsclient.Constants.UWS_UUID_CHARACTERISTIC_HRATBEAT;
+import static com.tks.uwsclient.Constants.d2Str;
 
 public class UwsClientService extends Service {
 	private int mStatus = SERVICE_STATUS_INITIALIZING;
@@ -182,8 +181,8 @@ public class UwsClientService extends Service {
 		if (mBluetoothLeAdvertiser == null)
 			throw new RuntimeException("Bluetooth未サポート.使用不可3!!");
 
-		mGattManager = bluetoothManager.openGattServer(this, mGattServerCallback);
-		if(mGattManager == null)
+		mGattServer = bluetoothManager.openGattServer(this, mGattServerCallback);
+		if(mGattServer == null)
 			throw new RuntimeException("Bluetooth未サポート.使用不可4!!");
 
 		TLog.d( "アドバタイズの最大サイズ={0}", bluetoothAdapter.getLeMaximumAdvertisingDataLength());
@@ -192,19 +191,19 @@ public class UwsClientService extends Service {
 	private void uwsFin() {
 		TLog.d("");
 		mFlc = null;
+		mGattServer.close();
+		mGattServer = null;
 		mBluetoothLeAdvertiser = null;
 	}
 
-	/* ***************/
+	/* *************/
 	/* 開始/停止処理 */
-	/* ***************/
+	/* *************/
 	private void uwsStart(short seekerid, IOnStatusChangeListner listner) {
 		TLog.d("seekerid={0}", seekerid);
-		mSeekerId = seekerid;
 		mOnStatusChangeListner = listner;
 		/* 位置情報 取得開始 */
 		startLoc();
-
 		/* BLEアドバタイズ 開始 */
 		startAdvertise(seekerid);
 	}
@@ -212,7 +211,6 @@ public class UwsClientService extends Service {
 	private void uwsStop() {
 		/* 位置情報 停止 */
 		stoptLoc();
-
 		/* BLE停止 */
 		stopAdvertise();
 	}
@@ -220,14 +218,14 @@ public class UwsClientService extends Service {
 	/* *************/
 	/* 位置情報 機能 */
 	/* *************/
-	private final static int			LOC_UPD_INTERVAL = 2500;
+	private final static int			LOC_UPD_INTERVAL = 2000;
 	private FusedLocationProviderClient mFlc;
 	private final LocationRequest		mLocationRequest = LocationRequest.create()
 															.setInterval(LOC_UPD_INTERVAL)
 															.setFastestInterval(LOC_UPD_INTERVAL)
 															.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-	private double mLongitude;
-	private double mLatitude;
+	private double						mLongitude;
+	private double						mLatitude;
 	private final LocationCallback		mLocationCallback = new LocationCallback() {
 		@Override
 		public void onLocationResult(@NonNull LocationResult locationResult) {
@@ -235,11 +233,11 @@ public class UwsClientService extends Service {
 			Location location = locationResult.getLastLocation();
 			mLongitude = location.getLongitude();
 			mLatitude  = location.getLatitude();
-			TLog.d("1秒定期 (緯度:{0} 経度:{1})", String.format(Locale.JAPAN, "%1$.12f", mLatitude), String.format(Locale.JAPAN, "%1$.12f", mLongitude));
+			TLog.d("1秒定期 (緯度:{0} 経度:{1})", d2Str(mLatitude), d2Str(mLongitude));
 
 			/* 毎回OFF->ONにすることで、更新間隔が1秒になるようにしている。 */
 			stoptLoc();
-			try { Thread.sleep(1000); } catch (InterruptedException e) { }
+			try { Thread.sleep(LOC_UPD_INTERVAL); } catch (InterruptedException ignored) { }
 			startLoc();
 		}
 	};
@@ -260,22 +258,28 @@ public class UwsClientService extends Service {
 	/* ********/
 	/* BLE機能 */
 	/* ********/
-	private short						mSeekerId = 0;
+	private short						mSeekerId = -1;
 	private BluetoothLeAdvertiser		mBluetoothLeAdvertiser;
 	private BluetoothGattCharacteristic mUwsCharacteristic;
-	private BluetoothGattServer			mGattManager;
+	private BluetoothGattServer			mGattServer;
 	private BluetoothDevice				mServerDevice;
 
 	/* アドバタイズ開始 */
 	Handler mHandler = new Handler();
 	Runnable mAdvertiseRunner = null;
 	private void startAdvertise(short seekerid) {
-		if(mAdvertiseRunner != null) {
+		if(mSeekerId == seekerid && mAdvertiseRunner != null) {
 			TLog.d("すでにアドバタイズ中...続行します。");
 			return;
 		}
+		else if(mSeekerId != seekerid) {
+			mSeekerId = seekerid;
+			boolean ret = BluetoothAdapter.getDefaultAdapter().setName(MessageFormat.format("消防士{0}", seekerid));
+			TLog.d("デバイス名変更 {0} ret={1}", MessageFormat.format("消防士{0}", seekerid), ret);
+		}
+
 		/* Advertiseのタイミングで、自分自身のペリフェラル特性定義も実施しておく(gatt接続に備えておく) */
-		mUwsCharacteristic = createOwnCharacteristic(seekerid);
+		mUwsCharacteristic = createOwnCharacteristic(seekerid, mGattServer);
 
 		mAdvertiseRunner = new Runnable() {
 			@Override
@@ -286,10 +290,8 @@ public class UwsClientService extends Service {
 				catch (InterruptedException e) { e.printStackTrace(); }
 
 				/* 新データでアドバタイズ開始 */
-				boolean ret = BluetoothAdapter.getDefaultAdapter().setName(MessageFormat.format("消防士{0}", seekerid));
-				TLog.d("デバイス名変更 {0} ret={1}", MessageFormat.format("消防士{0}", seekerid), ret);
 				AdvertiseSettings settings	= buildAdvertiseSettings();
-				AdvertiseData data			= buildAdvertiseData(seekerid, (float)mLongitude, (float)mLatitude, mHeartbeat);
+				AdvertiseData data			= buildAdvertiseData((float)mLongitude, (float)mLatitude, mHeartbeat);
 				mBluetoothLeAdvertiser.startAdvertising(settings, data, mAdvertiseCallback);
 
 				/* 3秒後再開 */
@@ -309,7 +311,7 @@ public class UwsClientService extends Service {
 	/** **********************
 	 * 自身のペリフェラル特性を定義
 	 * ***********************/
-	private BluetoothGattCharacteristic createOwnCharacteristic(int seekerid) {
+	private BluetoothGattCharacteristic createOwnCharacteristic(int seekerid, BluetoothGattServer gattManager) {
 		/* 自身が提供するサービスを定義 */
 		BluetoothGattService ownService = new BluetoothGattService(UUID.fromString(Constants.createServiceUuid(seekerid)), BluetoothGattService.SERVICE_TYPE_PRIMARY);
 
@@ -324,7 +326,7 @@ public class UwsClientService extends Service {
 		ownService.addCharacteristic(charac);
 
 		/* Gattサーバに定義したサービスを付与 */
-		mGattManager.addService(ownService);
+		gattManager.addService(ownService);
 
 		return charac;
 	}
@@ -340,7 +342,7 @@ public class UwsClientService extends Service {
 
 	/* アドバタイズのデータ生成 */
 	private byte mSeqNo = 0;
-	private AdvertiseData buildAdvertiseData(short seekerid, float longitude, float latitude, short heartbeat) {
+	private AdvertiseData buildAdvertiseData(float longitude, float latitude, short heartbeat) {
 		AdvertiseData.Builder dataBuilder = new AdvertiseData.Builder();
 //		↓↓↓ TODO 削除予定
 //		dataBuilder.addServiceUuid(ParcelUuid.fromString(Constants.createServiceUuid(seekerid)));
@@ -380,7 +382,6 @@ public class UwsClientService extends Service {
 		public void onStartSuccess(AdvertiseSettings settingsInEffect) {
 			TLog.d("アドバタイズ開始OK.");
 		}
-
 		@Override
 		public void onStartFailure(int errorCode) {
 			TLog.d("アドバタイズ開始失敗 error={0}", errorCode);
@@ -444,8 +445,12 @@ public class UwsClientService extends Service {
 			byte[] resData = new byte[characteristic.getValue().length-offset];
 			System.arraycopy(characteristic.getValue(), offset, resData, 0, resData.length);
 
-			TLog.d("CentralからのRead要求({0}) 返却値:(UUID:{1},resData(byte数{2}:データ{3}) org(offset{4},val:{5}))", requestId, characteristic.getUuid(), resData.length, Arrays.toString(resData), offset, Arrays.toString(characteristic.getValue()));
-			mGattManager.sendResponse(server, requestId, BluetoothGatt.GATT_SUCCESS, 0, resData);
+			if(requestId == 1)
+				TLog.d("Server->Read要求(reqid={0}) snd({1}:{2}:{3}) 返却値:(UUID:{4},resData(byte数{5}:データ{6}) org(offset{7},val:{8}))", requestId, mLongitude, mLatitude, mHeartbeat, characteristic.getUuid(), resData.length, Arrays.toString(resData));
+			else
+				TLog.d("Server->Read要求({0}) 返却値:(UUID:{1},resData(byte数{2}:データ{3}) org(offset{4},val:{5}))", requestId, characteristic.getUuid(), resData.length, Arrays.toString(resData), offset, Arrays.toString(characteristic.getValue()));
+
+			mGattServer.sendResponse(server, requestId, BluetoothGatt.GATT_SUCCESS, 0, resData);
 		}
 
 		/* Write要求受信 */
@@ -456,7 +461,7 @@ public class UwsClientService extends Service {
 			TLog.d("CentralからのWrite要求 受信値:(UUID:{0},vat:{1}))", mUwsCharacteristic.getUuid(), Arrays.toString(value));
 			setValuetoCharacteristic(mUwsCharacteristic, new Date(), 555, 666,  123);
 			if (responseNeeded)
-				mGattManager.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, value);
+				mGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, value);
 		}
 
 		/* Read要求受信 */
@@ -465,7 +470,7 @@ public class UwsClientService extends Service {
 			super.onDescriptorReadRequest(device, requestId, offset, descriptor);
 
 			TLog.d("CentralからのDescriptor_Read要求 返却値:(UUID:{0},vat:{1}))", descriptor.getUuid(), Arrays.toString(descriptor.getValue()));
-			mGattManager.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, descriptor.getValue());
+			mGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, descriptor.getValue());
 		}
 
 		/* Write要求受信 */
@@ -516,7 +521,7 @@ public class UwsClientService extends Service {
 //                descriptor.setValue(value);
 //            }
 			if (responseNeeded)
-				mGattManager.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS,0,null);
+				mGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS,0,null);
 
 		}
 	};

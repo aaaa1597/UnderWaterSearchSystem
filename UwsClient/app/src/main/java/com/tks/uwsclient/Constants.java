@@ -1,6 +1,7 @@
 package com.tks.uwsclient;
 
 import java.text.MessageFormat;
+import java.util.Locale;
 import java.util.UUID;
 
 public class Constants {
@@ -63,4 +64,9 @@ public class Constants {
 //	public static String getShortUuid(UUID uuid) {
 //		return uuid.toString().substring(4,8);
 //	}
+
+	public static String d2Str(double val) {
+		return String.format(Locale.JAPAN, "%1$.12f", val);
+//		return String.format(Locale.JAPAN, "%.10f", val);
+	}
 }
