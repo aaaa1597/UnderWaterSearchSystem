@@ -94,8 +94,8 @@ public class UwsServerService extends Service {
 	 * BLE処理
 	 * ********/
 	private final Map<Short, String>		mSeekerDevicesAddress	= new HashMap<>();
-	private final Map<Short, BluetoothGatt>	mSeekerDevicesGatt		= new HashMap<>();
-	private final Map<Short, Runnable>		mSeekerDevicesReadProc	= new HashMap<>();
+	private final Map<String, BluetoothGatt>mSeekerDevicesGatt		= new HashMap<>();
+	private final Map<String, Runnable>		mSeekerDevicesReadProc	= new HashMap<>();
 
 	/** *******
 	 * BLE初期化
@@ -196,21 +196,35 @@ public class UwsServerService extends Service {
 
 				if(deviceInfo.getSeekerId()!=-1) {
 					String old = mSeekerDevicesAddress.put(deviceInfo.getSeekerId(), deviceInfo.getDeviceAddress());
-					if(old !=null && old.equals(deviceInfo.getDeviceAddress())) {
+					TLog.d("seekerid={0} old={1} new={2}", deviceInfo.getSeekerId(), old, deviceInfo.getDeviceAddress());
+					/* アドレス変化をチェック */
+					if(old !=null && !old.equals(deviceInfo.getDeviceAddress())) {
 						/* データ読込み中なら、再開する */
 						boolean isStart = false;
 						try { isStart = mCb.getStartStopStatus(deviceInfo.getSeekerId()); }
 						catch(RemoteException e) { e.printStackTrace(); }
 
-						if(isStart && mSeekerDevicesReadProc.get(deviceInfo.getSeekerId())==null)
+						/* TODO */TLog.d("isStart={0}", isStart);
+
+						/* 古いアドレスでの動作を解除 */
+//						mSeekerDevicesGatt.get(old).close();	/* 副作用が面倒なのでここではしない。onConnectionStateChange()で検知するはずなのでそっちで実行 */
+						Runnable readrun = mSeekerDevicesReadProc.get(old);
+						if(readrun != null) {
+							mHandler.removeCallbacks(readrun);
+							mSeekerDevicesReadProc.remove(old);
+						}
+
+						if(isStart) {
+							/* TODO */TLog.d("isStart={0} -> uwsStartPeriodicNotify()", isStart);
 							uwsStartPeriodicNotify(deviceInfo.getSeekerId(), mCallback);
+						}
 					}
 					/* TODO ******************/
 					TLog.d("ccccc scan結果 arg(seekerid:{0})", deviceInfo.getSeekerId());
 					for(short lpct = 0; lpct < 10; lpct++) {
-						String			address	= mSeekerDevicesAddress.get(lpct);
-						BluetoothGatt	gatt	= mSeekerDevicesGatt.get(lpct);
-						Runnable		func	= mSeekerDevicesReadProc.get(lpct);
+						String			address	= mSeekerDevicesAddress .get(lpct);
+						BluetoothGatt	gatt	= mSeekerDevicesGatt	.get(address);
+						Runnable		func	= mSeekerDevicesReadProc.get(address);
 						if(address!=null || gatt!=null || func!=null)
 							TLog.d("ccccc     消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, address, gatt, func);
 					}
@@ -276,14 +290,14 @@ public class UwsServerService extends Service {
 
 	/* 定期通知 開始 */
 	private int uwsStartPeriodicNotify(short seekerid, IUwsInfoCallback callback) {
-		Long stime = System.currentTimeMillis();
+		long stime = System.currentTimeMillis();
 		mCallback = callback;
 		/* TODO ******************/
 		TLog.d("ccccc 定期通知-開始 arg(seekerid:{0})", seekerid);
 		for(short lpct = 0; lpct < 10; lpct++) {
-			String			address	= mSeekerDevicesAddress.get(lpct);
-			BluetoothGatt	gatt	= mSeekerDevicesGatt.get(lpct);
-			Runnable		func	= mSeekerDevicesReadProc.get(lpct);
+			String			address	= mSeekerDevicesAddress .get(lpct);
+			BluetoothGatt	gatt	= mSeekerDevicesGatt	.get(address);
+			Runnable		func	= mSeekerDevicesReadProc.get(address);
 			if(address!=null || gatt!=null || func!=null)
 				TLog.d("ccccc     消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, address, gatt, func);
 		}
@@ -294,19 +308,21 @@ public class UwsServerService extends Service {
 			return UWS_NG_DEVICE_NOTFOUND;
 		}
 
-		Runnable func = mSeekerDevicesReadProc.get(seekerid);
+		TLog.d("seekerid={0} address={1}", seekerid, address);
+		Runnable func = mSeekerDevicesReadProc.get(address);
 		if(func != null) {
-			TLog.d("すでに実行中なので処理不要。継続します。", seekerid);
+			TLog.d("すでに実行中なので処理不要。継続します。seekerid={0} address={1}", seekerid, address);
 			return UWS_NG_SUCCESS;
 		}
-		mSeekerDevicesReadProc.put(seekerid, mDmmyFunc);
+		mSeekerDevicesReadProc.put(address, mDmmyFunc);
 
 		/* 実行してた場合は、再度、接続し直す */
-		BluetoothGatt btgatt =mSeekerDevicesGatt.get(seekerid);
+		BluetoothGatt btgatt = mSeekerDevicesGatt.get(address);
 		if(btgatt != null) {
-			btgatt.disconnect();;
+			TLog.d("note : 実行してた場合は、再度、接続し直す(gatt.close()). address={0}", address);
+			btgatt.disconnect();
 			btgatt.close();
-			mSeekerDevicesGatt.remove(seekerid);
+			mSeekerDevicesGatt.remove(address);
 		}
 
 		BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
@@ -324,14 +340,14 @@ public class UwsServerService extends Service {
 			return UWS_NG_DEVICE_NOTFOUND;
 		}
 		else {
-			mSeekerDevicesGatt.put(seekerid, btGatt);
+			mSeekerDevicesGatt.put(address, btGatt);
 			TLog.d("ccccc 接続要求OK->接続確立待ち. seekerid={0} address={1}", seekerid, btGatt.getDevice().getAddress());
 			/* TODO ******************/
 			TLog.d("ccccc 定期通知-this.2 arg(seekerid:{0})", seekerid);
 			for(short lpct = 0; lpct < 10; lpct++) {
 				String			laddress= mSeekerDevicesAddress .get(lpct);
-				BluetoothGatt	lgatt	= mSeekerDevicesGatt	.get(lpct);
-				Runnable		lfunc	= mSeekerDevicesReadProc.get(lpct);
+				BluetoothGatt	lgatt	= mSeekerDevicesGatt	.get(laddress);
+				Runnable		lfunc	= mSeekerDevicesReadProc.get(laddress);
 				if(laddress!=null || lgatt!=null || lfunc!=null)
 					TLog.d("ccccc     消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, laddress, lgatt, lfunc);
 			}
@@ -343,23 +359,27 @@ public class UwsServerService extends Service {
 
 	/* 定期通知 終了 */
 	private void uwsStopPeriodicNotify(short seekerid) {
-		BluetoothGatt btgatt = mSeekerDevicesGatt.get(seekerid);
+		String address = mSeekerDevicesAddress.get(seekerid);
+		mSeekerDevicesAddress.remove(seekerid);
+		BluetoothGatt btgatt = mSeekerDevicesGatt.get(address);
 		if(btgatt != null) {
 			btgatt.disconnect();
 			btgatt.close();
+			mSeekerDevicesGatt.remove(address);
 		}
-		Runnable readDataFunc = mSeekerDevicesReadProc.get(seekerid);
-		if(readDataFunc == null) return;
-		mHandler.removeCallbacks(readDataFunc);
-		mSeekerDevicesReadProc.remove(seekerid);
+		Runnable readDataFunc = mSeekerDevicesReadProc.get(address);
+		if(readDataFunc != null) {
+			mHandler.removeCallbacks(readDataFunc);
+			mSeekerDevicesReadProc.remove(address);
+		}
 		/* TODO ******************/
 		TLog.d("ccccc 定期通知-終了. arg(seekerid:{0})", seekerid);
 		for(short lpct = 0; lpct < 10; lpct++) {
-			String			address	= mSeekerDevicesAddress.get(lpct);
-			BluetoothGatt	gatt	= mSeekerDevicesGatt.get(lpct);
-			Runnable		func	= mSeekerDevicesReadProc.get(lpct);
-			if(address!=null || gatt!=null || func!=null)
-				TLog.d("ccccc     消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, address, gatt, func);
+			String			laddress= mSeekerDevicesAddress.get(lpct);
+			BluetoothGatt	lgatt	= mSeekerDevicesGatt.get(laddress);
+			Runnable		lfunc	= mSeekerDevicesReadProc.get(laddress);
+			if(laddress!=null || lgatt!=null || lfunc!=null)
+				TLog.d("ccccc     消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, laddress, lgatt, lfunc);
 		}
 		/* ******************/
 	}
@@ -377,36 +397,18 @@ public class UwsServerService extends Service {
 				Map.Entry<Short, String> findit = mSeekerDevicesAddress.entrySet().stream().filter(
 																			item->item.getValue().equals(gatt.getDevice().getAddress())
 																		).findAny().orElse(null);
-				/* TODO ******************/
-				/* TODO あり得ん */
-				if(findit == null) {
-					TLog.d("ccccc あり得ない!! Gatt切断!!で、後処理中にアドレス->seekeridの名前解決ができない. arg(address:{0}->seekerid:null)", gatt.getDevice().getAddress());
-					for(short lpct = 0; lpct < 10; lpct++) {
-						String			laddress= mSeekerDevicesAddress.get(lpct);
-						BluetoothGatt	lgatt	= mSeekerDevicesGatt.get(lpct);
-						Runnable		lfunc	= mSeekerDevicesReadProc.get(lpct);
-						if(laddress!=null || lgatt!=null || lfunc!=null)
-							TLog.d("ccccc     消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, laddress, lgatt, lfunc);
-					}
-					throw new RuntimeException("あり得ない!! Gatt切断!!で、後処理中にアドレス->seekeridの名前解決ができない. arg(address:" + gatt.getDevice().getAddress() + "->seekerid:null)");
-				}
-				/* ******************/
-
-				short seekerid = findit.getKey();
-				mSeekerDevicesAddress.remove(seekerid);
-				mSeekerDevicesGatt.remove(seekerid);
-				Runnable tmpProc =  mSeekerDevicesReadProc.get(seekerid);
-				if(tmpProc != null) {
-					mHandler.removeCallbacks(tmpProc);
-					mSeekerDevicesReadProc.remove(seekerid);
-				}
+				mSeekerDevicesAddress.remove(findit==null?-1:findit.getKey());
+				mSeekerDevicesGatt.remove(gatt.getDevice().getAddress());
+				Runnable old = mSeekerDevicesReadProc.remove(gatt.getDevice().getAddress());
+				if(old != null)
+					mHandler.removeCallbacks(old);
 
 				/* TODO ******************/
-				TLog.d("ccccc gatt切断(新addressになるはずなのでここで削除) arg(seekerid:{0})", seekerid);
+				TLog.d("ccccc gatt切断(新addressになるはずなのでここで削除) arg(旧adr:{0})", gatt.getDevice().getAddress());
 				for(short lpct = 0; lpct < 10; lpct++) {
 					String			laddress= mSeekerDevicesAddress .get(lpct);
-					BluetoothGatt	lgatt	= mSeekerDevicesGatt	.get(lpct);
-					Runnable		lfunc	= mSeekerDevicesReadProc.get(lpct);
+					BluetoothGatt	lgatt	= mSeekerDevicesGatt	.get(laddress);
+					Runnable		lfunc	= mSeekerDevicesReadProc.get(laddress);
 					if(laddress!=null || lgatt!=null || lfunc!=null)
 						TLog.d("ccccc     消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, laddress, lgatt, lfunc);
 				}
@@ -426,19 +428,15 @@ public class UwsServerService extends Service {
 			TLog.d("ccccc  接続要求OK->接続確立OK->DiscoverOK->charac解析開始 arg({0}   seekerid:{1})", gatt.getDevice().getAddress(), seekerid);
 			for(short lpct = 0; lpct < 10; lpct++) {
 				String			laddress= mSeekerDevicesAddress .get(lpct);
-				BluetoothGatt	lgatt	= mSeekerDevicesGatt	.get(lpct);
-				Runnable		lfunc	= mSeekerDevicesReadProc.get(lpct);
+				BluetoothGatt	lgatt	= mSeekerDevicesGatt	.get(laddress);
+				Runnable		lfunc	= mSeekerDevicesReadProc.get(laddress);
 				if(laddress!=null || lgatt!=null || lfunc!=null)
 					TLog.d("ccccc     消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, laddress, lgatt, lfunc);
 			}
 			/* ******************/
-			/* アドレスから検索 */
-			Map.Entry<Short, String> seekeridobj = mSeekerDevicesAddress.entrySet().stream().filter(
-																						o->o.getValue().equals(gatt.getDevice().getAddress())
-																					).findAny().orElse(null);
-			if(seekeridobj == null)
-				return;	/* どうしようもないのでreturn. */
-			if(mSeekerDevicesReadProc.get(seekeridobj.getKey()) != null && mSeekerDevicesReadProc.get(seekeridobj.getKey()) != mDmmyFunc)
+
+			/* 実行チェック */
+			if(mSeekerDevicesReadProc.get(gatt.getDevice().getAddress()) != null && mSeekerDevicesReadProc.get(gatt.getDevice().getAddress()) != mDmmyFunc)
 				return;	/* すでに実行済return. */
 
 			TLog.d("接続要求OK->接続確立OK->DiscoverOK->charac解析中. address={0}", gatt.getDevice().getAddress());
@@ -450,12 +448,12 @@ public class UwsServerService extends Service {
 					public void run() {
 						boolean ret = gatt.readCharacteristic(charac);
 						if( !ret) {
+							TLog.d("ccccc デバイス読込み失敗! arg(seekerid:{0}) address={1}", seekerid, gatt.getDevice().getAddress());
 							/* TODO ******************/
-							TLog.d("ccccc デバイス読込み失敗! arg(seekerid:{0})", seekerid);
 							for(short lpct = 0; lpct < 10; lpct++) {
 								String			laddress= mSeekerDevicesAddress .get(lpct);
-								BluetoothGatt	lgatt	= mSeekerDevicesGatt	.get(lpct);
-								Runnable		lfunc	= mSeekerDevicesReadProc.get(lpct);
+								BluetoothGatt	lgatt	= mSeekerDevicesGatt	.get(laddress);
+								Runnable		lfunc	= mSeekerDevicesReadProc.get(laddress);
 								if(laddress!=null || lgatt!=null || lfunc!=null)
 									TLog.d("ccccc     消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, laddress, lgatt, lfunc);
 							}
@@ -467,7 +465,7 @@ public class UwsServerService extends Service {
 					}
 				};
 				/* 生成したRunnableをセット */
-				mSeekerDevicesReadProc.put(seekerid, readCharaRunner);
+				mSeekerDevicesReadProc.put(gatt.getDevice().getAddress(), readCharaRunner);
 				/* デバイス読込み開始(1秒定期) */
 				mHandler.post(readCharaRunner);
 			}
@@ -476,8 +474,8 @@ public class UwsServerService extends Service {
 				TLog.d("ccccc 対象外デバイス!! arg(seekerid:{0})", seekerid);
 				for(short lpct = 0; lpct < 10; lpct++) {
 					String			laddress= mSeekerDevicesAddress .get(lpct);
-					BluetoothGatt	lgatt	= mSeekerDevicesGatt	.get(lpct);
-					Runnable		lfunc	= mSeekerDevicesReadProc.get(lpct);
+					BluetoothGatt	lgatt	= mSeekerDevicesGatt	.get(laddress);
+					Runnable		lfunc	= mSeekerDevicesReadProc.get(laddress);
 					if(laddress!=null || lgatt!=null || lfunc!=null)
 						TLog.d("ccccc     消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, laddress, lgatt, lfunc);
 				}
@@ -502,8 +500,8 @@ public class UwsServerService extends Service {
 				TLog.d("ccccc readCharc失敗!! arg(seekerid:{0}) address={1}", seekerid, addr);
 				for(short lpct = 0; lpct < 10; lpct++) {
 					String			laddress= mSeekerDevicesAddress .get(lpct);
-					BluetoothGatt	lgatt	= mSeekerDevicesGatt	.get(lpct);
-					Runnable		lfunc	= mSeekerDevicesReadProc.get(lpct);
+					BluetoothGatt	lgatt	= mSeekerDevicesGatt	.get(laddress);
+					Runnable		lfunc	= mSeekerDevicesReadProc.get(laddress);
 					if(laddress!=null || lgatt!=null || lfunc!=null)
 						TLog.d("ccccc     消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, laddress, lgatt, lfunc);
 				}
