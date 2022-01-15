@@ -28,8 +28,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
+import static com.tks.uwsserverunit00.Constants.UWS_NG_ALREADY_CONNECTED;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_DEVICE_NOTFOUND;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_SUCCESS;
 import static com.tks.uwsserverunit00.Constants.UWS_OWNDATA_KEY;
@@ -198,7 +201,7 @@ public class UwsServerService extends Service {
 					String old = mSeekerDevicesAddress.put(deviceInfo.getSeekerId(), deviceInfo.getDeviceAddress());
 					TLog.d("seekerid={0} old={1} new={2}", deviceInfo.getSeekerId(), old, deviceInfo.getDeviceAddress());
 					/* アドレス変化をチェック */
-					if(old !=null && !old.equals(deviceInfo.getDeviceAddress())) {
+					if(old==null || !old.equals(deviceInfo.getDeviceAddress())) {
 						/* データ読込み中なら、再開する */
 						boolean isStart = false;
 						try { isStart = mCb.getStartStopStatus(deviceInfo.getSeekerId()); }
@@ -289,71 +292,82 @@ public class UwsServerService extends Service {
 	private final Runnable mDmmyFunc = () -> {/* 接続処理中を示す空関数 これが設定されている時は、準備中。 */};
 
 	/* 定期通知 開始 */
+	Lock mLock = new ReentrantLock();
 	private int uwsStartPeriodicNotify(short seekerid, IUwsInfoCallback callback) {
 		long stime = System.currentTimeMillis();
-		mCallback = callback;
-		/* TODO ******************/
-		TLog.d("ccccc 定期通知-開始 arg(seekerid:{0})", seekerid);
-		for(short lpct = 0; lpct < 10; lpct++) {
-			String			address	= mSeekerDevicesAddress .get(lpct);
-			BluetoothGatt	gatt	= mSeekerDevicesGatt	.get(address);
-			Runnable		func	= mSeekerDevicesReadProc.get(address);
-			if(address!=null || gatt!=null || func!=null)
-				TLog.d("ccccc     消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, address, gatt, func);
-		}
-		/* ******************/
-		String address = mSeekerDevicesAddress.get(seekerid);
-		if(address == null) {
-			TLog.d("scanできてないデバイス(消防士{0})です。接続できません。", seekerid);
-			return UWS_NG_DEVICE_NOTFOUND;
-		}
 
-		TLog.d("seekerid={0} address={1}", seekerid, address);
-		Runnable func = mSeekerDevicesReadProc.get(address);
-		if(func != null) {
-			TLog.d("すでに実行中なので処理不要。継続します。seekerid={0} address={1}", seekerid, address);
-			return UWS_NG_SUCCESS;
-		}
-		mSeekerDevicesReadProc.put(address, mDmmyFunc);
+		/* ロックが取れなければ処理不要 */
+		boolean islock = mLock.tryLock();
+		if( !islock) return UWS_NG_ALREADY_CONNECTED;
 
-		/* 実行してた場合は、再度、接続し直す */
-		BluetoothGatt btgatt = mSeekerDevicesGatt.get(address);
-		if(btgatt != null) {
-			TLog.d("note : 実行してた場合は、再度、接続し直す(gatt.close()). address={0}", address);
-			btgatt.disconnect();
-			btgatt.close();
-			mSeekerDevicesGatt.remove(address);
-		}
-
-		BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
-		if (device == null) {
-			TLog.d("デバイス({0})が見つかりません。接続できません。", address);
-			return UWS_NG_DEVICE_NOTFOUND;
-		}
-
-		/* デバイスに直接接続したい時に、autoConnectをfalseにする。 */
-		/* デバイスが使用可能になったら自動的にすぐに接続する様にする時に、autoConnectをtrueにする。 */
-		BluetoothGatt btGatt = device.connectGatt(getApplicationContext(), false, mGattCallback);
-		if (btGatt == null) {
-			TLog.d("接続要求失敗!! seekerid={0} address={1}", seekerid, address);
-			/* TODO */TLog.d("経過時間:{0}ms", System.currentTimeMillis() - stime);
-			return UWS_NG_DEVICE_NOTFOUND;
-		}
-		else {
-			mSeekerDevicesGatt.put(address, btGatt);
-			TLog.d("ccccc 接続要求OK->接続確立待ち. seekerid={0} address={1}", seekerid, btGatt.getDevice().getAddress());
+		try/*ロック解除漏れ防止*/ {
+			mCallback = callback;
 			/* TODO ******************/
-			TLog.d("ccccc 定期通知-this.2 arg(seekerid:{0})", seekerid);
+			TLog.d("ccccc 定期通知-開始 arg(seekerid:{0})", seekerid);
 			for(short lpct = 0; lpct < 10; lpct++) {
-				String			laddress= mSeekerDevicesAddress .get(lpct);
-				BluetoothGatt	lgatt	= mSeekerDevicesGatt	.get(laddress);
-				Runnable		lfunc	= mSeekerDevicesReadProc.get(laddress);
-				if(laddress!=null || lgatt!=null || lfunc!=null)
-					TLog.d("ccccc     消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, laddress, lgatt, lfunc);
+				String			address	= mSeekerDevicesAddress .get(lpct);
+				BluetoothGatt	gatt	= mSeekerDevicesGatt	.get(address);
+				Runnable		func	= mSeekerDevicesReadProc.get(address);
+				if(address!=null || gatt!=null || func!=null)
+					TLog.d("ccccc     消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, address, gatt, func);
 			}
 			/* ******************/
-			/* TODO */TLog.d("経過時間:{0}ms", System.currentTimeMillis() - stime);
-			return UWS_NG_SUCCESS;
+			String address = mSeekerDevicesAddress.get(seekerid);
+			if(address == null) {
+				TLog.d("scanできてないデバイス(消防士{0})です。接続できません。", seekerid);
+				return UWS_NG_DEVICE_NOTFOUND;
+			}
+
+			TLog.d("seekerid={0} address={1}", seekerid, address);
+			Runnable func = mSeekerDevicesReadProc.get(address);
+			if(func != null) {
+				TLog.d("すでに実行中なので処理不要。継続します。seekerid={0} address={1}", seekerid, address);
+				return UWS_NG_SUCCESS;
+			}
+			mSeekerDevicesReadProc.put(address, mDmmyFunc);
+
+			/* 実行してた場合は、再度、接続し直す */
+			BluetoothGatt btgatt = mSeekerDevicesGatt.get(address);
+			if(btgatt != null) {
+				TLog.d("note : 実行してた場合は、再度、接続し直す(gatt.close()). address={0}", address);
+				btgatt.disconnect();
+				btgatt.close();
+				mSeekerDevicesGatt.remove(address);
+			}
+
+			BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
+			if (device == null) {
+				TLog.d("デバイス({0})が見つかりません。接続できません。", address);
+				return UWS_NG_DEVICE_NOTFOUND;
+			}
+
+			/* デバイスに直接接続したい時に、autoConnectをfalseにする。 */
+			/* デバイスが使用可能になったら自動的にすぐに接続する様にする時に、autoConnectをtrueにする。 */
+			BluetoothGatt btGatt = device.connectGatt(getApplicationContext(), false, mGattCallback);
+			if (btGatt == null) {
+				TLog.d("接続要求失敗!! seekerid={0} address={1}", seekerid, address);
+				/* TODO */TLog.d("経過時間:{0}ms", System.currentTimeMillis() - stime);
+				return UWS_NG_DEVICE_NOTFOUND;
+			}
+			else {
+				mSeekerDevicesGatt.put(address, btGatt);
+				TLog.d("ccccc 接続要求OK->接続確立待ち. seekerid={0} address={1}", seekerid, btGatt.getDevice().getAddress());
+				/* TODO ******************/
+				TLog.d("ccccc 定期通知-this.2 arg(seekerid:{0})", seekerid);
+				for(short lpct = 0; lpct < 10; lpct++) {
+					String			laddress= mSeekerDevicesAddress .get(lpct);
+					BluetoothGatt	lgatt	= mSeekerDevicesGatt	.get(laddress);
+					Runnable		lfunc	= mSeekerDevicesReadProc.get(laddress);
+					if(laddress!=null || lgatt!=null || lfunc!=null)
+						TLog.d("ccccc     消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, laddress, lgatt, lfunc);
+				}
+				/* ******************/
+				/* TODO */TLog.d("経過時間:{0}ms", System.currentTimeMillis() - stime);
+				return UWS_NG_SUCCESS;
+			}
+		}
+		finally {
+			mLock.unlock();
 		}
 	}
 
