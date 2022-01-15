@@ -1,5 +1,7 @@
 package com.tks.uwsserverunit00.ui;
 
+import static com.tks.uwsserverunit00.Constants.d2Str;
+
 import java.util.HashMap;
 import java.util.Map;
 import androidx.core.app.ActivityCompat;
@@ -162,7 +164,7 @@ public class FragMap extends SupportMapFragment {
 		if (googleMap == null) return;
 
 		LatLng nowposgps = new LatLng(location.getLatitude(), location.getLongitude());
-		TLog.d("経度:{0} 緯度:{1}", location.getLatitude(), location.getLongitude());
+		TLog.d("経度:{0} 緯度:{1}", d2Str(location.getLatitude()), d2Str(location.getLongitude()));
 		TLog.d("拡縮 min:{0} max:{1}", googleMap.getMinZoomLevel(), googleMap.getMaxZoomLevel());
 
 		/* 現在地マーカ追加 */

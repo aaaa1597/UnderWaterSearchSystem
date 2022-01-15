@@ -2,6 +2,8 @@ package com.tks.uwsserverunit00.ui;
 
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.util.Log;
+
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
@@ -9,12 +11,15 @@ import com.tks.uwsserverunit00.DeviceInfo;
 import com.tks.uwsserverunit00.IUwsInfoCallback;
 import com.tks.uwsserverunit00.IUwsScanCallback;
 import com.tks.uwsserverunit00.IUwsServer;
+import com.tks.uwsserverunit00.IUwsSystemCallback;
 import com.tks.uwsserverunit00.TLog;
 import com.tks.uwsserverunit00.UwsInfo;
 
 import static com.tks.uwsserverunit00.Constants.UWS_NG_AIDL_REMOTE_ERROR;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_SUCCESS;
+import static com.tks.uwsserverunit00.Constants.d2Str;
 
+import java.text.MessageFormat;
 import java.util.List;
 
 public class FragBleViewModel extends ViewModel {
@@ -49,7 +54,13 @@ public class FragBleViewModel extends ViewModel {
 
 		/* BLE初期化 */
 		int ret;
-		try { ret = mUwsServiceIf.initBle(); }
+		try { ret = mUwsServiceIf.initBle(new IUwsSystemCallback.Stub() {
+						@Override
+						public boolean getStartStopStatus(int seekerid) {
+							return mDeviceListAdapter.getChecked((short)seekerid);
+						}
+					});
+		}
 		catch (RemoteException e) { e.printStackTrace(); return UWS_NG_AIDL_REMOTE_ERROR;}
 
 		if(ret != UWS_NG_SUCCESS)
@@ -116,12 +127,16 @@ public class FragBleViewModel extends ViewModel {
 	}
 
 	public void setChecked(short seekerid, boolean isChecked) {
-		new Thread(() -> {
-			/* メンバ選択Switchに設定 */
-			int idx = mDeviceListAdapter.setChecked(seekerid, isChecked);
-			/* メンバ選択Switch表示更新 */
-			mNotifyItemChanged.postValue(idx);
+		/* TODO */TLog.d("seekerid={0} isChecked={1}", seekerid, isChecked);
+		boolean nowStatus = mDeviceListAdapter.getChecked(seekerid);
+		if(nowStatus == isChecked) return;
+		/* TODO */TLog.d("seekerid={0} nowStatus:({1})->isChecked:({2})", seekerid, nowStatus, isChecked);
 
+		/* メンバ選択Switchに設定 */
+		int pos = mDeviceListAdapter.setChecked(seekerid, isChecked);
+		mNotifyItemChanged.postValue(pos);
+
+//		new Thread(() -> {
 			/* サービスに通知(開始/終了) */
 			int ret = UWS_NG_SUCCESS;
 			try {
@@ -131,6 +146,7 @@ public class FragBleViewModel extends ViewModel {
 							public void notifyUwsData(UwsInfo uwsInfo) {
 								int pos = mDeviceListAdapter.setUwsInfo(uwsInfo);
 								mNotifyItemChanged.postValue(pos);
+								TLog.d("UwsInfo受信({0} {1} {2} {3})", d2Str(uwsInfo.getDate()), d2Str(uwsInfo.getLongitude()), d2Str(uwsInfo.getLatitude()), uwsInfo.getHeartbeat());
 							}
 
 						@Override
@@ -143,7 +159,7 @@ public class FragBleViewModel extends ViewModel {
 			}
 			catch (RemoteException e) { e.printStackTrace(); ret = UWS_NG_AIDL_REMOTE_ERROR; }
 			TLog.d("ret={0}", ret);
-		}).start();
+//		}).start();
 	}
 
 	public void setBuoy(short seekerid, boolean isChecked) {

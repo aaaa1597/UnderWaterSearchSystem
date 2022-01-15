@@ -24,6 +24,7 @@ import com.tks.uwsserverunit00.R;
 import com.tks.uwsserverunit00.UwsInfo;
 
 import static com.tks.uwsserverunit00.Constants.UWS_NG_DEVICE_NOTFOUND;
+import static com.tks.uwsserverunit00.Constants.d2Str;
 
 /**
  * -30 dBm	素晴らしい	達成可能な最大信号強度。クライアントは、これを実現するには、APから僅か数フィートである必要があります。現実的には一般的ではなく、望ましいものでもありません	N/A
@@ -72,7 +73,6 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	private final Context					mContext;
 	private final OnCheckedChangeListener	mOnCheckedChangeListener;
 	private final OnSetBuoyListener			mOnSetBuoyListener;
-	private final SimpleDateFormat mDf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSSXXX", Locale.JAPAN);
 	public DeviceListAdapter(Context context, OnCheckedChangeListener lisner, OnSetBuoyListener lisner2) {
 		mContext				= context;
 		mOnCheckedChangeListener= lisner;
@@ -113,7 +113,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 								model.mDeviceRssi > -80 ? R.drawable.wifi_level_1 : R.drawable.wifi_level_0;
 		final int constsresid =	seekerid==-1			? R.drawable.statusx_na :
 								model.mSelected			? R.drawable.status5_ready : R.drawable.status0_none;
-		holder.mtxtDatetime.setText(mDf.format(model.mDatetime));
+		holder.mtxtDatetime.setText(d2Str(model.mDatetime));
 		holder.mTxtSeekerId.setText((seekerid==-1) ? " - " : String.valueOf(seekerid));
 		holder.mTxtDeviceName.setText(TextUtils.isEmpty(deviceName) ? "" : deviceName);
 		holder.mTxtDeviceNameAddress.setText(TextUtils.isEmpty(deviceAddress) ? "" : deviceAddress);
@@ -255,6 +255,11 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 
 		device.mSelected = isChecked;
 		return index.get();
+	}
+
+	public boolean getChecked(short seekerid) {
+		DevicveInfoModel device = mDeviceList.stream().filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
+		return (device==null) ? false : device.mSelected;
 	}
 
 	public void setBuoy(short seekerid, boolean isChecked) {

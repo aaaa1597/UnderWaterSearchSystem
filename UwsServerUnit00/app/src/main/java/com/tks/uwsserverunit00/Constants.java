@@ -3,6 +3,9 @@ package com.tks.uwsserverunit00;
 import android.bluetooth.BluetoothGatt;
 
 import java.text.MessageFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.UUID;
 
 public class Constants {
@@ -12,6 +15,7 @@ public class Constants {
 	public final static int 	UWS_OWNDATA_KEY			= 0xffff;
 	public final static double	UWS_LOC_BASE_DISTANCE_X = 40000*1000/*4万*1000m*/ * Math.cos(UWS_LOC_BASE_LATITUDE*180/Math.PI) / 360;	/* 小城消防署付近の経度1°当たりの距離[m] */
 	public final static double	UWS_LOC_BASE_DISTANCE_Y = 40000*1000/*4万*1000m*/ / 360.0;												/* 赤道     付近の経度1°当たりの距離[m] */
+	public final static int 	UWS_PERIODIC_POLING_TIME= 2000;	/* ms */
 
 	/* エラーコード */
 	public final static int UWS_NG_SUCCESS				= 0;	/* OK */
@@ -57,4 +61,17 @@ public class Constants {
 
 	/* 状態(サービス) */
 	public static final int UWS_SERVICE_STATUS_GATT_DISCONNECT = -1;	/* GATT切断 */
+
+	/* Log文字列 */
+	public static String d2Str(double val) {
+		return String.format(Locale.JAPAN, "%1$.12f", val);
+//		return String.format(Locale.JAPAN, "%.10f", val);
+	}
+	private final static SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSSXXX", Locale.JAPAN);
+	public static String d2Str(Date val) {
+		return df.format(val);
+	}
+	public static String d2Str(Long val) {
+		return df.format(new Date(val));
+	}
 }
