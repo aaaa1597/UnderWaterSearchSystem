@@ -427,6 +427,7 @@ public class UwsServerService extends Service {
 						TLog.d("ccccc     消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, laddress, lgatt, lfunc);
 				}
 				/* ******************/
+				gatt.close();
 			}
 		}
 
