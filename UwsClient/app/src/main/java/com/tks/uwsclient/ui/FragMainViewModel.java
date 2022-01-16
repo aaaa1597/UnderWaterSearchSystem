@@ -10,7 +10,9 @@ import androidx.lifecycle.ViewModel;
 import com.tks.uwsclient.Constants.Sender;
 import com.tks.uwsclient.IClientService;
 import com.tks.uwsclient.IOnStatusChangeListner;
+import com.tks.uwsclient.IOnUwsInfoListner;
 import com.tks.uwsclient.TLog;
+import com.tks.uwsclient.UwsInfo;
 
 public class FragMainViewModel extends ViewModel {
 	private final MutableLiveData<Double>					mLatitude		= new MutableLiveData<>(0.0);
@@ -72,11 +74,19 @@ public class FragMainViewModel extends ViewModel {
 	public void startUws(short seekerId) {
 		TLog.d("seekerid={0}", seekerId);
 		if(mClientServiceIf == null) return;
-		try { mClientServiceIf.startUws(seekerId, new IOnStatusChangeListner.Stub() {
-				@Override
-				public void OnStatusChange(int oldStatus, int newStatus) {
-				}
-			});
+		try { mClientServiceIf.startUws(seekerId, new IOnUwsInfoListner.Stub() {
+													@Override
+													public void onUwsInfoResult(UwsInfo uwsinfo) {
+														mLongitude.postValue(uwsinfo.getLogitude());
+														mLatitude .postValue(uwsinfo.getLatitude());
+														mHearBeat .postValue(uwsinfo.getHeartbeat());
+													}
+												},
+												new IOnStatusChangeListner.Stub() {
+													@Override
+													public void OnStatusChange(int oldStatus, int newStatus) {
+													}
+												});
 		}
 		catch (RemoteException e) { e.printStackTrace(); }
 	}

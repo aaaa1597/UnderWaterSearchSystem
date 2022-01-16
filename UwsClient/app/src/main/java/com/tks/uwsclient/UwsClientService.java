@@ -56,7 +56,8 @@ import static com.tks.uwsclient.Constants.d2Str;
 
 public class UwsClientService extends Service {
 	private int mStatus = SERVICE_STATUS_INITIALIZING;
-	private IOnStatusChangeListner mOnStatusChangeListner;
+	private IOnStatusChangeListner	mOnStatusChangeListner;
+	private IOnUwsInfoListner		mOnUwsInfoListner;
 
 	@Override
 	public void onCreate() {
@@ -88,10 +89,10 @@ public class UwsClientService extends Service {
 		}
 
 		@Override
-		public int startUws(int seekerid, IOnStatusChangeListner listner) {
+		public int startUws(int seekerid, IOnUwsInfoListner onUwsInfoListner, IOnStatusChangeListner listner) {
 			mStatus = SERVICE_STATUS_AD_LOC_BEAT;
 			TLog.d("seekerid={0}", seekerid);
-			uwsStart((short)seekerid, listner);
+			uwsStart((short)seekerid, onUwsInfoListner, listner);
 			return 0;
 		}
 
@@ -199,9 +200,10 @@ public class UwsClientService extends Service {
 	/* *************/
 	/* 開始/停止処理 */
 	/* *************/
-	private void uwsStart(short seekerid, IOnStatusChangeListner listner) {
+	private void uwsStart(short seekerid, IOnUwsInfoListner onUwsInfoResult, IOnStatusChangeListner listner) {
 		TLog.d("seekerid={0}", seekerid);
-		mOnStatusChangeListner = listner;
+		mOnStatusChangeListner	= listner;
+		mOnUwsInfoListner		= onUwsInfoResult;
 		/* 位置情報 取得開始 */
 		startLoc();
 		/* BLEアドバタイズ 開始 */
