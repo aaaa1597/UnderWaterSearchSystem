@@ -46,18 +46,18 @@ public class FragMapViewModel extends ViewModel {
 	static private int createColor(int cnt) {
 		int lcnt = cnt % 10;
 		switch(lcnt) {
-			case 0: return Color.rgb(127,  79,  33);
-			case 1: return Color.rgb(234,  44,  59);
-			case 2: return Color.rgb( 46, 167, 224);
+			case 0: return Color.rgb(  0,   0,   0);
+			case 1: return Color.rgb(127,  79,  33);
+			case 2: return Color.rgb(234,  44,  59);
 			case 3: return Color.rgb(255, 106,  54);
-			case 4: return Color.rgb( 73,  94, 159);
+			case 4: return Color.rgb(234, 190,  59);
 			case 5: return Color.rgb(  0, 145,  58);
-			case 6: return Color.rgb(149,  85, 170);
-			case 7: return Color.rgb(234, 190,  59);
-			case 8: return Color.rgb(121, 214,  56);
-			case 9: return Color.rgb(234, 62, 136);
+			case 6: return Color.rgb( 46, 167, 224);
+			case 7: return Color.rgb(149,  85, 170);
+			case 8: return Color.rgb(175, 175, 175);
+			case 9: return Color.rgb(255, 255, 255);
 			default:
-				return Color.rgb(234, 62, 136);
+				return Color.rgb(  0,   0,   0);
 		}
 	}
 
