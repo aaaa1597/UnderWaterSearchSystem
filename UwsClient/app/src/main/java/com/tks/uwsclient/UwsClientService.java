@@ -312,6 +312,12 @@ public class UwsClientService extends Service {
 	 * 自身のペリフェラル特性を定義
 	 * ***********************/
 	private BluetoothGattCharacteristic createOwnCharacteristic(int seekerid, BluetoothGattServer gattManager) {
+		BluetoothGattService old = gattManager.getService(UUID.fromString(Constants.createServiceUuid(seekerid)));
+		if(old != null) {
+			/* TODO */TLog.d("古いUUID-Serviceを削除={0}", old);
+			gattManager.removeService(old);
+		}
+
 		/* 自身が提供するサービスを定義 */
 		BluetoothGattService ownService = new BluetoothGattService(UUID.fromString(Constants.createServiceUuid(seekerid)), BluetoothGattService.SERVICE_TYPE_PRIMARY);
 
