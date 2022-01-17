@@ -179,7 +179,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 				return item.mDeviceAddress.equals(deviceInfo.getDeviceAddress());
 		}).findFirst().orElse(null);
 
-		boolean retNewDataFlg;
+		boolean retNewDataFlg = false;
 		if(device == null) {
 			/* 新規追加 */
 			retNewDataFlg = true;
@@ -248,13 +248,18 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		mDeviceList.removeIf(item -> item.mSeekerId == -1);
 	}
 
-	public int setChecked(short seekerid, boolean isChecked) {
+	public int setSelected(short seekerid, boolean isChecked) {
 		AtomicInteger index = new AtomicInteger(-1);
 		DevicveInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
 		if(device == null) return UWS_NG_DEVICE_NOTFOUND;	/* 対象外デバイスが存在しない。ありえないはず。 */
 
 		device.mSelected = isChecked;
 		return index.get();
+	}
+
+	public boolean isSelected(short seekerid) {
+		DevicveInfoModel device = mDeviceList.stream().filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
+		return (device!=null) && device.mSelected;
 	}
 
 	public boolean getChecked(short seekerid) {

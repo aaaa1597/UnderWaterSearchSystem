@@ -1,8 +1,6 @@
 package com.tks.uwsserverunit00.ui;
 
-import android.os.IBinder;
 import android.os.RemoteException;
-import android.util.Log;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -19,8 +17,7 @@ import static com.tks.uwsserverunit00.Constants.UWS_NG_AIDL_REMOTE_ERROR;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_SUCCESS;
 import static com.tks.uwsserverunit00.Constants.d2Str;
 
-import java.text.MessageFormat;
-import java.util.List;
+import java.util.Date;
 
 public class FragBleViewModel extends ViewModel {
 	private IUwsServer							mUwsServiceIf;
@@ -126,14 +123,14 @@ public class FragBleViewModel extends ViewModel {
 		mNotifyDataSetChanged.postValue(true);
 	}
 
-	public void setChecked(short seekerid, boolean isChecked) {
+	public void setSelected(short seekerid, boolean isChecked) {
 		/* TODO */TLog.d("seekerid={0} isChecked={1}", seekerid, isChecked);
 		boolean nowStatus = mDeviceListAdapter.getChecked(seekerid);
 		if(nowStatus == isChecked) return;
 		/* TODO */TLog.d("seekerid={0} nowStatus:({1})->isChecked:({2})", seekerid, nowStatus, isChecked);
 
 		/* メンバ選択Switchに設定 */
-		int pos = mDeviceListAdapter.setChecked(seekerid, isChecked);
+		int pos = mDeviceListAdapter.setSelected(seekerid, isChecked);
 		mNotifyItemChanged.postValue(pos);
 
 //		new Thread(() -> {

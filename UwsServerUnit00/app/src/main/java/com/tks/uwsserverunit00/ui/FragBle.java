@@ -46,8 +46,8 @@ public class FragBle extends Fragment {
 			mBleViewModel.getDeviceListAdapter().notifyItemChanged(pos);
 		});
 		mBleViewModel.setDeviceListAdapter(new DeviceListAdapter(getActivity().getApplicationContext(),
-															  (seekerid, isChecked) -> {mBleViewModel.setChecked(seekerid, isChecked);
-																						mMapViewModel.setChecked(seekerid, isChecked);},
+															  (seekerid, isChecked) -> {mBleViewModel.setSelected(seekerid, isChecked);
+																						mMapViewModel.setSelected(seekerid, isChecked);},
 															  (seekerid, isChecked) -> mBleViewModel.setBuoy(seekerid, isChecked)
 															));
 

@@ -7,6 +7,8 @@ import android.util.Pair;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.tks.uwsserverunit00.TLog;
+
 public class FragMapViewModel extends ViewModel {
 	/* Permission */
 	private final MutableLiveData<Boolean>	mPermission = new MutableLiveData<>(false);
@@ -15,7 +17,7 @@ public class FragMapViewModel extends ViewModel {
 	private final MutableLiveData<Pair<Short, Boolean>>	mSelectedSeeker = new MutableLiveData<>(Pair.create((short)-32768, false));
 	private final List<Pair<Short, Boolean>>			mSelectedSeekerList = new ArrayList<>();
 	public MutableLiveData<Pair<Short, Boolean>>		SelectedSeeker() { return mSelectedSeeker; }
-	public void setChecked(short seekerid, boolean isChecked) {
+	public void setSelected(short seekerid, boolean isChecked) {
 		Pair<Short, Boolean> findit = mSelectedSeekerList.stream().filter(item->item.first==seekerid).findAny().orElse(null);
 		if(findit==null) {
 			/* 新規追加 */
