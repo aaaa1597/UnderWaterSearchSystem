@@ -197,6 +197,10 @@ public class UwsServerService extends Service {
 			public void onScanResult(int callbackType, ScanResult result) {
 				super.onScanResult(callbackType, result);
 				DeviceInfo deviceInfo = parseScanResult(result);
+
+				/* クライアントの初回データは、位置情報未取得なのでmanufacturerデータが0になる、その対応 */
+				if(((int)deviceInfo.getLongitude()) == 0 || ((int)deviceInfo.getLatitude()) == 0)
+					return;
 //			TLog.d("発見!! {0}({1}):Rssi({2}) ScanRecord={3}", result.getDevice().getAddress(), result.getDevice().getName(), result.getRssi(), result.getScanRecord());
 				try { cb.notifyDeviceInfo(deviceInfo);}
 				catch (RemoteException e) {e.printStackTrace();}
