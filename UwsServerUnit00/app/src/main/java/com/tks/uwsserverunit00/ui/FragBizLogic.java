@@ -51,7 +51,8 @@ public class FragBizLogic extends Fragment {
 
 		/*　検索矩形の塗りつぶし色変更 */
 		view.findViewById(R.id.btnCngSerchColor).setOnClickListener(v -> {
-			mMapLogicViewModel.incrementFillColorCnt();
+			int colidx = mMapLogicViewModel.incrementFillColorCnt();
+			((Button)view.findViewById(R.id.btnCngSerchColor)).setTextColor((colidx==9)?0xff000000 : 0xffffffff);
 			view.findViewById(R.id.btnCngSerchColor).setBackgroundColor(mMapLogicViewModel.getFillColor());
 		});
 	}

@@ -9,12 +9,12 @@ import java.util.List;
 
 public class FragMapViewModel extends ViewModel {
 	/* Permission */
-	private final MutableLiveData<Boolean> mPermission = new MutableLiveData<>(false);
-	public MutableLiveData<Boolean> Permission() { return mPermission; }
+	private final MutableLiveData<Boolean>	mPermission = new MutableLiveData<>(false);
+	public MutableLiveData<Boolean>			Permission() { return mPermission; }
 	/* Selected Seeker */
 	private final MutableLiveData<Pair<Short, Boolean>>	mSelectedSeeker = new MutableLiveData<>(Pair.create((short)-32768, false));
 	private final List<Pair<Short, Boolean>>			mSelectedSeekerList = new ArrayList<>();
-	public MutableLiveData<Pair<Short, Boolean>> SelectedSeeker() { return mSelectedSeeker; }
+	public MutableLiveData<Pair<Short, Boolean>>		SelectedSeeker() { return mSelectedSeeker; }
 	public void setChecked(short seekerid, boolean isChecked) {
 		Pair<Short, Boolean> findit = mSelectedSeekerList.stream().filter(item->item.first==seekerid).findAny().orElse(null);
 		if(findit==null) {
@@ -36,16 +36,17 @@ public class FragMapViewModel extends ViewModel {
 
 
 	/* Change Fill Color */
-	private int mFillColorCnt = -1;
+	private int mFillColorCnt = 0;
 	/* 塗りつぶし色カウンタ */
-	public void incrementFillColorCnt() {
+	public int incrementFillColorCnt() {
 		mFillColorCnt++;
+		mFillColorCnt%=10;
+		return mFillColorCnt;
 	}
 
 	/* 塗りつぶし色生成 */
 	static private int createColor(int cnt) {
-		int lcnt = cnt % 10;
-		switch(lcnt) {
+		switch(cnt) {
 			case 0: return Color.rgb(  0,   0,   0);
 			case 1: return Color.rgb(127,  79,  33);
 			case 2: return Color.rgb(234,  44,  59);
@@ -54,8 +55,8 @@ public class FragMapViewModel extends ViewModel {
 			case 5: return Color.rgb(  0, 145,  58);
 			case 6: return Color.rgb( 46, 167, 224);
 			case 7: return Color.rgb(149,  85, 170);
-			case 8: return Color.rgb(175, 175, 175);
-			case 9: return Color.rgb(255, 255, 255);
+			case 8: return Color.rgb(128, 128, 128);
+			case 9: return Color.rgb(240, 240, 240);
 			default:
 				return Color.rgb(  0,   0,   0);
 		}
