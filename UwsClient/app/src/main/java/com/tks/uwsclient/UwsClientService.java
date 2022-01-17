@@ -33,6 +33,7 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.RemoteException;
 import android.widget.RemoteViews;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -294,6 +295,8 @@ public class UwsClientService extends Service {
 				/* 新データでアドバタイズ開始 */
 				AdvertiseSettings settings	= buildAdvertiseSettings();
 				AdvertiseData data			= buildAdvertiseData((float)mLongitude, (float)mLatitude, mHeartbeat);
+				try { mOnUwsInfoListner.onUwsInfoResult(new UwsInfo(mLongitude, mLatitude, mHeartbeat)); }
+				catch(RemoteException ignored) { }
 				mBluetoothLeAdvertiser.startAdvertising(settings, data, mAdvertiseCallback);
 
 				/* 3秒後再開 */
