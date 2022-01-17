@@ -161,7 +161,11 @@ public class UwsServerService extends Service {
 			heartbeat	= ByteBuffer.wrap(rcvdata).getShort(9);
 		}
 
-		TLog.d("scanデータ=({0} {1}({2}):{3} 経度:{4} 緯度:{5} 脈拍:{6})", nowtime, address, name, seekerid, d2Str(longitude), d2Str(latitude), heartbeat);
+		/* TODO 削除予定 */
+		if(seekerid==-1)
+			TLog.d("scanデータ=({0} {1}({2}):{3} 経度:0 緯度:0 脈拍:0)", nowtime, address, name, seekerid);
+		else
+			TLog.d("scanデータ=({0} {1}({2}):{3} 経度:{4} 緯度:{5} 脈拍:{6})", nowtime, address, name, seekerid, d2Str(longitude), d2Str(latitude), heartbeat);
 		return new DeviceInfo(nowtime, seekerid, name, address, rssi, seqno, longitude, latitude, heartbeat);
 	}
 
