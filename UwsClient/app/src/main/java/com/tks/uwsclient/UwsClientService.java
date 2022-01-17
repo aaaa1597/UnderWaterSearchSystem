@@ -451,6 +451,8 @@ public class UwsClientService extends Service {
 				double latitude = mLatitude;
 				int heartbeat = mHeartbeat;
 				setValuetoCharacteristic(characteristic, new Date(),  longitude, latitude,  heartbeat);
+				try { mOnUwsInfoListner.onUwsInfoResult(new UwsInfo(mLongitude, mLatitude, mHeartbeat)); }
+				catch(RemoteException ignored) { }
 			}
 			/* 分割送信処理対応 */
 			byte[] resData = new byte[characteristic.getValue().length-offset];
