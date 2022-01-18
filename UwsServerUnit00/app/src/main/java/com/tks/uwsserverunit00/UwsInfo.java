@@ -2,7 +2,6 @@ package com.tks.uwsserverunit00;
 
 import android.os.Parcel;
 import android.os.Parcelable;
-
 import java.util.Date;
 
 public class UwsInfo implements Parcelable {
@@ -11,6 +10,14 @@ public class UwsInfo implements Parcelable {
 	private final double	mLongitude;
 	private final double	mLatitude;
 	private final short		mHeartbeat;
+
+	public UwsInfo(DeviceInfo deviceInfo) {
+		mDatetime		= deviceInfo.getDate();
+		mSeekerId		= deviceInfo.getSeekerId();
+		mLongitude		= deviceInfo.getLongitude();
+		mLatitude		= deviceInfo.getLatitude();
+		mHeartbeat		= deviceInfo.getHeartbeat();
+	}
 
 	public UwsInfo(Date datetime, short seekerid, double longitude, double latitude, short heartbeat) {
 		mDatetime		= datetime;

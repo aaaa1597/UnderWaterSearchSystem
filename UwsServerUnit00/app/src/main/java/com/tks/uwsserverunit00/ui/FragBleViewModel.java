@@ -17,8 +17,6 @@ import static com.tks.uwsserverunit00.Constants.UWS_NG_AIDL_REMOTE_ERROR;
 import static com.tks.uwsserverunit00.Constants.UWS_NG_SUCCESS;
 import static com.tks.uwsserverunit00.Constants.d2Str;
 
-import java.util.Date;
-
 public class FragBleViewModel extends ViewModel {
 	private IUwsServer							mUwsServiceIf;
 	/* ---------------- */
@@ -36,8 +34,8 @@ public class FragBleViewModel extends ViewModel {
 	public void									setDeviceListAdapter(DeviceListAdapter adapter)	{ mDeviceListAdapter = adapter; }
 	public DeviceListAdapter					getDeviceListAdapter()	{ return mDeviceListAdapter; }
 	/* ---------------- */
-	private final MutableLiveData<DeviceInfo>	mNewDeviceInfo			= new MutableLiveData<>(null);
-	public MutableLiveData<DeviceInfo>			NewDeviceInfo()			{ return mNewDeviceInfo; }
+	private final MutableLiveData<UwsInfo>		mUpdUwsInfo				= new MutableLiveData<>(null);
+	public MutableLiveData<UwsInfo>				UpdUwsInfo()			{ return mUpdUwsInfo; }
 	/* ---------------- */
 	private final MutableLiveData<Boolean>		mOnlySeeker				= new MutableLiveData<>(true);
 	public MutableLiveData<Boolean>				OnlySeeker()			{ return mOnlySeeker; }
@@ -67,10 +65,11 @@ public class FragBleViewModel extends ViewModel {
 		int retscan = startScan(new IUwsScanCallback.Stub() {
 			@Override
 			public void notifyDeviceInfo(DeviceInfo device) {
-				boolean newDataFlg = mDeviceListAdapter.addDevice(device, mOnlySeeker.getValue());
-				mNotifyDataSetChanged.postValue(true);
-				if(newDataFlg && device.getSeekerId()!=-1)
-					mNewDeviceInfo.postValue(device);
+				int pos = mDeviceListAdapter.updDeviceInfo(device, mOnlySeeker.getValue());
+				if(pos >= 0)
+					mNotifyDataSetChanged.postValue(true);
+				if(device.getSeekerId()!=-1)
+					mUpdUwsInfo.postValue(new UwsInfo(device));
 			}
 		});
 		TLog.d("scan開始 ret={0}", retscan);
@@ -98,7 +97,7 @@ public class FragBleViewModel extends ViewModel {
 		if(ret != UWS_NG_SUCCESS)
 			return ret;
 
-		mDeviceListAdapter.clearDevice();
+		mDeviceListAdapter.clearDeviceInfo();
 		mNotifyDataSetChanged.postValue(true);
 
 		return UWS_NG_SUCCESS;
@@ -114,7 +113,7 @@ public class FragBleViewModel extends ViewModel {
 	}
 
 	public void clearAll() {
-		mDeviceListAdapter.clearDevice();
+		mDeviceListAdapter.clearDeviceInfo();
 		mNotifyDataSetChanged.postValue(true);
 	}
 
@@ -133,30 +132,29 @@ public class FragBleViewModel extends ViewModel {
 		int pos = mDeviceListAdapter.setSelected(seekerid, isChecked);
 		mNotifyItemChanged.postValue(pos);
 
-//		new Thread(() -> {
-			/* サービスに通知(開始/終了) */
-			int ret = UWS_NG_SUCCESS;
-			try {
-				if(isChecked)
-					ret = mUwsServiceIf.startPeriodicNotify(seekerid, new IUwsInfoCallback.Stub() {
-							@Override
-							public void notifyUwsData(UwsInfo uwsInfo) {
-								int pos = mDeviceListAdapter.setUwsInfo(uwsInfo);
-								mNotifyItemChanged.postValue(pos);
-								TLog.d("UwsInfo受信({0} {1} {2} {3})", d2Str(uwsInfo.getDate()), d2Str(uwsInfo.getLongitude()), d2Str(uwsInfo.getLatitude()), uwsInfo.getHeartbeat());
-							}
-
+		/* サービスに通知(開始/終了) */
+		int ret = UWS_NG_SUCCESS;
+		try {
+			if(isChecked)
+				ret = mUwsServiceIf.startPeriodicNotify(seekerid, new IUwsInfoCallback.Stub() {
 						@Override
-						public void notifyStatus(int status) {
-							/* TODO 要実装 */
+						public void notifyUwsData(UwsInfo uwsInfo) {
+							int pos = mDeviceListAdapter.updDeviceInfo(uwsInfo);
+							mNotifyItemChanged.postValue(pos);
+							mUpdUwsInfo.postValue(uwsInfo);
+							TLog.d("UwsInfo受信({0} {1} {2} {3})", d2Str(uwsInfo.getDate()), d2Str(uwsInfo.getLongitude()), d2Str(uwsInfo.getLatitude()), uwsInfo.getHeartbeat());
 						}
-					});
-				else
-					mUwsServiceIf.stopPeriodicNotify(seekerid);
-			}
-			catch (RemoteException e) { e.printStackTrace(); ret = UWS_NG_AIDL_REMOTE_ERROR; }
-			TLog.d("ret={0}", ret);
-//		}).start();
+
+					@Override
+					public void notifyStatus(int status) {
+						/* TODO 要実装 */
+					}
+				});
+			else
+				mUwsServiceIf.stopPeriodicNotify(seekerid);
+		}
+		catch (RemoteException e) { e.printStackTrace(); ret = UWS_NG_AIDL_REMOTE_ERROR; }
+		TLog.d("ret={0}", ret);
 	}
 
 	public void setBuoy(short seekerid, boolean isChecked) {

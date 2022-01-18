@@ -45,6 +45,7 @@ import com.google.android.gms.maps.model.PolygonOptions;
 import com.tks.uwsserverunit00.DeviceInfo;
 import com.tks.uwsserverunit00.R;
 import com.tks.uwsserverunit00.TLog;
+import com.tks.uwsserverunit00.UwsInfo;
 
 public class FragMap extends SupportMapFragment {
 	private final short						BASE_COMMANDER_LOCATION_IDX = 9999;
@@ -75,12 +76,9 @@ public class FragMap extends SupportMapFragment {
 		mBizLogicViewModel = new ViewModelProvider(requireActivity()).get(FragBizLogicViewModel.class);
 
 		mBleViewModel = new ViewModelProvider(requireActivity()).get(FragBleViewModel.class);
-		mBleViewModel.NewDeviceInfo().observe(getViewLifecycleOwner(), deviceInfo -> {
-			if(deviceInfo==null) return;
-			MapDrawInfo si = mMapDrawInfos.get(deviceInfo.getSeekerId());
-			if(si != null)
-				si.pos = new LatLng(deviceInfo.getLatitude(), deviceInfo.getLongitude());
-			updMapDrawInfo(mGoogleMap, mMapDrawInfos, deviceInfo);
+		mBleViewModel.UpdUwsInfo().observe(getViewLifecycleOwner(), uwsInfo -> {
+			if(uwsInfo==null) return;
+			updMapDrawInfo(mGoogleMap, mMapDrawInfos, uwsInfo);
 		});
 
 		mMapViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
@@ -222,22 +220,22 @@ public class FragMap extends SupportMapFragment {
 	}
 
 	/* Map用描画情報 表示 */
-	private void updMapDrawInfo(GoogleMap googleMap, Map<Short, MapDrawInfo> mdList, DeviceInfo deviceInfo) {
-		short seekerid = deviceInfo.getSeekerId();
+	private void updMapDrawInfo(GoogleMap googleMap, Map<Short, MapDrawInfo> mdList, UwsInfo uwsInfo) {
+		short seekerid = uwsInfo.getSeekerId();
 		if(seekerid < 0) {
-			TLog.d("対象外エントリ.何もしない.info({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7})", deviceInfo.getDate(), deviceInfo.getSeekerId(), deviceInfo.getSeqNo(), deviceInfo.getDeviceName(), deviceInfo.getDeviceAddress(), deviceInfo.getLongitude(), deviceInfo.getLatitude(), deviceInfo.getHeartbeat());
+			TLog.d("対象外エントリ.何もしない.uwsinfo({0}, {1}, {2}, {3}, {4})", uwsInfo.getDate(), uwsInfo.getSeekerId(), uwsInfo.getLongitude(), uwsInfo.getLatitude(), uwsInfo.getHeartbeat());
 			return;
 		}
 
 		MapDrawInfo drawinfo = mdList.get(seekerid);
 		if(drawinfo == null) {
 			/* 新規追加 */
-			LatLng nowposgps = new LatLng(deviceInfo.getLatitude(), deviceInfo.getLongitude());
+			LatLng nowposgps = new LatLng(uwsInfo.getLatitude(), uwsInfo.getLongitude());
 			if(mBleViewModel.getDeviceListAdapter().isSelected(seekerid)/*選択中*/) {
 				Marker marker = googleMap.addMarker(new MarkerOptions()
 						.position(nowposgps)
 						.title(String.valueOf(seekerid))
-						.icon(createIcon(deviceInfo.getSeekerId())));
+						.icon(createIcon(uwsInfo.getSeekerId())));
 
 				Circle nowPoint = googleMap.addCircle(new CircleOptions()
 						.center(nowposgps)
@@ -254,7 +252,7 @@ public class FragMap extends SupportMapFragment {
 		else {
 			/* 位置更新 */
 			LatLng spos = drawinfo.pos;
-			LatLng epos = new LatLng(deviceInfo.getLatitude(), deviceInfo.getLongitude());
+			LatLng epos = new LatLng(uwsInfo.getLatitude(), uwsInfo.getLongitude());
 			drawinfo.pos = epos;
 			double dx = epos.longitude- spos.longitude;
 			double dy = epos.latitude - spos.latitude;
@@ -275,11 +273,11 @@ public class FragMap extends SupportMapFragment {
 //				drawinfo.polygon.remove();
 //				drawinfo.polygon = null;
 //			}
-			if(mBleViewModel.getDeviceListAdapter().isSelected(deviceInfo.getSeekerId())/*選抜中*/) {
+			if(mBleViewModel.getDeviceListAdapter().isSelected(uwsInfo.getSeekerId())/*選抜中*/) {
 				Marker marker = googleMap.addMarker(new MarkerOptions()
 						.position(epos)
 						.title(String.valueOf(seekerid))
-						.icon(createIcon(deviceInfo.getSeekerId())));
+						.icon(createIcon(uwsInfo.getSeekerId())));
 				Circle nowPoint = googleMap.addCircle(new CircleOptions()
 						.center(epos)
 						.radius(0.5)
