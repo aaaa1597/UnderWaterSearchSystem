@@ -13,6 +13,7 @@ import androidx.lifecycle.ViewModelProvider;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.location.Location;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
@@ -302,66 +303,35 @@ public class FragMap extends SupportMapFragment {
 	}
 
 	private LatLng[] createSquare(final LatLng spos, final LatLng epos, final double BASE_DISTANCE_X, final double BASE_DISTANCE_Y) {
-		/* 0.準備 */
-		double dx = epos.longitude- spos.longitude;
-		double dy = epos.latitude - spos.latitude;
-		TLog.d("0.準備 dx={0} dy={1}", String.format(Locale.JAPAN, "%.10f", dx), String.format(Locale.JAPAN, "%.10f", dy));
+		/* 0-1.前準備 検索線分の角度(degrees)を求める */
+		double dx = epos.longitude* (BASE_DISTANCE_X/100000) - spos.longitude* (BASE_DISTANCE_X/100000);
+		double dy = epos.latitude * (BASE_DISTANCE_Y/100000) - spos.latitude * (BASE_DISTANCE_Y/100000);
+		double degrees = Math.atan2(dy, dx) * 180 / Math.PI;
 
-////		/* 1.傾きを求める */
-////		double slope = dy / dx;
-////		TLog.d("1.傾きを求める slope={0}", String.format(Locale.JAPAN, "%.10f", slope));
-////
-////		/* 2.直行線分の傾きを求める */
-////		double rslope = -1 / slope;
-////		TLog.d("2.直行線分の傾きを求める rslope={0}", String.format(Locale.JAPAN, "%.10f", rslope));
-//
-//		/* 3.直行線分の傾きの角度(rad)を求める */
-//		double rdegree = Math.atan2(dx, -dy);	/* 直交座標なので反転(xy入替え)する */
-//		TLog.d("3.直行線分の傾きの角度(°)を求める rdegree={0}", String.format(Locale.JAPAN, "%.10f", rdegree));
-//
-//		/* 4. 50cmをx,y成分に分ける1 x成分を求める */
-//		double newdx = 50/*cm*/ * Math.cos(rdegree);	/* 引数はすでにrad. */
-//		TLog.d("4. 50cmをx,y成分に分ける1 x成分を求める newdx={0}", String.format(Locale.JAPAN, "%.10f", newdx));
-//
-//		/* 5. 50cmをx,y成分に分ける2 y成分を求める */
-//		double newdy = 50/*cm*/ * Math.sin(rdegree);	/* 引数はすでにrad. */
-//		TLog.d("5. 50cmをx,y成分に分ける2 y成分を求める newdy={0}", String.format(Locale.JAPAN, "%.10f", newdy));
-//
-//		/* 6. x成分を度分秒に変換 */
-//		double difflng = newdx * (1/(BASE_DISTANCE_X*100));
-//		TLog.d("6. x成分を度分秒に変換 difflng={0}", String.format(Locale.JAPAN, "%.10f", difflng));
-//
-//		/* 7. y成分を度分秒に変換 */
-//		double difflat = newdx * (1/(BASE_DISTANCE_Y*100));
-//		TLog.d("7. y成分を度分秒に変換 difflat={0}", String.format(Locale.JAPAN, "%.10f", difflat));
-//
-//		/* 8. (左上/右上/左下/右下) 経度/緯度を算出 */
-//		LatLng ltpos, rtpos, lbpos, rbpos;
-//		if( (epos.longitude-spos.longitude > 0 && epos.latitude-spos.latitude > 0) ||	/* 第1象限 or */
-//				(epos.longitude-spos.longitude < 0 && epos.latitude-spos.latitude < 0)) {	/* 第3象限 */
-//			ltpos = new LatLng(spos.latitude-difflat, spos.longitude+difflng);
-//			rtpos = new LatLng(epos.latitude-difflat, epos.longitude+difflng);
-//			lbpos = new LatLng(spos.latitude+difflat, spos.longitude-difflng);
-//			rbpos = new LatLng(epos.latitude+difflat, epos.longitude-difflng);
-//		}
-//		else {
-//			/* 第2象限 or 第4象限 */
-//			ltpos = new LatLng(spos.latitude-difflat, spos.longitude-difflng);
-//			rtpos = new LatLng(epos.latitude-difflat, epos.longitude-difflng);
-//			lbpos = new LatLng(spos.latitude+difflat, spos.longitude+difflng);
-//			rbpos = new LatLng(epos.latitude+difflat, epos.longitude+difflng);
-//		}
-//
-//		TLog.d("8. 完成 左上=({0})", String.format(Locale.JAPAN, "%.10f,%.10f", ltpos.latitude, ltpos.longitude));
-//		TLog.d("8. 完成 右上=({0})", String.format(Locale.JAPAN, "%.10f,%.10f", rtpos.latitude, rtpos.longitude));
-//		TLog.d("8. 完成 左下=({0})", String.format(Locale.JAPAN, "%.10f,%.10f", lbpos.latitude, lbpos.longitude));
-//		TLog.d("8. 完成 右下=({0})", String.format(Locale.JAPAN, "%.10f,%.10f", rbpos.latitude, rbpos.longitude));
+		/* 0-2.前準備 行列生成 */
+		Matrix mat = new Matrix();
+		mat.reset();
 
-		LatLng ltpos, rtpos, lbpos, rbpos;
-		ltpos = new LatLng(spos.latitude, spos.longitude);
-		rtpos = new LatLng(epos.latitude, epos.longitude);
-		lbpos = new LatLng(spos.latitude, spos.longitude);
-		rbpos = new LatLng(epos.latitude, epos.longitude);
+		/* 1.単位変換適用(cm座標系 → 度分秒座標系) */
+		mat.postScale((float)(1/(BASE_DISTANCE_X*100)), (float)(1/(BASE_DISTANCE_Y*100)));
+
+		/* 2.回転適用(検索線分の角度) */
+		mat.postRotate((float)degrees);
+
+		float[] src4vertex = {/*右上*/50,50,/*右下*/50,-50,/*左上*/-50,50,/*左下*/-50,-50};
+		float[] dst4vertex = new float[src4vertex.length];
+		mat.mapPoints(dst4vertex, src4vertex);
+
+		TLog.d("完成2 右上:\n{0},{1}\n右下:\n{2},{3}\n左上:\n{4},{5}\n左下:\n{6},{7}\n",
+				d2Str(epos.latitude+dst4vertex[1]), d2Str(epos.longitude+dst4vertex[0]),
+				d2Str(epos.latitude+dst4vertex[3]), d2Str(epos.longitude+dst4vertex[2]),
+				d2Str(spos.latitude+dst4vertex[5]), d2Str(spos.longitude+dst4vertex[4]),
+				d2Str(spos.latitude+dst4vertex[7]), d2Str(spos.longitude+dst4vertex[6]));
+
+		LatLng ltpos = new LatLng(epos.latitude+dst4vertex[1], epos.longitude+dst4vertex[0]);
+		LatLng rtpos = new LatLng(epos.latitude+dst4vertex[3], epos.longitude+dst4vertex[2]);
+		LatLng lbpos = new LatLng(spos.latitude+dst4vertex[5], spos.longitude+dst4vertex[4]);
+		LatLng rbpos = new LatLng(spos.latitude+dst4vertex[7], spos.longitude+dst4vertex[6]);
 		return new LatLng[]{ltpos, rtpos, lbpos, rbpos};
 	}
 }
