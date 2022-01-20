@@ -1,24 +1,30 @@
 package com.tks.uwsclientwearos.ui;
 
+import android.os.RemoteException;
+import android.util.Pair;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
-
 import java.util.Date;
 
+import com.tks.uwsclientwearos.IClientService;
+import com.tks.uwsclientwearos.IOnStatusChangeListner;
+import com.tks.uwsclientwearos.IOnUwsInfoListner;
+import com.tks.uwsclientwearos.Constants.Sender;
+import com.tks.uwsclientwearos.TLog;
+import com.tks.uwsclientwearos.UwsInfo;
+
 public class FragMainViewModel extends ViewModel {
-	private final MutableLiveData<Double>			mLatitude		= new MutableLiveData<>(0.0);
-	private final MutableLiveData<Double>			mLongitude		= new MutableLiveData<>(0.0);
-	private final MutableLiveData<Short>			mHearBeat		= new MutableLiveData<>((short)0);
-	private final MutableLiveData<Boolean>			mUnLock			= new MutableLiveData<>(true);
-	private final MutableLiveData<ConnectStatus>	mStatus			= new MutableLiveData<>(ConnectStatus.NONE);
-	private final Date								mStartTime		= new Date();
-	public MutableLiveData<Double>			Latitude()		{ return mLatitude; }
-	public MutableLiveData<Double>			Longitude()		{ return mLongitude; }
-	public MutableLiveData<Short>			HearBeat()		{ return mHearBeat; }
-	public MutableLiveData<Boolean>			UnLock()		{ return mUnLock; }
-	public MutableLiveData<ConnectStatus>	ConnectStatus()	{ return mStatus; }
-	public Date								getStartTime()	{ return mStartTime; }
+	private final MutableLiveData<Double>					mLatitude		= new MutableLiveData<>(0.0);
+	private final MutableLiveData<Double>					mLongitude		= new MutableLiveData<>(0.0);
+	private final MutableLiveData<Short>					mHearBeat		= new MutableLiveData<>((short)0);
+	private final MutableLiveData<Pair<Sender, Boolean>>	mUnLock			= new MutableLiveData<>(Pair.create(Sender.App, true));
+	private final MutableLiveData<ConnectStatus>			mStatus			= new MutableLiveData<>(ConnectStatus.NONE);
+	public MutableLiveData<Double>					Latitude()		{ return mLatitude; }
+	public MutableLiveData<Double>					Longitude()		{ return mLongitude; }
+	public MutableLiveData<Short>					HearBeat()		{ return mHearBeat; }
+	public MutableLiveData<Pair<Sender, Boolean>>	UnLock()		{ return mUnLock; }
+	public MutableLiveData<ConnectStatus>			ConnectStatus()	{ return mStatus; }
 
 	public enum ConnectStatus {
 		NONE,
@@ -32,9 +38,10 @@ public class FragMainViewModel extends ViewModel {
 
 	private final MutableLiveData<Boolean>	mAdvertisingFlg	= new MutableLiveData<>(false);
 	public MutableLiveData<Boolean>			AdvertisingFlg()	{ return mAdvertisingFlg; }
-	private int		mSeekerID		= 0;
-	public void		setSeekerID(int id)	{ mSeekerID = id; }
-	public int		getSeekerID()		{ return mSeekerID; }
+	private short	mSeekerId = 0;
+	public void		setSeekerId(short id)	{ mSeekerId = id; }
+	public short	getSeekerId()			{ return mSeekerId; }
+	public MutableLiveData<Object>			UpdDisplaySeerkerId = new MutableLiveData<>();
 
 	private final MutableLiveData<String>	mShowSnacbar			= new MutableLiveData<>();
 	public LiveData<String>					ShowSnacbar()			{ return mShowSnacbar; }
@@ -47,4 +54,44 @@ public class FragMainViewModel extends ViewModel {
 	 *  Location
 	 *  ********/
 	public boolean mIsSetedLocationON = false;
+
+	IClientService mClientServiceIf;
+	public void setClientServiceIf(IClientService serviceIf) {
+		mClientServiceIf = serviceIf;
+	}
+
+	public void setSeekerIdSmoothScrollToPosition(short seekerId) {
+		mSeekerId = seekerId;
+		UpdDisplaySeerkerId.postValue(seekerId);
+	}
+
+	/* ****************************/
+	/* 業務プロセス(BLE,位置情報,脈拍) */
+	/* ****************************/
+	/* 開始 */
+	public void startUws(short seekerId) {
+		TLog.d("seekerid={0}", seekerId);
+		if(mClientServiceIf == null) return;
+		try { mClientServiceIf.startUws(seekerId, new IOnUwsInfoListner.Stub() {
+													@Override
+													public void onUwsInfoResult(UwsInfo uwsinfo) {
+														mLongitude.postValue(uwsinfo.getLogitude());
+														mLatitude .postValue(uwsinfo.getLatitude());
+														mHearBeat .postValue(uwsinfo.getHeartbeat());
+													}
+												},
+												new IOnStatusChangeListner.Stub() {
+													@Override
+													public void OnStatusChange(int oldStatus, int newStatus) {
+													}
+												});
+		}
+		catch (RemoteException e) { e.printStackTrace(); }
+	}
+	/* 終了 */
+	public void stopUws() {
+		if(mClientServiceIf == null) return;
+		try { mClientServiceIf.stopUws(); }
+		catch (RemoteException e) { e.printStackTrace(); }
+	}
 }
