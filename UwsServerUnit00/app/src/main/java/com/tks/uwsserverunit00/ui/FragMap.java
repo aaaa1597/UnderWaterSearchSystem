@@ -293,8 +293,9 @@ public class FragMap extends SupportMapFragment {
 				if(mBizLogicViewModel.getSerchStatus()/*検索中*/) {
 					/* 矩形追加 */
 					Polygon polygon = googleMap.addPolygon(new PolygonOptions()
-							.fillColor(Color.CYAN)
+							.fillColor(mMapViewModel.getFillColor())
 							.strokeColor(Color.BLUE)
+							.strokeWidth(1)
 							.add(square[0], square[1], square[3], square[2]));
 					drawinfo.polygon = polygon;
 				}
@@ -318,16 +319,12 @@ public class FragMap extends SupportMapFragment {
 		/* 2.回転適用(検索線分の角度) */
 		mat.postRotate((float)degrees);
 
+		/* 3.ひとまず四隅の頂点offsetを求める */
 		float[] src4vertex = {/*右上*/50,50,/*右下*/50,-50,/*左上*/-50,50,/*左下*/-50,-50};
 		float[] dst4vertex = new float[src4vertex.length];
 		mat.mapPoints(dst4vertex, src4vertex);
 
-		TLog.d("完成2 右上:\n{0},{1}\n右下:\n{2},{3}\n左上:\n{4},{5}\n左下:\n{6},{7}\n",
-				d2Str(epos.latitude+dst4vertex[1]), d2Str(epos.longitude+dst4vertex[0]),
-				d2Str(epos.latitude+dst4vertex[3]), d2Str(epos.longitude+dst4vertex[2]),
-				d2Str(spos.latitude+dst4vertex[5]), d2Str(spos.longitude+dst4vertex[4]),
-				d2Str(spos.latitude+dst4vertex[7]), d2Str(spos.longitude+dst4vertex[6]));
-
+		/* 4.開始点/終了点にoffsetを加算して完成 */
 		LatLng ltpos = new LatLng(epos.latitude+dst4vertex[1], epos.longitude+dst4vertex[0]);
 		LatLng rtpos = new LatLng(epos.latitude+dst4vertex[3], epos.longitude+dst4vertex[2]);
 		LatLng lbpos = new LatLng(spos.latitude+dst4vertex[5], spos.longitude+dst4vertex[4]);
