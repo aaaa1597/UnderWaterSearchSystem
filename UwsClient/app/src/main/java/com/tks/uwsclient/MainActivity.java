@@ -48,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-		TLog.d("xxxxx MainActivity.class={0}", MainActivity.class);
+		TLog.d("MainActivity.class={0}", MainActivity.class);
 
 		/* ViewModelインスタンス取得 */
 		mViewModel = new ViewModelProvider(this).get(FragMainViewModel.class);

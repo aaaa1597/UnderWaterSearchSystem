@@ -30,7 +30,7 @@ public class FragMainViewModel extends ViewModel {
 		NONE,
 		SETTING_ID,		/* ID設定中 */
 		START_ADVERTISE,/* アドバタイズ開始 */
-		ADVERTISING,	/* アドバタイズ中... 接続開始 */
+		ADVERTISING,	/* アドバタイズ中... */
 		CONNECTED,		/* 接続確立 */
 		DISCONNECTED,	/* 接続断 */
 		ERROR,			/* エラー発生!! */
@@ -39,10 +39,8 @@ public class FragMainViewModel extends ViewModel {
 	private final MutableLiveData<Boolean>	mAdvertisingFlg	= new MutableLiveData<>(false);
 	public MutableLiveData<Boolean>			AdvertisingFlg()	{ return mAdvertisingFlg; }
 	private short	mSeekerId = 0;
-	public void		setSeekerId(short id)	{
-		/*TODO*/TLog.d("mSeekerId={0}", id); mSeekerId = id; }
-	public short	getSeekerId()			{
-		/*TODO*/TLog.d("mSeekerId={0}", mSeekerId); return mSeekerId; }
+	public void		setSeekerId(short id)	{ mSeekerId = id; }
+	public short	getSeekerId()			{ return mSeekerId; }
 	public MutableLiveData<Object>			UpdDisplaySeerkerId = new MutableLiveData<>();
 
 	private final MutableLiveData<String>	mShowSnacbar			= new MutableLiveData<>();
@@ -96,5 +94,4 @@ public class FragMainViewModel extends ViewModel {
 		try { mClientServiceIf.stopUws(); }
 		catch (RemoteException e) { e.printStackTrace(); }
 	}
-
 }

@@ -263,7 +263,7 @@ public class UwsClientService extends Service {
 	/* ********/
 	private short						mSeekerId = -1;
 	private BluetoothLeAdvertiser		mBluetoothLeAdvertiser;
-	private BluetoothGattCharacteristic mUwsCharacteristic;
+	private BluetoothGattCharacteristic	mUwsCharacteristic;
 	private BluetoothGattServer			mGattServer;
 	private BluetoothDevice				mServerDevice;
 
