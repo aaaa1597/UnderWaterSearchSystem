@@ -83,13 +83,17 @@ public class UwsServerService extends Service {
 
 		@Override
 		public int startPeriodicNotify(int seekerid, IUwsInfoCallback callback) {
-			/*TODO*/TLog.d("seekerid={0} callback={1}", seekerid, callback);
-			return uwsStartPeriodicNotify((short)seekerid, callback);
+			/* ↓↓↓ WearOSだと、なぜか動かないので無効化する */
+//			return uwsStartPeriodicNotify((short)seekerid, callback);
+			/* ↑↑↑ WearOSだと、なぜか動かないので無効化する */
+			return UWS_NG_SUCCESS;
 		}
 
 		@Override
 		public void stopPeriodicNotify(int seekerid) {
-			uwsStopPeriodicNotify((short)seekerid);
+			/* ↓↓↓ WearOSだと、なぜか動かないので無効化する */
+//			uwsStopPeriodicNotify((short)seekerid);
+			/* ↑↑↑ WearOSだと、なぜか動かないので無効化する */
 		}
 	};
 
@@ -231,13 +235,13 @@ public class UwsServerService extends Service {
 						}
 					}
 					/* TODO ******************/
-					TLog.d("ccccc scan結果 arg(seekerid:{0})", deviceInfo.getSeekerId());
+					TLog.d("scan結果 arg(seekerid:{0})", deviceInfo.getSeekerId());
 					for(short lpct = 0; lpct < 10; lpct++) {
 						String			address	= mSeekerDevicesAddress .get(lpct);
 						BluetoothGatt	gatt	= mSeekerDevicesGatt	.get(address);
 						Runnable		func	= mSeekerDevicesReadProc.get(address);
 						if(address!=null || gatt!=null || func!=null)
-							TLog.d("ccccc     消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, address, gatt, func);
+							TLog.d("    消防士{0} address={1} btgatt={2} readCharc()={3}", lpct, address, gatt, func);
 					}
 					/* ******************/
 				}
