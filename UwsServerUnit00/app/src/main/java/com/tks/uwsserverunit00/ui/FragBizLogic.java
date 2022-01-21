@@ -16,7 +16,7 @@ import com.tks.uwsserverunit00.R;
 import com.tks.uwsserverunit00.TLog;
 
 public class FragBizLogic extends Fragment {
-	private FragMapViewModel		mMapLogicViewModel;
+	private FragMapViewModel		mMapViewModel;
 	private FragBizLogicViewModel	mBizLogicViewModel;
 
 	@Override
@@ -28,7 +28,7 @@ public class FragBizLogic extends Fragment {
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
 
-		mMapLogicViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
+		mMapViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
 		mBizLogicViewModel = new ViewModelProvider(requireActivity()).get(FragBizLogicViewModel.class);
 		/* メンバ選択ボタン */
 		view.findViewById(R.id.btnSelectMember).setOnClickListener(v -> {
@@ -51,9 +51,9 @@ public class FragBizLogic extends Fragment {
 
 		/*　検索矩形の塗りつぶし色変更 */
 		view.findViewById(R.id.btnCngSerchColor).setOnClickListener(v -> {
-			int colidx = mMapLogicViewModel.incrementFillColorCnt();
+			int colidx = mMapViewModel.incrementFillColorCnt();
 			((Button)view.findViewById(R.id.btnCngSerchColor)).setTextColor((colidx==9)?0xff000000 : 0xffffffff);
-			view.findViewById(R.id.btnCngSerchColor).setBackgroundColor(mMapLogicViewModel.getFillColor());
+			view.findViewById(R.id.btnCngSerchColor).setBackgroundColor(mMapViewModel.getFillColor());
 		});
 	}
 }
