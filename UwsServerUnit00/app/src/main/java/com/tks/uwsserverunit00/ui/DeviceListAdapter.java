@@ -259,8 +259,8 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		return index.get();
 	}
 
-	public void clearDeviceInfo() {
-		mDeviceList.clear();
+	public void clearDeviceWithoutConnected() {
+		mDeviceList.removeIf(item -> !item.mSelected);
 //		notifyDataSetChanged(); UIスレッドで実行する必要がある。
 	}
 

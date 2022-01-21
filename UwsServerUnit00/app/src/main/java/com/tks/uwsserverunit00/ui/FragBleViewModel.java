@@ -97,7 +97,7 @@ public class FragBleViewModel extends ViewModel {
 		if(ret != UWS_NG_SUCCESS)
 			return ret;
 
-		mDeviceListAdapter.clearDeviceInfo();
+		mDeviceListAdapter.clearDeviceWithoutConnected();
 		mNotifyDataSetChanged.postValue(true);
 
 		return UWS_NG_SUCCESS;
@@ -112,8 +112,8 @@ public class FragBleViewModel extends ViewModel {
 		TLog.d("scan停止");
 	}
 
-	public void clearAll() {
-		mDeviceListAdapter.clearDeviceInfo();
+	public void clearDeviceWithoutConnected() {
+		mDeviceListAdapter.clearDeviceWithoutConnected();
 		mNotifyDataSetChanged.postValue(true);
 	}
 

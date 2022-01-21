@@ -52,7 +52,7 @@ public class FragBle extends Fragment {
 															));
 
 		view.findViewById(R.id.btnClear).setOnClickListener(lview -> {
-			mBleViewModel.clearAll();
+			mBleViewModel.clearDeviceWithoutConnected();
 		});
 		((CheckBox)view.findViewById(R.id.cbxMember)).setOnCheckedChangeListener((btn, isChecked) -> {
 			if(isChecked)
