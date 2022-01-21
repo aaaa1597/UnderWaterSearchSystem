@@ -114,8 +114,6 @@ public class FragMain extends Fragment {
 		/* SeekerIDのlistView定義 */
 		RecyclerView recyclerView = getActivity().findViewById(R.id.rvw_seekerid);
 		recyclerView.setLayoutManager(new LinearLayoutManager(getActivity().getApplicationContext(), LinearLayoutManager.HORIZONTAL, false));
-		recyclerView.scrollToPosition(5);
-		recyclerView.smoothScrollToPosition(0);
 		recyclerView.setAdapter(new SeekerIdAdapter());
 		/* SeekerIDのlistView(子の中心で収束する設定) */
 		LinearSnapHelper linearSnapHelper = new LinearSnapHelper();
