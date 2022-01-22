@@ -223,10 +223,14 @@ public class MainActivity extends AppCompatActivity {
 			TLog.d("サービス起動済。処理不要.");
 			return;
 		}
-		/* サービス起動 */
+		/* サービス(位置情報+BLE)起動 */
 		mStartServiceintent = new Intent(MainActivity.this, UwsClientService.class);
 		mStartServiceintent.setAction(Constants.ACTION.INITIALIZE);
 		startForegroundService(mStartServiceintent);
+		/* サービス(脈拍)起動 */
+		Intent intent = new Intent(MainActivity.this, UwsHeartBeatService.class);
+		intent.setAction(Constants.ACTION.INITIALIZE);
+		startForegroundService(intent);
 	}
 
 	/* フォアグランドサービス終了 */
@@ -236,11 +240,15 @@ public class MainActivity extends AppCompatActivity {
 			TLog.d("サービス起動してないので終了処理不要。");
 			return;
 		}
-		/* サービス終了 */
+		/* サービス(位置情報+BLE)終了 */
 		mStartServiceintent = null;
 		Intent intent = new Intent(MainActivity.this, UwsClientService.class);
 		intent.setAction(Constants.ACTION.FINALIZE);
 		startService(intent);
+		/* サービス(脈拍)終了 */
+		Intent intent2= new Intent(MainActivity.this, UwsHeartBeatService.class);
+		intent2.setAction(Constants.ACTION.FINALIZE);
+		startService(intent2);
 	}
 
 	/* 実行前の権限/条件チェック */

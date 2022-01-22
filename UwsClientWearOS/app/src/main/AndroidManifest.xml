@@ -38,5 +38,6 @@
         </activity>
 
         <service android:name=".UwsClientService" android:exported="false"/>
+        <service android:name=".UwsHeartBeatService" android:exported="false"/>
     </application>
 </manifest>

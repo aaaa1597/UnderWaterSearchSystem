@@ -8,4 +8,6 @@ interface IClientService {
 	StatusInfo getServiceStatus();
 	int startUws(int seekerid, IOnUwsInfoListner onUwsInfoListner, IOnStatusChangeListner listner);
 	void stopUws();
+	/* UwsHeartBeatService向け */
+	void notifyHeartBeat(int heartbeat);
 }

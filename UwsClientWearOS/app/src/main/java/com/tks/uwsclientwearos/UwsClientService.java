@@ -101,6 +101,13 @@ public class UwsClientService extends Service {
 			mStatus = SERVICE_STATUS_IDLE;
 			uwsStop();
 		}
+
+		/* UwsHeartBeatServiceから、脈拍通知で呼ばれる */
+		@Override
+		public void notifyHeartBeat(int heartbeat) {
+			mHeartbeat = (short)heartbeat;
+			TLog.d("aaaaaaaaa よっしゃ!! = {0}", heartbeat);
+		}
 	};
 
 	@Override

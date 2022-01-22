@@ -12,6 +12,7 @@ public class Constants {
 	/*******/
 	public final static int		NOTIFICATION_ID_FOREGROUND_SERVICE = 1231234;
 	public final static String	NOTIFICATION_CHANNEL_STARTSTOP = "NOTIFICATION_CHANNEL_STARTSTOP";
+	public final static String	NOTIFICATION_CHANNEL_STARTSTOP2= "NOTIFICATION_CHANNEL_STARTSTOP2";
 
 	public static class ACTION {
 		public final static String INITIALIZE	= "uws.action.initialize";
