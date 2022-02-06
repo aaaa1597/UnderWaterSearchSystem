@@ -2,7 +2,6 @@ package com.tks.uwsclientwearos;
 
 import android.os.Parcel;
 import android.os.Parcelable;
-
 import java.util.Date;
 
 public class StatusInfo implements Parcelable {

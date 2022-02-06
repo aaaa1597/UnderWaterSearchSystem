@@ -1,4 +1,4 @@
-// StatusInfo.aidl
+// UwsInfo.aidl
 package com.tks.uwsclientwearos;
 
 parcelable UwsInfo;

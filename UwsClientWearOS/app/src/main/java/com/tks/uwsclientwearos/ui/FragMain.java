@@ -20,7 +20,6 @@ import android.widget.TextView;
 import com.tks.uwsclientwearos.R;
 import com.tks.uwsclientwearos.TLog;
 import com.tks.uwsclientwearos.Constants.Sender;
-import com.tks.uwsclientwearos.ui.FragMainViewModel.ConnectStatus;
 
 public class FragMain extends Fragment {
 	private FragMainViewModel mViewModel;
@@ -47,12 +46,13 @@ public class FragMain extends Fragment {
 		mViewModel.UnLock().observe(getActivity(), new Observer<Pair<Sender, Boolean>>() {
 			@Override
 			public void onChanged(Pair<Sender, Boolean> pair) {
-				if(pair.first == Sender.Service)
-					((SwitchCompat)getActivity().findViewById(R.id.swhUnLock)).setChecked(false);
-
+				if(pair == null) return;
 				boolean isUnLock = pair.second;
+				if(pair.first == Sender.Service)
+					((SwitchCompat)getActivity().findViewById(R.id.swhUnLock)).setChecked(isUnLock);
+
 				TLog.d("UI周りの処理 UnLock isUnLock={0}", isUnLock);
-				/* ClickListnerの処理はMainActivityで実行している。 */
+				/* ClickListnerの処理はMainActivityで実行しているのでここでは、リストViewを無効化するだけ */
 				RecyclerView rvw = getActivity().findViewById(R.id.rvw_seekerid);
 				if(isUnLock) {
 					rvw.removeOnItemTouchListener(mOnItemTouchListener);
@@ -87,27 +87,13 @@ public class FragMain extends Fragment {
 				((TextView)view.findViewById(R.id.txtHeartbeat)).setText(String.valueOf(heartbeat));
 			}
 		});
-		/* 情報表示(状態) */
-		mViewModel.ConnectStatus().observe(getActivity(), new Observer<ConnectStatus>() {
-			@Override
-			public void onChanged(ConnectStatus status) {
-				TextView txtStatus = view.findViewById(R.id.txtStatus);
-				switch (status) {
-					case NONE:				txtStatus.setText("-- none --");			break;
-					case SETTING_ID:		txtStatus.setText("ID設定中...");			break;
-					case START_ADVERTISE:	txtStatus.setText("アドバタイズ開始");		break;
-					case ADVERTISING:		txtStatus.setText("アドバタイズ中...");		break;
-					case ERROR:				txtStatus.setText("エラーが発生しました。");break;
-				}
-			}
-		});
 		/* SeekerId表示更新 */
-		mViewModel.UpdDisplaySeerkerId.observe(getActivity(), new Observer<Object>() {
+		mViewModel.UpdDisplaySeerkerId.observe(getActivity(), new Observer<Short>() {
 			@Override
-			public void onChanged(Object objpos) {
-				short pos = (short)objpos;
+			public void onChanged(Short pos) {
+				TLog.d("scrollToPosition({0})", pos);
 				RecyclerView rvw = getActivity().findViewById(R.id.rvw_seekerid);
-				rvw.smoothScrollToPosition(pos);
+				rvw.scrollToPosition(pos);
 			}
 		});
 

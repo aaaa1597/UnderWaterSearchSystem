@@ -3,8 +3,6 @@ package com.tks.uwsclientwearos;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import java.util.Date;
-
 public class UwsInfo implements Parcelable {
 	private final double	mLogitude;
 	private final double	mLatitude;

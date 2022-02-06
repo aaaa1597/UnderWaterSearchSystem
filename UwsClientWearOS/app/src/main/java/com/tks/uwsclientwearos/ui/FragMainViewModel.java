@@ -1,14 +1,12 @@
 package com.tks.uwsclientwearos.ui;
 
+import android.location.Location;
 import android.os.RemoteException;
 import android.util.Pair;
-import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
-import java.util.Date;
 
 import com.tks.uwsclientwearos.IClientService;
-import com.tks.uwsclientwearos.IOnStatusChangeListner;
 import com.tks.uwsclientwearos.IOnUwsInfoListner;
 import com.tks.uwsclientwearos.Constants.Sender;
 import com.tks.uwsclientwearos.TLog;
@@ -19,70 +17,47 @@ public class FragMainViewModel extends ViewModel {
 	private final MutableLiveData<Double>					mLongitude		= new MutableLiveData<>(0.0);
 	private final MutableLiveData<Short>					mHearBeat		= new MutableLiveData<>((short)0);
 	private final MutableLiveData<Pair<Sender, Boolean>>	mUnLock			= new MutableLiveData<>(Pair.create(Sender.App, true));
-	private final MutableLiveData<ConnectStatus>			mStatus			= new MutableLiveData<>(ConnectStatus.NONE);
 	public MutableLiveData<Double>					Latitude()		{ return mLatitude; }
 	public MutableLiveData<Double>					Longitude()		{ return mLongitude; }
 	public MutableLiveData<Short>					HearBeat()		{ return mHearBeat; }
 	public MutableLiveData<Pair<Sender, Boolean>>	UnLock()		{ return mUnLock; }
-	public MutableLiveData<ConnectStatus>			ConnectStatus()	{ return mStatus; }
 
-	public enum ConnectStatus {
-		NONE,
-		SETTING_ID,		/* ID設定中 */
-		START_ADVERTISE,/* アドバタイズ開始 */
-		ADVERTISING,	/* アドバタイズ中... */
-		CONNECTED,		/* 接続確立 */
-		DISCONNECTED,	/* 接続断 */
-		ERROR,			/* エラー発生!! */
-	}
-
-	private final MutableLiveData<Boolean>	mAdvertisingFlg	= new MutableLiveData<>(false);
-	public MutableLiveData<Boolean>			AdvertisingFlg()	{ return mAdvertisingFlg; }
 	private short	mSeekerId = 0;
 	public void		setSeekerId(short id)	{ mSeekerId = id; }
 	public short	getSeekerId()			{ return mSeekerId; }
-	public MutableLiveData<Object>			UpdDisplaySeerkerId = new MutableLiveData<>();
-
-	private final MutableLiveData<String>	mShowSnacbar			= new MutableLiveData<>();
-	public LiveData<String>					ShowSnacbar()			{ return mShowSnacbar; }
-	public void								showSnacbar(String showmMsg) { mShowSnacbar.postValue(showmMsg);}
-	private final MutableLiveData<String>	mShowErrMsg				= new MutableLiveData<>();
-	public LiveData<String>					ShowErrMsg()			{ return mShowErrMsg; }
-	public void								showErrMsg(String showmMsg) { mShowErrMsg.postValue(showmMsg);}
-
-	/** ********
-	 *  Location
-	 *  ********/
-	public boolean mIsSetedLocationON = false;
+	public MutableLiveData<Short>			UpdDisplaySeerkerId = new MutableLiveData<>();
+	public void setSeekerIdSmoothScrollToPosition(short seekerId) {
+		mSeekerId = seekerId;
+		UpdDisplaySeerkerId.postValue(seekerId);
+	}
 
 	IClientService mClientServiceIf;
 	public void setClientServiceIf(IClientService serviceIf) {
 		mClientServiceIf = serviceIf;
 	}
 
-	public void setSeekerIdSmoothScrollToPosition(short seekerId) {
-		mSeekerId = seekerId;
-		UpdDisplaySeerkerId.postValue(seekerId);
-	}
+	/** ********
+	 *  Location
+	 *  ********/
+	public boolean mIsSetedLocationON = false;
 
-	/* ****************************/
+	/* *********************************/
 	/* 業務プロセス(BLE,位置情報,脈拍) */
-	/* ****************************/
+	/* *********************************/
 	/* 開始 */
 	public void startUws(short seekerId) {
 		TLog.d("seekerid={0}", seekerId);
 		if(mClientServiceIf == null) return;
 		try { mClientServiceIf.startUws(seekerId, new IOnUwsInfoListner.Stub() {
 													@Override
-													public void onUwsInfoResult(UwsInfo uwsinfo) {
-														mLongitude.postValue(uwsinfo.getLogitude());
-														mLatitude .postValue(uwsinfo.getLatitude());
-														mHearBeat .postValue(uwsinfo.getHeartbeat());
+													public void onLocationResult(Location location) {
+														mLongitude.postValue(location.getLongitude());
+														mLatitude .postValue(location.getLatitude());
 													}
-												},
-												new IOnStatusChangeListner.Stub() {
+
 													@Override
-													public void OnStatusChange(int oldStatus, int newStatus) {
+													public void onHeartbeatResult(int heartbeat) {
+														mHearBeat.postValue((short)heartbeat);
 													}
 												});
 		}
