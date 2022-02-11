@@ -1,5 +1,4 @@
 <resources>
-    <string name="app_name">水中検索(子2)</string>
-    <string name="error_notsupported">Bluetooth未サポートの端末です。動作しないので終了します。</string>
+    <string name="app_name">水中検索(子)</string>
     <string name="error_end">終了</string>
 </resources>

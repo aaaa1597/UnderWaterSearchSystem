@@ -21,8 +21,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.tks.uwsserverunit00.DeviceInfo;
 import com.tks.uwsserverunit00.R;
+import com.tks.uwsserverunit00.UwsInfo;
 
 import static com.tks.uwsserverunit00.Constants.UWS_NG_DEVICE_NOTFOUND;
+import static com.tks.uwsserverunit00.Constants.d2Str;
 
 /**
  * -30 dBm	素晴らしい	達成可能な最大信号強度。クライアントは、これを実現するには、APから僅か数フィートである必要があります。現実的には一般的ではなく、望ましいものでもありません	N/A
@@ -71,7 +73,6 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	private final Context					mContext;
 	private final OnCheckedChangeListener	mOnCheckedChangeListener;
 	private final OnSetBuoyListener			mOnSetBuoyListener;
-	private final SimpleDateFormat mDf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSSXXX", Locale.JAPAN);
 	public DeviceListAdapter(Context context, OnCheckedChangeListener lisner, OnSetBuoyListener lisner2) {
 		mContext				= context;
 		mOnCheckedChangeListener= lisner;
@@ -111,8 +112,8 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 								model.mDeviceRssi > -70 ? R.drawable.wifi_level_2 :
 								model.mDeviceRssi > -80 ? R.drawable.wifi_level_1 : R.drawable.wifi_level_0;
 		final int constsresid =	seekerid==-1			? R.drawable.statusx_na :
-								model.mSelected		? R.drawable.status5_ready : R.drawable.status0_none;
-		holder.mtxtDatetime.setText(mDf.format(model.mDatetime));
+								model.mSelected			? R.drawable.status5_ready : R.drawable.status0_none;
+		holder.mtxtDatetime.setText(d2Str(model.mDatetime));
 		holder.mTxtSeekerId.setText((seekerid==-1) ? " - " : String.valueOf(seekerid));
 		holder.mTxtDeviceName.setText(TextUtils.isEmpty(deviceName) ? "" : deviceName);
 		holder.mTxtDeviceNameAddress.setText(TextUtils.isEmpty(deviceAddress) ? "" : deviceAddress);
@@ -154,7 +155,6 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 				mOnCheckedChangeListener.onCheckedChanged(seekerid, isChecked);
 			});
 		}
-
 	}
 
 	@Override
@@ -162,36 +162,26 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		return mDeviceList.size();
 	}
 
-	public void addDevice(List<DeviceInfo> deviceInfos) {
-		if (deviceInfos != null) {
-			for (DeviceInfo deviceInfo : deviceInfos) {
-				addDevice(deviceInfo);
-			}
-//			notifyDataSetChanged();
-		}
-	}
-
-//	public void addDevice(DeviceInfo deviceInfo) {
-//		addDevice(deviceInfo, true);
-//	}
-
 	/** * @return 新データかどうかのフラグ */
-	public boolean addDevice(DeviceInfo deviceInfo) {
+	public int updDeviceInfo(DeviceInfo deviceInfo, Boolean isOnlySeeker) {
 		if (deviceInfo == null)
-			return false;
+			return -1;
 
-		/* リスト済確認 */
-		DevicveInfoModel device = mDeviceList.stream().filter((item) -> {
+		/* 隊員のみ表示中なら、対象外デバイスは追加しない */
+		if(isOnlySeeker && deviceInfo.getSeekerId()==-1)
+			return -1;
+
+		/* リスト追加済確認 */
+		AtomicInteger idx = new AtomicInteger(-1);
+		DevicveInfoModel device = mDeviceList.stream().peek(x->idx.incrementAndGet()).filter((item) -> {
 			if(item.mSeekerId!=-1)	/* SeekerIdが-1でない場合は、対象デバイス。SeekerIdで識別する */
 				return item.mSeekerId==deviceInfo.getSeekerId();
 			else					/* SeekerIdが-1の場合は、対象外デバイス。Adressで識別する */
 				return item.mDeviceAddress.equals(deviceInfo.getDeviceAddress());
-		}).findFirst().orElse(null);
+		}).findAny().orElse(null);
 
-		boolean retNewDataFlg;
 		if(device == null) {
 			/* 新規追加 */
-			retNewDataFlg = true;
 			mDeviceList.add(
 					new DevicveInfoModel() {{
 						mDatetime		= deviceInfo.getDate();
@@ -206,11 +196,37 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 						mSelected		= false;
 						mIsBuoy			= false;
 					}});
+
+			/* 並び替え。 */
+			mDeviceList.sort((o1, o2) -> {
+				/* SeekerIdの昇順 */
+				if(o1.mSeekerId!=-1 && o2.mSeekerId!=-1)
+					return Integer.compare(o1.mSeekerId, o2.mSeekerId);
+					/* 対象のデバイス優先 */
+				else if(o1.mSeekerId!=-1/* && !o2.mIsApplicable*/)
+					return -1;
+				else if(/*!o1.mIsApplicable &&*/ o2.mSeekerId!=-1)
+					return 1;
+
+				/* 次にアドレス名で並び替え */
+				int compare = o1.mDeviceAddress.compareTo(o2.mDeviceAddress);
+				if(compare == 0) return 0;
+				return compare < 0 ? -1 : 1;
+			});
+
+			/* indexを検索 */
+			AtomicInteger index = new AtomicInteger(-1);
+			DevicveInfoModel findit = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mSeekerId==deviceInfo.getSeekerId()).findAny().orElse(null);
+			if(findit == null) return UWS_NG_DEVICE_NOTFOUND;	/* 対象外デバイスが存在しない。ありえないはず。 */
+
+			/* 呼び元で実行する */
+//		if (notify) notifyDataSetChanged();
+
+			/* indexを返却 */
+			return index.get();
 		}
 		else {
 			/* 新データ判定 */
-			retNewDataFlg = device.mSeqNo != deviceInfo.getSeqNo();
-
 //			device.mDatetime		= deviceInfo.mDatetime;			更新しない
 			device.mSeekerId		= deviceInfo.getSeekerId();
 			device.mDeviceName		= deviceInfo.getDeviceName();
@@ -222,34 +238,29 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			device.mHertBeat		= deviceInfo.getHeartbeat();
 //			device.mSelected		= false;						更新しない
 //			device.mIsBuoy			= deviceInfo.getIsBuoy();		更新しない
+
+			/* 呼び元で実行する */
+//		if (notify) notifyDataSetChanged();
+
+			return idx.get();
 		}
-
-		/* 並び替え。 */
-		mDeviceList.sort((o1, o2) -> {
-			/* SeekerIdの昇順 */
-			if(o1.mSeekerId!=-1 && o2.mSeekerId!=-1)
-				return Integer.compare(o1.mSeekerId, o2.mSeekerId);
-				/* 対象のデバイス優先 */
-			else if(o1.mSeekerId!=-1/* && !o2.mIsApplicable*/)
-				return -1;
-			else if(/*!o1.mIsApplicable &&*/ o2.mSeekerId!=-1)
-				return 1;
-
-			/* 次にアドレス名で並び替え */
-			int compare = o1.mDeviceAddress.compareTo(o2.mDeviceAddress);
-			if(compare == 0) return 0;
-			return compare < 0 ? -1 : 1;
-		});
-
-//		if (notify) {
-//			notifyDataSetChanged();
-//		}
-
-		return retNewDataFlg;
 	}
 
-	public void clearDevice() {
-		mDeviceList.clear();
+	public int updDeviceInfo(UwsInfo uwsInfo) {
+		AtomicInteger index = new AtomicInteger(-1);
+		DevicveInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mSeekerId==uwsInfo.getSeekerId()).findAny().orElse(null);
+		if(device == null) return UWS_NG_DEVICE_NOTFOUND;	/* 対象外デバイスが存在しない。ありえないはず。 */
+
+		device.mDatetime = uwsInfo.getDate();
+		device.mSeekerId = uwsInfo.getSeekerId();
+		device.mLongitude= uwsInfo.getLongitude();
+		device.mLatitude = uwsInfo.getLatitude();
+		device.mHertBeat = uwsInfo.getHeartbeat();
+		return index.get();
+	}
+
+	public void clearDeviceWithoutConnected() {
+		mDeviceList.removeIf(item -> !item.mSelected);
 //		notifyDataSetChanged(); UIスレッドで実行する必要がある。
 	}
 
@@ -257,13 +268,23 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		mDeviceList.removeIf(item -> item.mSeekerId == -1);
 	}
 
-	public int setChecked(short seekerid, boolean isChecked) {
+	public int setSelected(short seekerid, boolean isChecked) {
 		AtomicInteger index = new AtomicInteger(-1);
 		DevicveInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
 		if(device == null) return UWS_NG_DEVICE_NOTFOUND;	/* 対象外デバイスが存在しない。ありえないはず。 */
 
 		device.mSelected = isChecked;
 		return index.get();
+	}
+
+	public boolean isSelected(short seekerid) {
+		DevicveInfoModel device = mDeviceList.stream().filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
+		return (device!=null) && device.mSelected;
+	}
+
+	public boolean getChecked(short seekerid) {
+		DevicveInfoModel device = mDeviceList.stream().filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
+		return (device==null) ? false : device.mSelected;
 	}
 
 	public void setBuoy(short seekerid, boolean isChecked) {
@@ -276,5 +297,10 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		DevicveInfoModel nowbuoy = mDeviceList.stream().filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
 		if(nowbuoy!=null)
 			nowbuoy.mIsBuoy = isChecked;
+	}
+
+	public String getAddress(short seekerid) {
+		DevicveInfoModel di = mDeviceList.stream().filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
+		return di==null ? "" : di.mDeviceAddress;
 	}
 }

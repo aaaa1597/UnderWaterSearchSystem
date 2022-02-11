@@ -2,11 +2,11 @@ package com.tks.uwsserverunit00.ui;
 
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
-import android.os.Bundle;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.ViewModelProvider;
+import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,7 +16,7 @@ import com.tks.uwsserverunit00.R;
 import com.tks.uwsserverunit00.TLog;
 
 public class FragBizLogic extends Fragment {
-	private FragMapViewModel		mMapLogicViewModel;
+	private FragMapViewModel		mMapViewModel;
 	private FragBizLogicViewModel	mBizLogicViewModel;
 
 	@Override
@@ -27,14 +27,15 @@ public class FragBizLogic extends Fragment {
 	@Override
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
-		mMapLogicViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
-		mBizLogicViewModel = new ViewModelProvider(requireActivity()).get(FragBizLogicViewModel.class);
 
+		mMapViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
+		mBizLogicViewModel = new ViewModelProvider(requireActivity()).get(FragBizLogicViewModel.class);
+		/* メンバ選択ボタン */
 		view.findViewById(R.id.btnSelectMember).setOnClickListener(v -> {
 			DrawerLayout naviview = getActivity().findViewById(R.id.root_view);
 			naviview.openDrawer(GravityCompat.START);
 		});
-
+		/* 検索開始/終了ボタン */
 		view.findViewById(R.id.btnSerchStartStop).setOnClickListener(v -> {
 			Button btnStartStop = (Button)v;
 			TLog.d("mBizLogicViewModel.getSerchStatus() = {0}", mBizLogicViewModel.getSerchStatus());
@@ -50,8 +51,9 @@ public class FragBizLogic extends Fragment {
 
 		/*　検索矩形の塗りつぶし色変更 */
 		view.findViewById(R.id.btnCngSerchColor).setOnClickListener(v -> {
-			mMapLogicViewModel.incrementFillColorCnt();
-			view.findViewById(R.id.btnCngSerchColor).setBackgroundColor(mMapLogicViewModel.getFillColor());
+			int colidx = mMapViewModel.incrementFillColorCnt();
+			((Button)view.findViewById(R.id.btnCngSerchColor)).setTextColor((colidx==9)?0xff000000 : 0xffffffff);
+			view.findViewById(R.id.btnCngSerchColor).setBackgroundColor(mMapViewModel.getFillColor());
 		});
 	}
 }
