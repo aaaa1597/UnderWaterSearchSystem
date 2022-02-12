@@ -12,7 +12,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.location.LocationManager;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.Looper;
@@ -32,21 +31,21 @@ import com.google.android.gms.location.LocationServices;
 import static com.tks.uwsclientwearos.Constants.ACTION.INITIALIZE;
 import static com.tks.uwsclientwearos.Constants.ACTION.FINALIZE;
 import static com.tks.uwsclientwearos.Constants.NOTIFICATION_CHANNEL_ID;
-import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_AD_LOC_BEAT;
+import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_CON_LOC_BEAT;
 import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_INITIALIZING;
 import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_IDLE;
-
 import static com.tks.uwsclientwearos.Constants.d2Str;
 
 public class UwsClientService extends Service {
-	private int mStatus			= SERVICE_STATUS_INITIALIZING;
+	private int		mStatus		= SERVICE_STATUS_INITIALIZING;
+	private short	mSeekerId	= -1;
 	private IOnUwsInfoListner	mCallback;
 
 	@Override
 	public void onCreate() {
 		super.onCreate();
 		uwsInit();
-		mStatus = SERVICE_STATUS_IDLE;
+		startLoc();
 		IntentFilter filter = new IntentFilter();
 		filter.addAction(FINALIZE);
 		LocalBroadcastManager.getInstance(getApplicationContext()).registerReceiver(mReceiver, filter);
@@ -57,15 +56,14 @@ public class UwsClientService extends Service {
 		super.onDestroy();
 		LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mReceiver);
 		stoptLoc();
-//		stopAdvertise();
 		uwsFin();
 	}
 
 	private BroadcastReceiver mReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context context, Intent intent) {
-			if( !intent.getAction().equals(FINALIZE))
-				return;
+			if( !intent.getAction().equals(FINALIZE)) return;
+
 			Toast.makeText(getApplicationContext(), "終了します。", Toast.LENGTH_SHORT).show();
 			LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mReceiver);
 			stopForeground(true);
@@ -137,24 +135,18 @@ public class UwsClientService extends Service {
 
 		@Override
 		public int startUws(int seekerid, IOnUwsInfoListner onUwsInfoListner) {
-			mStatus = SERVICE_STATUS_AD_LOC_BEAT;
-			TLog.d("seekerid={0}", seekerid);
-			uwsStart((short)seekerid, onUwsInfoListner);
 			return 0;
 		}
 
 		@Override
 		public void stopUws() {
-			mStatus = SERVICE_STATUS_IDLE;
-			uwsStop();
 		}
 
 		/* UwsHeartBeatServiceから、脈拍通知で呼ばれる */
 		@Override
 		public void notifyHeartBeat(int heartbeat) {
-			mHeartbeat = (short)heartbeat;
 			TLog.d("脈拍通知 from HeartBeat-Service!! = {0}", heartbeat);
-			try { mCallback.onHeartbeatResult(mHeartbeat); }
+			try { mCallback.onHeartbeatResult((short)heartbeat); }
 			catch(RemoteException e) { e.printStackTrace();}
 		}
 	};
@@ -169,78 +161,43 @@ public class UwsClientService extends Service {
 	/* 初期化/終了処理 */
 	/* ***************/
 	private void uwsInit() {
-		TLog.d("");
+		TLog.d("xxxxx");
+		mStatus = SERVICE_STATUS_IDLE;
 		/* 位置情報初期化 */
 		mFlc = LocationServices.getFusedLocationProviderClient(this);
-//		/* Bluetooth初期化 */
-//		final BluetoothManager bluetoothManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
-//		if(bluetoothManager == null)
-//			throw new RuntimeException("Bluetooth未サポート.使用不可!!");
-
-//		BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
-//		if (bluetoothAdapter == null)
-//			throw new RuntimeException("Bluetooth未サポート.使用不可2!!");
-
-//		mBluetoothLeAdvertiser = bluetoothAdapter.getBluetoothLeAdvertiser();
-//		if (mBluetoothLeAdvertiser == null)
-//			throw new RuntimeException("Bluetooth未サポート.使用不可3!!");
-//
-//		mGattServer = bluetoothManager.openGattServer(this, mGattServerCallback);
-//		if(mGattServer == null)
-//			throw new RuntimeException("Bluetooth未サポート.使用不可4!!");
-
-//		TLog.d( "アドバタイズの最大サイズ={0}", bluetoothAdapter.getLeMaximumAdvertisingDataLength());
+		/* 位置情報取得開始 */
+		if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+			throw new RuntimeException("ありえない権限エラー。すでにチェック済。");
+		mFlc.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
+//		/* TODO Bluetooth初期化 */
 	}
-
 	private void uwsFin() {
-		TLog.d("");
+		TLog.d("xxxxx");
 		mFlc = null;
-//		mGattServer.close();
-//		mGattServer = null;
-//		mBluetoothLeAdvertiser = null;
+//		/* TODO Bluetooth終了 */
 	}
 
 	/* *************/
 	/* 開始/停止処理 */
 	/* *************/
-	private void uwsStart(short seekerid, IOnUwsInfoListner onUwsInfoResult) {
-		TLog.d("seekerid={0}", seekerid);
-		mSeekerId = seekerid;
-		mCallback = onUwsInfoResult;
-		/* 位置情報 取得開始 */
-		startLoc();
-		/* BLEアドバタイズ 開始 */
-//		startAdvertise(seekerid);
-	}
-
-	private void uwsStop() {
-		/* 位置情報 停止 */
-		stoptLoc();
-		/* BLE停止 */
-//		stopAdvertise();
-	}
 
 	/* *************/
 	/* 位置情報 機能 */
 	/* *************/
 	private final static int			LOC_UPD_INTERVAL = 2000;
-	private FusedLocationProviderClient mFlc;
-	private final LocationRequest		mLocationRequest = LocationRequest.create()
-															.setInterval(LOC_UPD_INTERVAL)
-															.setFastestInterval(LOC_UPD_INTERVAL)
-															.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-	private double					mLongitude;
-	private double					mLatitude;
-	private final LocationCallback	mLocationCallback = new LocationCallback() {
+	private FusedLocationProviderClient	mFlc;
+	private final LocationRequest		mLocationRequest = LocationRequest.create().setInterval(LOC_UPD_INTERVAL).setFastestInterval(LOC_UPD_INTERVAL).setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+	private final LocationCallback		mLocationCallback = new LocationCallback() {
 		@Override
 		public void onLocationResult(@NonNull LocationResult locationResult) {
 			super.onLocationResult(locationResult);
 			Location location = locationResult.getLastLocation();
-			mLongitude = location.getLongitude();
-			mLatitude  = location.getLatitude();
-			TLog.d("1秒定期 (緯度:{0} 経度:{1})", d2Str(mLatitude), d2Str(mLongitude));
-			try { mCallback.onLocationResult(location); }
-			catch(RemoteException e) { e.printStackTrace();}
+			TLog.d("1秒定期 (緯度:{0} 経度:{1})", d2Str(location.getLatitude()), d2Str(location.getLongitude()));
+
+			if(mCallback != null) {
+				try { mCallback.onLocationResult(location); }
+				catch(RemoteException e) { e.printStackTrace();}
+			}
 
 			/* 毎回OFF->ONにすることで、更新間隔が1秒になるようにしている。 */
 			stoptLoc();
@@ -251,7 +208,7 @@ public class UwsClientService extends Service {
 
 	/* 位置情報取得開始 */
 	private void startLoc() {
-		TLog.d("");
+		TLog.d("xxxxx");
 		if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
 			throw new RuntimeException("ありえない権限エラー。すでにチェック済。");
 		mFlc.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
@@ -259,17 +216,8 @@ public class UwsClientService extends Service {
 
 	/* 位置情報取得停止 */
 	private void stoptLoc() {
+		TLog.d("xxxxx");
 		mFlc.removeLocationUpdates(mLocationCallback);
 	}
-
-	/* ********/
-	/* BLE機能 */
-	/* ********/
-	private short						mSeekerId = -1;
-
-	/* *********/
-	/* 脈拍機能 */
-	/* *********/
-	private short mHeartbeat;
 }
 

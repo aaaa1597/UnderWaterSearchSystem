@@ -15,7 +15,6 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import com.tks.uwsclientwearos.R;
 import com.tks.uwsclientwearos.TLog;
@@ -51,40 +50,12 @@ public class FragMain extends Fragment {
 				if(pair.first == Sender.Service)
 					((SwitchCompat)getActivity().findViewById(R.id.swhUnLock)).setChecked(isUnLock);
 
-				TLog.d("UI周りの処理 UnLock isUnLock={0}", isUnLock);
 				/* ClickListnerの処理はMainActivityで実行しているのでここでは、リストViewを無効化するだけ */
 				RecyclerView rvw = getActivity().findViewById(R.id.rvw_seekerid);
-				if(isUnLock) {
+				if(isUnLock)
 					rvw.removeOnItemTouchListener(mOnItemTouchListener);
-				}
-				else {
+				else
 					rvw.addOnItemTouchListener(mOnItemTouchListener);
-				}
-			}
-		});
-		((SwitchCompat)view.findViewById(R.id.swhUnLock)).setOnCheckedChangeListener((btnView, isChecked) -> {
-			TLog.d("UnLock isChecked={0}", isChecked);
-			mViewModel.UnLock().setValue(Pair.create(Sender.App, isChecked));
-		});
-		/* 情報表示(経度) */
-		mViewModel.Longitude().observe(getActivity(), new Observer<Double>() {
-			@Override
-			public void onChanged(Double lng) {
-				((TextView)view.findViewById(R.id.txtLongitude)).setText(String.valueOf(lng));
-			}
-		});
-		/* 情報表示(緯度) */
-		mViewModel.Latitude().observe(getActivity(), new Observer<Double>() {
-			@Override
-			public void onChanged(Double lat) {
-				((TextView)view.findViewById(R.id.txtLatitude)).setText(String.valueOf(lat));
-			}
-		});
-		/* 情報表示(脈拍) */
-		mViewModel.HearBeat().observe(getActivity(), new Observer<Short>() {
-			@Override
-			public void onChanged(Short heartbeat) {
-				((TextView)view.findViewById(R.id.txtHeartbeat)).setText(String.valueOf(heartbeat));
 			}
 		});
 		/* SeekerId表示更新 */
@@ -99,7 +70,8 @@ public class FragMain extends Fragment {
 
 		/* SeekerIDのlistView定義 */
 		RecyclerView recyclerView = getActivity().findViewById(R.id.rvw_seekerid);
-		recyclerView.setLayoutManager(new LinearLayoutManager(getActivity().getApplicationContext(), LinearLayoutManager.HORIZONTAL, false));
+//		recyclerView.setLayoutManager(new LinearLayoutManager(getActivity().getApplicationContext(), LinearLayoutManager.HORIZONTAL, false));
+		recyclerView.setLayoutManager(new LinearLayoutManager(getActivity().getApplicationContext(), LinearLayoutManager.VERTICAL, false));
 		recyclerView.setAdapter(new SeekerIdAdapter());
 		/* SeekerIDのlistView(子の中心で収束する設定) */
 		LinearSnapHelper linearSnapHelper = new LinearSnapHelper();

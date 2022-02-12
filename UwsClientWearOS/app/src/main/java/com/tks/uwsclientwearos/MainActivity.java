@@ -6,7 +6,6 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
-import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.Manifest;
@@ -18,7 +17,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.IntentSender.SendIntentException;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -26,21 +24,13 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Pair;
-import com.google.android.gms.common.api.ApiException;
-import com.google.android.gms.common.api.ResolvableApiException;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.LocationSettingsRequest;
-import com.google.android.gms.location.LocationSettingsStatusCodes;
-import com.google.android.gms.location.SettingsClient;
-
 import com.tks.uwsclientwearos.ui.FragMainViewModel;
 import com.tks.uwsclientwearos.Constants.Sender;
 import static com.tks.uwsclientwearos.Constants.ACTION.FINALIZE;
-import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_AD_LOC_BEAT;
 import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_CON_LOC_BEAT;
 
 public class MainActivity extends AppCompatActivity {
-	private final static int	REQUEST_LOCATION_SETTINGS	= 1111;
+//	private final static int	REQUEST_LOCATION_SETTINGS	= 1111;	/* ← TicWatch e2にはそもそも実装がないので、チェックしない。常にmIsSetedLocationON = true。 */
 	private final static int	REQUEST_PERMISSIONS			= 2222;
 	private	FragMainViewModel	mViewModel;
 
@@ -49,34 +39,6 @@ public class MainActivity extends AppCompatActivity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		TLog.d("MainActivity.class={0}", MainActivity.class);
-
-		/* ViewModelインスタンス取得 */
-		mViewModel = new ViewModelProvider(this).get(FragMainViewModel.class);
-		/* Lock/Lock解除 設定 */
-		mViewModel.UnLock().observe(this, new Observer<Pair<Sender, Boolean>>() {
-			@Override
-			public void onChanged(Pair<Sender, Boolean> pair) {
-				if(pair.first == Sender.Service) return;
-				boolean isUnLock = pair.second;
-
-				/* UIの処理はFragMainで実行している。 */
-				if( !isUnLock) {
-					TLog.d("サービスStart要求 UnLock isUnLock={0}", isUnLock);
-					/* 実行前チェック */
-					boolean ret = checkExecution(getApplicationContext());
-					if( !ret) {
-						TLog.d("実行前チェックError!! 条件が揃ってない。 ret={0}", ret);
-						return;
-					}
-					TLog.d("mViewModel.getSeekerId()={0}", mViewModel.getSeekerId());
-					mViewModel.startUws(mViewModel.getSeekerId());
-				}
-				else {
-					TLog.d("サービスStop要求 UnLock isUnLock={0}", isUnLock);
-					mViewModel.stopUws();
-				}
-			}
-		});
 
 		/* Bluetoothのサポート状況チェック 未サポート端末なら起動しない */
 		if( !getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE))
@@ -90,11 +52,32 @@ public class MainActivity extends AppCompatActivity {
 				requestPermissions(new String[]{Manifest.permission.BODY_SENSORS, Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_PERMISSIONS);
 		}
 
-		/* 設定の位置情報ON/OFFチェック */
-		LocationSettingsRequest locationSettingsRequest = new LocationSettingsRequest.Builder().build();
-		SettingsClient settingsClient = LocationServices.getSettingsClient(this);
-		/* TicWatch e2にはそもそも実装がないので、チェックしない。常にmIsSetedLocationON = true。 */
+		/* BluetoothManager取得 */
+		final BluetoothManager bluetoothManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
+		BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
+		/* Bluetooth未サポート判定 未サポートならエラーpopupで終了 */
+		if (bluetoothAdapter == null) {
+			ErrDialog.create(MainActivity.this, "Bluetooth未サポートの端末です。\n終了します。").show();
+		}
+		/* Bluetooth ON/OFF判定 -> OFFならONにするようにリクエスト */
+		else if( !bluetoothAdapter.isEnabled()) {
+			Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+			ActivityResultLauncher<Intent> startForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+					result -> {
+						if(result.getResultCode() != Activity.RESULT_OK) {
+							ErrDialog.create(MainActivity.this, "BluetoothがOFFです。ONにして操作してください。\n終了します。").show();
+						}
+					});
+			startForResult.launch(enableBtIntent);
+		}
+
+		/* ViewModelインスタンス取得 */
+		mViewModel = new ViewModelProvider(this).get(FragMainViewModel.class);
+		/* ↓↓↓ TicWatch e2にはそもそも実装がないので、チェックしない。常にmIsSetedLocationON = true。 */
 		mViewModel.mIsSetedLocationON = true;
+//		/* 設定の位置情報ON/OFFチェック */
+//		LocationSettingsRequest locationSettingsRequest = new LocationSettingsRequest.Builder().build();
+//		SettingsClient settingsClient = LocationServices.getSettingsClient(this);
 //		settingsClient.checkLocationSettings(locationSettingsRequest)
 //				.addOnSuccessListener(this, locationSettingsResponse -> {
 //					mViewModel.mIsSetedLocationON = true;
@@ -124,25 +107,7 @@ public class MainActivity extends AppCompatActivity {
 //							break;
 //					}
 //				});
-
-		/* BluetoothManager取得 */
-		final BluetoothManager bluetoothManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
-		BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
-		/* Bluetooth未サポート判定 未サポートならエラーpopupで終了 */
-		if (bluetoothAdapter == null) {
-			ErrDialog.create(MainActivity.this, "Bluetooth未サポートの端末です。\n終了します。").show();
-		}
-		/* Bluetooth ON/OFF判定 -> OFFならONにするようにリクエスト */
-		else if( !bluetoothAdapter.isEnabled()) {
-			Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-			ActivityResultLauncher<Intent> startForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
-					result -> {
-						if(result.getResultCode() != Activity.RESULT_OK) {
-							ErrDialog.create(MainActivity.this, "BluetoothがOFFです。ONにして操作してください。\n終了します。").show();
-						}
-					});
-			startForResult.launch(enableBtIntent);
-		}
+//		/* ↑↑↑ TicWatch e2にはそもそも実装がないので、チェックしない。常にmIsSetedLocationON = true。 */
 	}
 
 	@Override
@@ -160,19 +125,22 @@ public class MainActivity extends AppCompatActivity {
 		}
 	}
 
-	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		super.onActivityResult(requestCode, resultCode, data);
-		if (requestCode != REQUEST_LOCATION_SETTINGS) return;	/* 対象外 */
-		switch (resultCode) {
-			case Activity.RESULT_OK:
-				mViewModel.mIsSetedLocationON = true;
-				break;
-			case Activity.RESULT_CANCELED:
-				ErrDialog.create(MainActivity.this, "このアプリには位置情報をOnにする必要があります。\n再起動後にOnにしてください。\n終了します。").show();
-				break;
-		}
-	}
+//	/* ↓↓↓ TicWatch e2にはそもそも実装がないので、チェックしない。常にmIsSetedLocationON = true。 */
+//	@Override
+//	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+//		super.onActivityResult(requestCode, resultCode, data);
+//		if (requestCode != REQUEST_LOCATION_SETTINGS) return;	/* 対象外 */
+//		switch (resultCode) {
+//			case Activity.RESULT_OK:
+//				mViewModel.mIsSetedLocationON = true;
+//				break;
+//			case Activity.RESULT_CANCELED:
+//				ErrDialog.create(MainActivity.this, "このアプリには位置情報をOnにする必要があります。\n再起動後にOnにしてください。\n終了します。").show();
+//				break;
+//		}
+//	}
+//	/* ↑↑↑ TicWatch e2にはそもそも実装がないので、チェックしない。常にmIsSetedLocationON = true。 */
+
 
 	@Override
 	protected void onStart() {
@@ -225,8 +193,8 @@ public class MainActivity extends AppCompatActivity {
 
 			TLog.d("si=(seekerid={0} Status={1})", si.getSeekerId(), si.getStatus());
 
-			/* サービス状態が、アドバタイズ中/接続中 */
-			if(si.getStatus() == SERVICE_STATUS_AD_LOC_BEAT || si.getStatus() == SERVICE_STATUS_CON_LOC_BEAT) {
+			/* サービス状態が、BT接続中 */
+			if(si.getStatus() == SERVICE_STATUS_CON_LOC_BEAT) {
 				/* SeekerIdを設定 */
 				mViewModel.setSeekerIdSmoothScrollToPosition(si.getSeekerId());
 				/* 画面をアドバタイズ中/接続中に更新 */
@@ -252,13 +220,10 @@ public class MainActivity extends AppCompatActivity {
 		}
 	};
 
-	private Intent mStartServiceintent = null;
 	/* フォアグランドサービス起動 */
+	private Intent mStartServiceintent = null;
 	private void startForeServ() {
-		if(mStartServiceintent != null) {
-			TLog.d("サービス起動済。処理不要.");
-			return;
-		}
+		if(mStartServiceintent != null) return;
 		/* サービス(位置情報+BLE)起動 */
 		mStartServiceintent = new Intent(MainActivity.this, UwsClientService.class);
 		mStartServiceintent.setAction(Constants.ACTION.INITIALIZE);
@@ -272,10 +237,7 @@ public class MainActivity extends AppCompatActivity {
 	/* フォアグランドサービス終了 */
 	private void stopForeServ() {
 		/* サービス起動済チェック */
-		if(mStartServiceintent == null) {
-			TLog.d("サービス起動してないので終了処理不要。");
-			return;
-		}
+		if(mStartServiceintent == null) return;
 		/* サービス(位置情報+BLE)終了 */
 		mStartServiceintent = null;
 		Intent intent = new Intent(MainActivity.this, UwsClientService.class);
@@ -287,46 +249,4 @@ public class MainActivity extends AppCompatActivity {
 		startService(intent2);
 	}
 
-	/* 実行前の権限/条件チェック */
-	private boolean checkExecution(Context context) {
-		/* Bluetooth未サポート */
-		if (!context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-			ErrDialog.create(MainActivity.this, "Bluetooth未サポートの端末です。\n終了します。").show();
-			return false;
-		}
-
-		/* 権限が許可されていない */
-		if(context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-			ErrDialog.create(MainActivity.this, "Bluetoothや位置情報に必要な権限がありません。\n終了します。").show();
-			return false;
-		}
-
-		/* Bluetooth未サポート */
-		final BluetoothManager bluetoothManager = (BluetoothManager)context.getSystemService(Context.BLUETOOTH_SERVICE);
-		if(bluetoothManager == null) {
-			ErrDialog.create(MainActivity.this, "Bluetooth未サポートの端末です。\n終了します。").show();
-			return false;
-		}
-
-		/* Bluetooth未サポート */
-		BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
-		if (bluetoothAdapter == null) {
-			ErrDialog.create(MainActivity.this, "Bluetooth未サポートの端末です。\n終了します。").show();
-			return false;
-		}
-
-		/* Bluetooth ON/OFF判定 */
-		if( !bluetoothAdapter.isEnabled()) {
-			ErrDialog.create(MainActivity.this, "設定のBluetoothがOFFになっています。\nONにして下さい。\n終了します。").show();
-			return false;
-		}
-
-		/* 設定の位置情報ON/OFF判定 */
-		if( !mViewModel.mIsSetedLocationON) {
-			ErrDialog.create(MainActivity.this, "設定の位置情報がOFFになっています。\nONにして下さい。\n終了します。").show();
-			return false;
-		}
-
-		return true;
-	}
 }

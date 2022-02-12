@@ -27,7 +27,6 @@ import static com.tks.uwsclientwearos.Constants.ACTION.FINALIZE;
 import static com.tks.uwsclientwearos.Constants.NOTIFICATION_CHANNEL_ID;
 
 public class UwsHeartBeatService extends Service {
-	private	IClientService				mIClientService;
 
 	@Override
 	public void onCreate() {
@@ -44,11 +43,11 @@ public class UwsHeartBeatService extends Service {
 	}
 
 	/* 終了要求インテント 受信設定 */
-	BroadcastReceiver mReceiver = new BroadcastReceiver() {
+	private BroadcastReceiver mReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context context, Intent intent) {
-			if( !intent.getAction().equals(FINALIZE))
-				return;
+			if( !intent.getAction().equals(FINALIZE)) return;
+
 			Toast.makeText(getApplicationContext(), "終了します。", Toast.LENGTH_SHORT).show();
 			LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mReceiver);
 			stopForeground(true);
@@ -104,9 +103,11 @@ public class UwsHeartBeatService extends Service {
 				.build();
 	}
 
-	private	SensorManager mSensorManager;
+	private SensorManager	mSensorManager;
+	private	IClientService	mIClientService;
 	private final ServiceConnection mCon = new ServiceConnection() {
-		@Override public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+		@Override
+		public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
 			mIClientService = IClientService.Stub.asInterface(iBinder);
 			TLog.d("UwsClientServiceと接続完了.");
 
@@ -115,7 +116,9 @@ public class UwsHeartBeatService extends Service {
 			Sensor sensor = mSensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE);
 			mSensorManager.registerListener(mSensorEventCallback, sensor, SensorManager.SENSOR_DELAY_NORMAL);
 		}
-		@Override public void onServiceDisconnected(ComponentName componentName) {
+
+		@Override
+		public void onServiceDisconnected(ComponentName componentName) {
 			TLog.d("脈拍 停止");
 			mSensorManager.unregisterListener(mSensorEventCallback);
 		}
