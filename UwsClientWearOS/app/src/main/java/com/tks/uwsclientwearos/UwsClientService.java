@@ -39,7 +39,7 @@ import static com.tks.uwsclientwearos.Constants.d2Str;
 public class UwsClientService extends Service {
 	private int		mStatus		= SERVICE_STATUS_INITIALIZING;
 	private short	mSeekerId	= -1;
-	private IOnUwsInfoListner	mCallback;
+	private IOnUwsInfoChangeListner	mCallback;
 
 	@Override
 	public void onCreate() {
@@ -136,7 +136,7 @@ public class UwsClientService extends Service {
 		}
 
 		@Override
-		public void setOnUwsInfoChangeListner(IOnUwsInfoListner onUwsInfoListner) {
+		public void setOnUwsInfoChangeListner(IOnUwsInfoChangeListner onUwsInfoListner) {
 			mCallback = onUwsInfoListner;
 		}
 
@@ -153,7 +153,7 @@ public class UwsClientService extends Service {
 		@Override
 		public void notifyHeartBeat(int heartbeat) {
 			TLog.d("脈拍通知 from HeartBeat-Service!! = {0}", heartbeat);
-			try { mCallback.onHeartbeatResult((short)heartbeat); }
+			try { mCallback.onHeartbeatResultChange((short)heartbeat); }
 			catch(RemoteException e) { e.printStackTrace();}
 		}
 	};
@@ -202,7 +202,7 @@ public class UwsClientService extends Service {
 			TLog.d("1秒定期 (緯度:{0} 経度:{1})", d2Str(location.getLatitude()), d2Str(location.getLongitude()));
 
 			if(mCallback != null) {
-				try { mCallback.onLocationResult(location); }
+				try { mCallback.onLocationResultChange(location); }
 				catch(RemoteException e) { e.printStackTrace();}
 			}
 
