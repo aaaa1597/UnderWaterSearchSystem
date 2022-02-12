@@ -26,6 +26,7 @@ import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Pair;
@@ -110,10 +111,13 @@ public class MainActivity extends AppCompatActivity {
 							.setItems(items, new DialogInterface.OnClickListener() {
 								@Override
 								public void onClick(DialogInterface dialog, int which) {
-									/* デバイス取得 */
-									BluetoothDevice device = (BluetoothDevice)devices.toArray()[which];
 									/* Bluetooth通信開始 */
-									mViewModel.startBt(mViewModel.getSeekerId(), device);
+									new Handler().postDelayed(() -> {
+										/* デバイス取得 */
+										BluetoothDevice device = (BluetoothDevice)devices.toArray()[which];
+										/* Bluetooth通信開始 */
+										mViewModel.startBt(mViewModel.getSeekerId(), device);
+									}, 100);
 								}
 							})
 							.show();
