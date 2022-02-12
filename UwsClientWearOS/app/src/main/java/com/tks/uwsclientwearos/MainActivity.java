@@ -1,16 +1,19 @@
 package com.tks.uwsclientwearos;
 
 import java.util.Arrays;
+import java.util.Set;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -39,6 +42,11 @@ public class MainActivity extends AppCompatActivity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		TLog.d("MainActivity.class={0}", MainActivity.class);
+
+		/* ペアリング済デバイスを取得 */
+		Set<BluetoothDevice> devices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
+		if(devices.size()==0)
+			ErrDialog.create(MainActivity.this, "ペアリング済デバイスがありません。\n先にペアリングを終了してください。\n終了します。").show();
 
 		/* Bluetoothのサポート状況チェック 未サポート端末なら起動しない */
 		if( !getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE))
@@ -73,6 +81,24 @@ public class MainActivity extends AppCompatActivity {
 
 		/* ViewModelインスタンス取得 */
 		mViewModel = new ViewModelProvider(this).get(FragMainViewModel.class);
+		/* Lock/Lock解除 設定 */
+		mViewModel.UnLock().observe(this, new Observer<Pair<Sender, Boolean>>() {
+			@Override
+			public void onChanged(Pair<Sender, Boolean> pair) {
+				if(pair.first == Sender.Service) return;
+				boolean isUnLock = pair.second;
+
+				/* UI更新処理はFragMainで実行している。 */
+				if( !isUnLock) {
+					TLog.d("mViewModel.getSeekerId()={0}", mViewModel.getSeekerId());
+					mViewModel.startBt(mViewModel.getSeekerId());
+				}
+				else {
+					TLog.d("サービスStop要求 UnLock isUnLock={0}", isUnLock);
+					mViewModel.stopBt();
+				}
+			}
+		});
 		/* ↓↓↓ TicWatch e2にはそもそも実装がないので、チェックしない。常にmIsSetedLocationON = true。 */
 		mViewModel.mIsSetedLocationON = true;
 //		/* 設定の位置情報ON/OFFチェック */

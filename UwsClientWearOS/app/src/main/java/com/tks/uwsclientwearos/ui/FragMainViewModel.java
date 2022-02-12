@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel;
 import com.tks.uwsclientwearos.Constants.Sender;
 import com.tks.uwsclientwearos.IClientService;
 import com.tks.uwsclientwearos.IOnUwsInfoChangeListner;
+import com.tks.uwsclientwearos.TLog;
 
 public class FragMainViewModel extends ViewModel {
 	private final MutableLiveData<Double>					mLatitude		= new MutableLiveData<>(0.0);
@@ -56,4 +57,20 @@ public class FragMainViewModel extends ViewModel {
 	 *  Location
 	 *  ********/
 	public boolean mIsSetedLocationON = false;
+
+	/* Bluetooth開始 */
+	public void startBt(short seekerId) {
+		TLog.d("seekerid={0}", seekerId);
+		if(mClientServiceIf == null) return;
+		try { mClientServiceIf.startBt(seekerId); }
+		catch (RemoteException e) { e.printStackTrace(); }
+	}
+
+	/* Bluetooth終了 */
+	public void stopBt() {
+		TLog.d("");
+		if(mClientServiceIf == null) return;
+		try { mClientServiceIf.stopBt(); }
+		catch (RemoteException e) { e.printStackTrace(); }
+	}
 }

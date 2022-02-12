@@ -6,6 +6,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -16,7 +17,6 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
-import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
@@ -33,7 +33,7 @@ import static com.tks.uwsclientwearos.Constants.ACTION.FINALIZE;
 import static com.tks.uwsclientwearos.Constants.NOTIFICATION_CHANNEL_ID;
 import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_CON_LOC_BEAT;
 import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_INITIALIZING;
-import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_IDLE;
+import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_LOC_BEAT;
 import static com.tks.uwsclientwearos.Constants.d2Str;
 
 public class UwsClientService extends Service {
@@ -66,7 +66,6 @@ public class UwsClientService extends Service {
 		public void onReceive(Context context, Intent intent) {
 			if( !intent.getAction().equals(FINALIZE)) return;
 
-			Toast.makeText(getApplicationContext(), "終了します。", Toast.LENGTH_SHORT).show();
 			LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mReceiver);
 			stopForeground(true);
 			stopSelf();
@@ -80,14 +79,14 @@ public class UwsClientService extends Service {
 				TLog.d("startForeground.");
 				startForeground(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE_BLE, prepareNotification());
 				break;
-			case FINALIZE:
-				TLog.d("stopForeground.");
-				LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(new Intent(FINALIZE));
-				Toast.makeText(getApplicationContext(), "終了します。", Toast.LENGTH_SHORT).show();
-				try { Thread.sleep(1000); } catch(InterruptedException ignore) { }
-				stopForeground(true);
-				stopSelf();
-				break;
+//			/* この処理は不要。FINALIZEは、mReceiver::onReceive()で処理する */
+//			case FINALIZE:
+//				TLog.d("stopForeground.");
+//				LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(new Intent(FINALIZE));
+//				try { Thread.sleep(1000); } catch(InterruptedException ignore) { }
+//				stopForeground(true);
+//				stopSelf();
+//				break;
 		}
 		return START_NOT_STICKY;
 	}
@@ -141,12 +140,18 @@ public class UwsClientService extends Service {
 		}
 
 		@Override
-		public int startUws(int seekerid) {
+		public int startBt(int seekerid) {
+			TLog.d("seekerid={0}", seekerid);
+			mStatus = SERVICE_STATUS_CON_LOC_BEAT;
+			mSeekerId = (short)seekerid;
+			uwsStartBt(mSeekerId);
 			return 0;
 		}
 
 		@Override
-		public void stopUws() {
+		public void stopBt() {
+			mStatus = SERVICE_STATUS_LOC_BEAT;
+			uwsStopBt();
 		}
 
 		/* UwsHeartBeatServiceから、脈拍通知で呼ばれる */
@@ -169,24 +174,22 @@ public class UwsClientService extends Service {
 	/* ***************/
 	private void uwsInit() {
 		TLog.d("xxxxx");
-		mStatus = SERVICE_STATUS_IDLE;
+		mStatus = SERVICE_STATUS_LOC_BEAT;
 		/* 位置情報初期化 */
 		mFlc = LocationServices.getFusedLocationProviderClient(this);
 		/* 位置情報取得開始 */
 		if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
 			throw new RuntimeException("ありえない権限エラー。すでにチェック済。");
 		mFlc.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
-//		/* TODO Bluetooth初期化 */
+		/* Bluetooth初期化 */
+		mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 	}
+
 	private void uwsFin() {
 		TLog.d("xxxxx");
 		mFlc = null;
-//		/* TODO Bluetooth終了 */
+		mBluetoothAdapter = null;
 	}
-
-	/* *************/
-	/* 開始/停止処理 */
-	/* *************/
 
 	/* *************/
 	/* 位置情報 機能 */
@@ -226,5 +229,23 @@ public class UwsClientService extends Service {
 		TLog.d("xxxxx");
 		mFlc.removeLocationUpdates(mLocationCallback);
 	}
+
+	/* **************/
+	/* Bluetooth機能 */
+	/* **************/
+	private BluetoothAdapter	mBluetoothAdapter;
+
+	private void uwsStartBt(short seekerid) {
+		TLog.d("seekerid={0}", seekerid);
+		/* Bluetooth接続開始 */
+//		startAdvertise(seekerid);
+	}
+
+	private void uwsStopBt() {
+		/* Bluetooth接続終了 */
+//		stopAdvertise();
+	}
+
+
 }
 
