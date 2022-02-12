@@ -36,6 +36,7 @@ import com.google.android.gms.location.LocationServices;
 import static com.tks.uwsclientwearos.Constants.ACTION.INITIALIZE;
 import static com.tks.uwsclientwearos.Constants.ACTION.FINALIZE;
 import static com.tks.uwsclientwearos.Constants.BT_CLASSIC_UUID;
+import static com.tks.uwsclientwearos.Constants.ERR_ALREADY_STARTED;
 import static com.tks.uwsclientwearos.Constants.ERR_BT_DISABLE;
 import static com.tks.uwsclientwearos.Constants.ERR_OK;
 import static com.tks.uwsclientwearos.Constants.NOTIFICATION_CHANNEL_ID;
@@ -218,14 +219,11 @@ public class UwsClientService extends Service {
 		mStatus = SERVICE_STATUS_LOC_BEAT;
 		/* 位置情報初期化 */
 		mFlc = LocationServices.getFusedLocationProviderClient(this);
-		/* Bluetooth初期化 */
-		mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 	}
 
 	private void uwsFin() {
 		TLog.d("xxxxx");
 		mFlc = null;
-		mBluetoothAdapter = null;
 	}
 
 	/* *************/
@@ -270,46 +268,64 @@ public class UwsClientService extends Service {
 	/* **************/
 	/* Bluetooth機能 */
 	/* **************/
-	private BluetoothAdapter	mBluetoothAdapter;
-	private BluetoothSocket		mBluetoothSocket;
+	private BtClientThread		mBtClientThread;
 
 	/* 接続開始 */
 	private int uwsStartBt(short seekerid, BluetoothDevice btServer) {
 		TLog.d("seekerid={0} device={1}", seekerid, btServer);
 
-		try {
-			mBluetoothSocket = btServer.createRfcommSocketToServiceRecord(BT_CLASSIC_UUID);
-		}
-		catch(IOException e) {
-//			throw new RuntimeException("bluetootが無効化してると発生。基本的に起きない。");
-			return ERR_BT_DISABLE;
-		}
-
-		/* 状態更新 */
-		try { mListner2.onServiceStatusChange(new StatusInfo(SERVICE_STATUS_CONNECTING, mSeekerId));}
-		catch(RemoteException ignore) {}
-
-		while(true) {
-			try {
-				TLog.d("接続中...");
-				mBluetoothSocket.connect();
-				break;
-			}
-			catch(IOException e) {
-				TLog.d("Server側がOpenしてない。リトライします");
-				try {Thread.sleep(1000);} catch(InterruptedException ignore) {}
-//					continue;
-			}
-		}
+		if(mBtClientThread != null) return ERR_ALREADY_STARTED;
+		mBtClientThread = new BtClientThread(btServer);
+		mBtClientThread.start();
 
 		return ERR_OK;
 	}
 
 	private void uwsStopBt() {
 		/* Bluetooth接続終了 */
-//		stopAdvertise();
+		if(mBtClientThread==null) return;	/* 停止済なら、停止不要。 */
+		mBtClientThread.interrupt();
+		mBtClientThread = null;
 	}
 
+	/* Bluetooth通信実行スレッド */
+	public class BtClientThread extends Thread {
+		private BluetoothDevice	bluetoothDevice;
+		private BluetoothSocket	bluetoothSocket;
+
+		public BtClientThread(BluetoothDevice device) {
+			if(device==null) throw new RuntimeException("デバイスが選択されてない!!");
+			bluetoothDevice = device;
+		}
+
+		@Override
+		public void run() {
+			byte[] incomingBuff = new byte[64];
+
+			try {
+				bluetoothSocket = bluetoothDevice.createRfcommSocketToServiceRecord(BT_CLASSIC_UUID);
+			}
+			catch(IOException e) {
+				throw new RuntimeException("bluetootが無効化してると発生。基本的に起きない。");
+			}
+
+			while(true) {
+				try {
+					TLog.d("接続中...");
+					try { mListner2.onServiceStatusChange(new StatusInfo(SERVICE_STATUS_CONNECTING , mSeekerId)); }
+					catch(RemoteException ignore) {}
+					bluetoothSocket.connect();
+					break;
+				}
+				catch(IOException e) {
+					TLog.d("ServerアプリがOpenしてない。リトライします");
+					try {Thread.sleep(1000);} catch(InterruptedException ignore) {}
+//					continue;
+				}
+			}
+
+		}
+	}
 
 }
 

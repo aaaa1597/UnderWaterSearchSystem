@@ -37,7 +37,8 @@ public class Constants {
 	/* エラーコード */
 	/* ************/
 	public final static int ERR_OK	= 0;	/* OK */
-	public final static int ERR_BT_DISABLE	= -1;	/* BT無効 */
+	public final static int ERR_ALREADY_STARTED	= -1;	/* すでに実行中 */
+	public final static int ERR_BT_DISABLE		= -2;	/* BT無効 */
 
 	public static String d2Str(double val) {
 		return String.format(Locale.JAPAN, "%1$.12f", val);
