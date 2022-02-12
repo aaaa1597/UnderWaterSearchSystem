@@ -17,7 +17,6 @@ import android.hardware.SensorEventCallback;
 import android.hardware.SensorManager;
 import android.os.IBinder;
 import android.os.RemoteException;
-import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -52,7 +51,6 @@ public class UwsHeartBeatService extends Service {
 
 			mSensorManager.unregisterListener(mSensorEventCallback);
 			unbindService(mCon);
-			Toast.makeText(getApplicationContext(), "終了します。", Toast.LENGTH_SHORT).show();
 			LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mReceiver);
 			stopForeground(true);
 			stopSelf();
@@ -72,7 +70,6 @@ public class UwsHeartBeatService extends Service {
 //				TLog.d("stopForeground.");
 //				LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcastSync(new Intent(FINALIZE));
 //				unbindService(mCon);
-//				Toast.makeText(getApplicationContext(), "脈拍終了します。", Toast.LENGTH_SHORT).show();
 //				try { Thread.sleep(1000); } catch(InterruptedException ignore) { }
 //				stopForeground(true);
 //				stopSelf();
