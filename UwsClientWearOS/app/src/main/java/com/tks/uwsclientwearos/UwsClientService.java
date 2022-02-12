@@ -134,7 +134,12 @@ public class UwsClientService extends Service {
 		}
 
 		@Override
-		public int startUws(int seekerid, IOnUwsInfoListner onUwsInfoListner) {
+		public void setOnUwsInfoChangeListner(IOnUwsInfoListner onUwsInfoListner) {
+			mCallback = onUwsInfoListner;
+		}
+
+		@Override
+		public int startUws(int seekerid) {
 			return 0;
 		}
 

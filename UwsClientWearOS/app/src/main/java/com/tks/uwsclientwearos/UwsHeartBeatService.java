@@ -130,7 +130,6 @@ public class UwsHeartBeatService extends Service {
 			super.onSensorChanged(event);
 			if(event.sensor.getType() == Sensor.TYPE_HEART_RATE) {
 				int hb = (int)event.values[0];
-				TLog.d("脈拍取得(fromセンサー) heartbeat = {0}", hb);
 				try { mIClientService.notifyHeartBeat(hb); }
 				catch(RemoteException e) { e.printStackTrace(); }
 			}

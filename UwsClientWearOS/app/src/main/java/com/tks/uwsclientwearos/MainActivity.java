@@ -19,6 +19,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -183,12 +184,12 @@ public class MainActivity extends AppCompatActivity {
 	private final ServiceConnection mCon = new ServiceConnection() {
 		@Override
 		public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-			IClientService ServiceIf = IClientService.Stub.asInterface(iBinder);
-			mViewModel.setClientServiceIf(ServiceIf);
+			IClientService serviceIf = IClientService.Stub.asInterface(iBinder);
+			mViewModel.setClientServiceIf(serviceIf);
 
 			/* サービス状態を取得 */
 			StatusInfo si;
-			try { si = ServiceIf.getServiceStatus(); }
+			try { si = serviceIf.getServiceStatus(); }
 			catch (RemoteException e) { e.printStackTrace(); throw new RuntimeException(e.getMessage()); }
 
 			TLog.d("si=(seekerid={0} Status={1})", si.getSeekerId(), si.getStatus());

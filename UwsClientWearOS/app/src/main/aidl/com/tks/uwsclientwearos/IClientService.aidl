@@ -5,7 +5,8 @@ import com.tks.uwsclientwearos.IOnUwsInfoListner;
 
 interface IClientService {
 	StatusInfo getServiceStatus();
-	int startUws(int seekerid, IOnUwsInfoListner onUwsInfoListner);
+	void setOnUwsInfoChangeListner(IOnUwsInfoListner onUwsInfoListner);
+	int startUws(int seekerid);
 	void stopUws();
 	/* UwsHeartBeatService向け */
 	void notifyHeartBeat(int heartbeat);

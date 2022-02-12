@@ -1,10 +1,13 @@
 package com.tks.uwsclientwearos.ui;
 
+import android.location.Location;
+import android.os.RemoteException;
 import android.util.Pair;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 import com.tks.uwsclientwearos.Constants.Sender;
 import com.tks.uwsclientwearos.IClientService;
+import com.tks.uwsclientwearos.IOnUwsInfoListner;
 
 public class FragMainViewModel extends ViewModel {
 	private final MutableLiveData<Double>					mLatitude		= new MutableLiveData<>(0.0);
@@ -28,6 +31,25 @@ public class FragMainViewModel extends ViewModel {
 	IClientService mClientServiceIf;
 	public void setClientServiceIf(IClientService serviceIf) {
 		mClientServiceIf = serviceIf;
+
+		try {
+			serviceIf.setOnUwsInfoChangeListner(new IOnUwsInfoListner.Stub() {
+				@Override
+				public void onLocationResult(Location location) {
+					mLongitude.postValue(location.getLongitude());
+					mLatitude .postValue(location.getLatitude());
+				}
+
+				@Override
+				public void onHeartbeatResult(int heartbeat) {
+					mHearBeat.postValue((short)heartbeat);
+				}
+			});
+		}
+		catch (RemoteException e) {
+			e.printStackTrace();
+			throw new RuntimeException("ここでは想定外!!\n" + e.getMessage());
+		}
 	}
 
 	/** ********
