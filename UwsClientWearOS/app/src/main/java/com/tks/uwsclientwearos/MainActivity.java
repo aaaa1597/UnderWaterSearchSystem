@@ -5,6 +5,7 @@ import java.util.Set;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.lifecycle.Observer;
@@ -18,6 +19,7 @@ import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
@@ -30,6 +32,7 @@ import android.util.Pair;
 import com.tks.uwsclientwearos.ui.FragMainViewModel;
 import com.tks.uwsclientwearos.Constants.Sender;
 import static com.tks.uwsclientwearos.Constants.ACTION.FINALIZE;
+import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_CONNECTING;
 import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_CON_LOC_BEAT;
 
 public class MainActivity extends AppCompatActivity {
@@ -75,6 +78,10 @@ public class MainActivity extends AppCompatActivity {
 						if(result.getResultCode() != Activity.RESULT_OK) {
 							ErrDialog.create(MainActivity.this, "BluetoothがOFFです。ONにして操作してください。\n終了します。").show();
 						}
+						else {
+							if(checkExecution(getApplicationContext()))
+								mViewModel.notifyStartCheckCleared();
+						}
 					});
 			startForResult.launch(enableBtIntent);
 		}
@@ -88,10 +95,28 @@ public class MainActivity extends AppCompatActivity {
 				if(pair.first == Sender.Service) return;
 				boolean isUnLock = pair.second;
 
-				/* UI更新処理はFragMainで実行している。 */
+				/* UI更新はFragMainで実行 */
 				if( !isUnLock) {
 					TLog.d("mViewModel.getSeekerId()={0}", mViewModel.getSeekerId());
-					mViewModel.startBt(mViewModel.getSeekerId());
+
+					/* ペアリング済デバイスを取得 */
+					Set<BluetoothDevice> devices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
+					if(devices.size()==0)
+						ErrDialog.create(MainActivity.this, "ペアリング済デバイスがありません。\n先にペアリングを終了してください。\n終了します。").show();
+					/* 選択Dialog(ペアリング済デバイスから一つを選ぶ) */
+					final String[] items = devices.stream().map(i -> i.getName() + " : " + i.getAddress()).toArray(String[]::new);
+					new AlertDialog.Builder(MainActivity.this)
+							.setTitle("Btサーバ選択")
+							.setItems(items, new DialogInterface.OnClickListener() {
+								@Override
+								public void onClick(DialogInterface dialog, int which) {
+									/* デバイス取得 */
+									BluetoothDevice device = (BluetoothDevice)devices.toArray()[which];
+									/* Bluetooth通信開始 */
+									mViewModel.startBt(mViewModel.getSeekerId(), device);
+								}
+							})
+							.show();
 				}
 				else {
 					TLog.d("サービスStop要求 UnLock isUnLock={0}", isUnLock);
@@ -148,6 +173,10 @@ public class MainActivity extends AppCompatActivity {
 		if (ngcnt > 0) {
 			ErrDialog.create(MainActivity.this, "このアプリには必要な権限です。\n再起動後に許可してください。\n終了します。").show();
 			return;
+		}
+		else {
+			if(checkExecution(getApplicationContext()))
+				mViewModel.notifyStartCheckCleared();
 		}
 	}
 
@@ -212,6 +241,9 @@ public class MainActivity extends AppCompatActivity {
 			IClientService serviceIf = IClientService.Stub.asInterface(iBinder);
 			mViewModel.setClientServiceIf(serviceIf);
 
+			if(checkExecution(getApplicationContext()))
+				mViewModel.notifyStartCheckCleared();
+
 			/* サービス状態を取得 */
 			StatusInfo si;
 			try { si = serviceIf.getServiceStatus(); }
@@ -220,7 +252,7 @@ public class MainActivity extends AppCompatActivity {
 			TLog.d("si=(seekerid={0} Status={1})", si.getSeekerId(), si.getStatus());
 
 			/* サービス状態が、BT接続中 */
-			if(si.getStatus() == SERVICE_STATUS_CON_LOC_BEAT) {
+			if(SERVICE_STATUS_CONNECTING <= si.getStatus() && si.getStatus() <= SERVICE_STATUS_CON_LOC_BEAT) {
 				/* SeekerIdを設定 */
 				mViewModel.setSeekerIdSmoothScrollToPosition(si.getSeekerId());
 				/* 画面をアドバタイズ中/接続中に更新 */
@@ -275,4 +307,34 @@ public class MainActivity extends AppCompatActivity {
 		startService(intent2);
 	}
 
+	/* 実行前の権限/条件チェック */
+	private boolean checkExecution(Context context) {
+		/* Bluetooth未サポート */
+		if (!context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE))
+			return false;
+
+		/* 権限が許可されていない */
+		if(context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+			return false;
+
+		/* Bluetooth未サポート */
+		final BluetoothManager bluetoothManager = (BluetoothManager)context.getSystemService(Context.BLUETOOTH_SERVICE);
+		if(bluetoothManager == null)
+			return false;
+
+		/* Bluetooth未サポート */
+		BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
+		if (bluetoothAdapter == null)
+			return false;
+
+		/* Bluetooth ON/OFF判定 */
+		if( !bluetoothAdapter.isEnabled())
+			return false;
+
+		/* 設定の位置情報ON/OFF判定 */
+		if( !mViewModel.mIsSetedLocationON)
+			return false;
+
+		return true;
+	}
 }

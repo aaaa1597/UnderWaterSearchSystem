@@ -110,13 +110,21 @@ public class UwsHeartBeatService extends Service {
 	private final ServiceConnection mCon = new ServiceConnection() {
 		@Override
 		public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+			TLog.d("");
 			mIClientService = IClientService.Stub.asInterface(iBinder);
-			TLog.d("UwsClientServiceと接続完了.");
+			try {
+				mIClientService.setNotifyStartCheckCleared(new IStartCheckClearedCallback.Stub() {
+					@Override
+					public void notifyStartCheckCleared() {
+						TLog.d("脈拍 開始");
+						Sensor sensor = mSensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE);
+						mSensorManager.registerListener(mSensorEventCallback, sensor, SensorManager.SENSOR_DELAY_NORMAL);
+					}
+				});
+			}
+			catch(RemoteException ignore) {}
 
-			TLog.d("脈拍 開始");
 			mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
-			Sensor sensor = mSensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE);
-			mSensorManager.registerListener(mSensorEventCallback, sensor, SensorManager.SENSOR_DELAY_NORMAL);
 		}
 
 		@Override

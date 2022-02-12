@@ -56,12 +56,12 @@
             android:columnCount="1">
 
             <TextView
-                android:id="@+id/txtAddress"
+                android:id="@+id/txtStatus"
                 android:layout_column="0"
                 android:layout_row="0"
                 android:ems="11"
                 android:textColor="@color/white"
-                android:text=""/>
+                android:text="aa-bb-cc-dd-ee-ff"/>
 
             <TextView
                 android:id="@+id/txtLatitude"

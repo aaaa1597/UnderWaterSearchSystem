@@ -7,18 +7,23 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -30,23 +35,33 @@ import com.google.android.gms.location.LocationServices;
 
 import static com.tks.uwsclientwearos.Constants.ACTION.INITIALIZE;
 import static com.tks.uwsclientwearos.Constants.ACTION.FINALIZE;
+import static com.tks.uwsclientwearos.Constants.BT_CLASSIC_UUID;
+import static com.tks.uwsclientwearos.Constants.ERR_BT_DISABLE;
+import static com.tks.uwsclientwearos.Constants.ERR_OK;
 import static com.tks.uwsclientwearos.Constants.NOTIFICATION_CHANNEL_ID;
+import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_CONNECTING;
 import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_CON_LOC_BEAT;
 import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_INITIALIZING;
 import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_LOC_BEAT;
 import static com.tks.uwsclientwearos.Constants.d2Str;
 
+import java.io.IOException;
+import java.util.Set;
+
 public class UwsClientService extends Service {
 	private int		mStatus		= SERVICE_STATUS_INITIALIZING;
 	private short	mSeekerId	= -1;
-	private IOnUwsInfoChangeListner	mCallback;
+	private IOnUwsInfoChangeListner			mCallback;
+	private IOnServiceStatusChangeListner	mListner2;
+	private IStartCheckClearedCallback		mCb;
+	private final Handler mHandler = new Handler();
 
 	@Override
 	public void onCreate() {
 		super.onCreate();
 		TLog.d("xxxxx");
 		uwsInit();
-		startLoc();
+//		startLoc();		このタイミングだとまだ権限許可が得られてない可能性がある。
 		IntentFilter filter = new IntentFilter();
 		filter.addAction(FINALIZE);
 		LocalBroadcastManager.getInstance(getApplicationContext()).registerReceiver(mReceiver, filter);
@@ -135,17 +150,38 @@ public class UwsClientService extends Service {
 		}
 
 		@Override
-		public void setOnUwsInfoChangeListner(IOnUwsInfoChangeListner onUwsInfoListner) {
-			mCallback = onUwsInfoListner;
+		public void setListners(IOnUwsInfoChangeListner onUwsInfoChangeListner, IOnServiceStatusChangeListner onServiceStatusChangeListner) {
+			mCallback = onUwsInfoChangeListner;
+			mListner2 = onServiceStatusChangeListner;
 		}
 
 		@Override
-		public int startBt(int seekerid) {
+		public void notifyStartCheckCleared() throws RemoteException {
+			/* 位置情報取得開始 */
+			startLoc();
+
+			/* 脈拍サービスと接続待ち */
+			mHandler.postDelayed(new Runnable() {
+				@Override
+				public void run() {
+					if(mCb== null) {
+						mHandler.postDelayed(this, 1000);
+						return;
+					}
+
+					TLog.d("脈拍サービスと接続待ち..");
+					try { mCb.notifyStartCheckCleared(); }
+					catch(RemoteException ignore) { }
+				}
+			}, 1000);
+		}
+
+		@Override
+		public int startBt(int seekerid, BluetoothDevice btServer) {
 			TLog.d("seekerid={0}", seekerid);
 			mStatus = SERVICE_STATUS_CON_LOC_BEAT;
 			mSeekerId = (short)seekerid;
-			uwsStartBt(mSeekerId);
-			return 0;
+			return uwsStartBt(mSeekerId, btServer);
 		}
 
 		@Override
@@ -155,6 +191,11 @@ public class UwsClientService extends Service {
 		}
 
 		/* UwsHeartBeatServiceから、脈拍通知で呼ばれる */
+		@Override
+		public void setNotifyStartCheckCleared(IStartCheckClearedCallback cb) {
+			mCb = cb;
+		}
+
 		@Override
 		public void notifyHeartBeat(int heartbeat) {
 			TLog.d("脈拍通知 from HeartBeat-Service!! = {0}", heartbeat);
@@ -177,10 +218,6 @@ public class UwsClientService extends Service {
 		mStatus = SERVICE_STATUS_LOC_BEAT;
 		/* 位置情報初期化 */
 		mFlc = LocationServices.getFusedLocationProviderClient(this);
-		/* 位置情報取得開始 */
-		if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
-			throw new RuntimeException("ありえない権限エラー。すでにチェック済。");
-		mFlc.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
 		/* Bluetooth初期化 */
 		mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 	}
@@ -234,11 +271,38 @@ public class UwsClientService extends Service {
 	/* Bluetooth機能 */
 	/* **************/
 	private BluetoothAdapter	mBluetoothAdapter;
+	private BluetoothSocket		mBluetoothSocket;
 
-	private void uwsStartBt(short seekerid) {
-		TLog.d("seekerid={0}", seekerid);
-		/* Bluetooth接続開始 */
-//		startAdvertise(seekerid);
+	/* 接続開始 */
+	private int uwsStartBt(short seekerid, BluetoothDevice btServer) {
+		TLog.d("seekerid={0} device={1}", seekerid, btServer);
+
+		try {
+			mBluetoothSocket = btServer.createRfcommSocketToServiceRecord(BT_CLASSIC_UUID);
+		}
+		catch(IOException e) {
+//			throw new RuntimeException("bluetootが無効化してると発生。基本的に起きない。");
+			return ERR_BT_DISABLE;
+		}
+
+		/* 状態更新 */
+		try { mListner2.onServiceStatusChange(new StatusInfo(SERVICE_STATUS_CONNECTING, mSeekerId));}
+		catch(RemoteException ignore) {}
+
+		while(true) {
+			try {
+				TLog.d("接続中...");
+				mBluetoothSocket.connect();
+				break;
+			}
+			catch(IOException e) {
+				TLog.d("Server側がOpenしてない。リトライします");
+				try {Thread.sleep(1000);} catch(InterruptedException ignore) {}
+//					continue;
+			}
+		}
+
+		return ERR_OK;
 	}
 
 	private void uwsStopBt() {
