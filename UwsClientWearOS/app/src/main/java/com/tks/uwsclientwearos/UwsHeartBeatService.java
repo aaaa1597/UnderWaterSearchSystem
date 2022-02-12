@@ -31,6 +31,7 @@ public class UwsHeartBeatService extends Service {
 	@Override
 	public void onCreate() {
 		super.onCreate();
+		TLog.d("xxxxx");
 		IntentFilter filter = new IntentFilter();
 		filter.addAction(FINALIZE);
 		LocalBroadcastManager.getInstance(getApplicationContext()).registerReceiver(mReceiver, filter);
@@ -39,6 +40,7 @@ public class UwsHeartBeatService extends Service {
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
+		TLog.d("xxxxx");
 		LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mReceiver);
 	}
 
@@ -48,6 +50,8 @@ public class UwsHeartBeatService extends Service {
 		public void onReceive(Context context, Intent intent) {
 			if( !intent.getAction().equals(FINALIZE)) return;
 
+			mSensorManager.unregisterListener(mSensorEventCallback);
+			unbindService(mCon);
 			Toast.makeText(getApplicationContext(), "終了します。", Toast.LENGTH_SHORT).show();
 			LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mReceiver);
 			stopForeground(true);
@@ -63,15 +67,16 @@ public class UwsHeartBeatService extends Service {
 				startForeground(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE_HB, prepareNotification());
 				bindService(new Intent(getApplicationContext(), UwsClientService.class), mCon, Context.BIND_AUTO_CREATE);
 				break;
-			case FINALIZE:
-				TLog.d("stopForeground.");
-				LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcastSync(new Intent(FINALIZE));
-				unbindService(mCon);
-				Toast.makeText(getApplicationContext(), "脈拍終了します。", Toast.LENGTH_SHORT).show();
-				try { Thread.sleep(1000); } catch(InterruptedException ignore) { }
-				stopForeground(true);
-				stopSelf();
-				break;
+//			/* この処理は不要。FINALIZEは、mReceiver::onReceive()で処理する */
+//			case FINALIZE:
+//				TLog.d("stopForeground.");
+//				LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcastSync(new Intent(FINALIZE));
+//				unbindService(mCon);
+//				Toast.makeText(getApplicationContext(), "脈拍終了します。", Toast.LENGTH_SHORT).show();
+//				try { Thread.sleep(1000); } catch(InterruptedException ignore) { }
+//				stopForeground(true);
+//				stopSelf();
+//				break;
 		}
 		return START_NOT_STICKY;
 	}

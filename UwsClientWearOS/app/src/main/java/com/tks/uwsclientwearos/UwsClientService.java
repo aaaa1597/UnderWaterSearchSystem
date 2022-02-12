@@ -44,6 +44,7 @@ public class UwsClientService extends Service {
 	@Override
 	public void onCreate() {
 		super.onCreate();
+		TLog.d("xxxxx");
 		uwsInit();
 		startLoc();
 		IntentFilter filter = new IntentFilter();
@@ -54,6 +55,7 @@ public class UwsClientService extends Service {
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
+		TLog.d("xxxxx");
 		LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mReceiver);
 		stoptLoc();
 		uwsFin();

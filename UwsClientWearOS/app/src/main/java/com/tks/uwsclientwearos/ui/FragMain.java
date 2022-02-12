@@ -1,21 +1,29 @@
 package com.tks.uwsclientwearos.ui;
 
+import static com.tks.uwsclientwearos.Constants.ACTION.FINALIZE;
+
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.LinearSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.tks.uwsclientwearos.R;
 import com.tks.uwsclientwearos.TLog;
@@ -93,6 +101,20 @@ public class FragMain extends Fragment {
 				rvw.scrollToPosition(pos);
 			}
 		});
+		/* 終了ボタン */
+		view.findViewById(R.id.btnFin).setOnClickListener(
+			v -> {
+				new AlertDialog.Builder(getActivity())
+						.setTitle("確認!!")
+						.setMessage("終了しますか?")
+						.setPositiveButton("OK", (dialog, which) -> {
+							/* Broadcastで終了のインテントを送信 -> 後は各々の終了処理を実行 */
+							LocalBroadcastManager.getInstance(getActivity()).sendBroadcastSync(new Intent(FINALIZE));
+						})
+						.setNegativeButton("Cancel", null)
+						.show();
+			}
+		);
 
 		/* SeekerIDのlistView定義 */
 		RecyclerView recyclerView = getActivity().findViewById(R.id.rvw_seekerid);
