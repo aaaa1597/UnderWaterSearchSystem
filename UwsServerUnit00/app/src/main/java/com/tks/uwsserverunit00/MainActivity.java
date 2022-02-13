@@ -19,6 +19,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.RemoteException;
 
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
@@ -214,22 +215,11 @@ public class MainActivity extends AppCompatActivity {
 		return new ServiceConnection() {
 			@Override
 			public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-				int ret = mBleViewModel.onServiceConnected(IUwsServer.Stub.asInterface(iBinder));
-				TLog.d("Bletooth初期化 ret={0}", ret);
-
-				if(ret == Constants.UWS_NG_PERMISSION_DENIED)
-					ErrDialog.create(MainActivity.this, "このアプリに権限がありません!!\n終了します。").show();
-				else if(ret == Constants.UWS_NG_SERVICE_NOTFOUND)
-					ErrDialog.create(MainActivity.this, "この端末はBluetoothに対応していません!!\n終了します。").show();
-				else if(ret == Constants.UWS_NG_ADAPTER_NOTFOUND)
-					ErrDialog.create(MainActivity.this, "この端末はBluetoothに対応していません!!\n終了します。").show();
-				else if(ret == Constants.UWS_NG_BT_OFF)
-					Snackbar.make(findViewById(R.id.root_view), "BluetoothがOFFです。\nONにして操作してください。", Snackbar.LENGTH_LONG).show();
-				else if(ret == Constants.UWS_NG_ALREADY_SCANNED)
-					Snackbar.make(findViewById(R.id.root_view), "すでにscan中です。継続します。", Snackbar.LENGTH_LONG).show();
-				else if(ret != Constants.UWS_NG_SUCCESS)
-					ErrDialog.create(MainActivity.this, "原因不明のエラーが発生しました!!\n終了します。").show();
-				return;
+				IUwsServer serverIf = IUwsServer.Stub.asInterface(iBinder);
+				mBleViewModel.onServiceConnected(serverIf);
+				/* BT開始 */
+				try { serverIf.notifyStartCheckCleared();}
+				catch (RemoteException e) { e.printStackTrace(); }
 			}
 
 			@Override

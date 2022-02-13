@@ -12,18 +12,17 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.recyclerview.widget.RecyclerView;
-import java.text.SimpleDateFormat;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.tks.uwsserverunit00.DeviceInfo;
 import com.tks.uwsserverunit00.R;
 import com.tks.uwsserverunit00.UwsInfo;
 
-import static com.tks.uwsserverunit00.Constants.UWS_NG_DEVICE_NOTFOUND;
+import static com.tks.uwsserverunit00.Constants.ERR_DEVICE_NOTFOUND;
 import static com.tks.uwsserverunit00.Constants.d2Str;
 
 /**
@@ -217,7 +216,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			/* indexを検索 */
 			AtomicInteger index = new AtomicInteger(-1);
 			DevicveInfoModel findit = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mSeekerId==deviceInfo.getSeekerId()).findAny().orElse(null);
-			if(findit == null) return UWS_NG_DEVICE_NOTFOUND;	/* 対象外デバイスが存在しない。ありえないはず。 */
+			if(findit == null) return ERR_DEVICE_NOTFOUND;	/* 対象外デバイスが存在しない。ありえないはず。 */
 
 			/* 呼び元で実行する */
 //		if (notify) notifyDataSetChanged();
@@ -249,7 +248,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	public int updDeviceInfo(UwsInfo uwsInfo) {
 		AtomicInteger index = new AtomicInteger(-1);
 		DevicveInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mSeekerId==uwsInfo.getSeekerId()).findAny().orElse(null);
-		if(device == null) return UWS_NG_DEVICE_NOTFOUND;	/* 対象外デバイスが存在しない。ありえないはず。 */
+		if(device == null) return ERR_DEVICE_NOTFOUND;	/* 対象外デバイスが存在しない。ありえないはず。 */
 
 		device.mDatetime = uwsInfo.getDate();
 		device.mSeekerId = uwsInfo.getSeekerId();
@@ -271,7 +270,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	public int setSelected(short seekerid, boolean isChecked) {
 		AtomicInteger index = new AtomicInteger(-1);
 		DevicveInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
-		if(device == null) return UWS_NG_DEVICE_NOTFOUND;	/* 対象外デバイスが存在しない。ありえないはず。 */
+		if(device == null) return ERR_DEVICE_NOTFOUND;	/* 対象外デバイスが存在しない。ありえないはず。 */
 
 		device.mSelected = isChecked;
 		return index.get();

@@ -4,4 +4,6 @@
     <string name="stopscan">Scan停止</string>
     <string name="connect_device">connect</string>
     <string name="error_end">終了</string>
+    <string name="err_btconnect_failured">Bluetoothの接続に失敗。\nクライアントを確認してください。</string>
+    <string name="err_btdisconnected">Bluetoothが切断されました。</string>
 </resources>
