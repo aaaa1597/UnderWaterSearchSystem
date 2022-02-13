@@ -104,8 +104,8 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		final short seekerid = model.mSeekerId;
 		final String deviceName = model.mDeviceName;
 		final String deviceAddress = model.mDeviceAddress;
-		final int constsresid = seekerid == -1 ? R.drawable.statusx_na :
-				model.mSelected ? R.drawable.status5_ready : R.drawable.status0_none;
+		final int constsresid = seekerid == -1 ? R.drawable.statusx_waitforconnect :
+								model.mSelected ? R.drawable.status5_ready : R.drawable.status0_none;
 		holder.mtxtDatetime.setText(d2Str(model.mDatetime));
 		holder.mTxtSeekerId.setText((seekerid == -1) ? " - " : String.valueOf(seekerid));
 		holder.mTxtDeviceName.setText(TextUtils.isEmpty(deviceName) ? "" : deviceName);
