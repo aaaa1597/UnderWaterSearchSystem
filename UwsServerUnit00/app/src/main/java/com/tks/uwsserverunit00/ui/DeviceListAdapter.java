@@ -1,12 +1,12 @@
 package com.tks.uwsserverunit00.ui;
 
 import android.content.Context;
-import android.graphics.Color;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -31,24 +31,26 @@ import static com.tks.uwsserverunit00.Constants.d2Str;
 
 public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.ViewHolder> {
 	static class ViewHolder extends RecyclerView.ViewHolder {
+		LinearLayout mllRow;
 		TextView	mtxtDatetime;
 		TextView	mTxtSeekerId;
 		TextView	mTxtDeviceName;
 		TextView	mTxtDeviceNameAddress;
 		ImageView	mImvConnectStatus;
-		TextView	mTxtConnectStatus;
+		TextView	mTxtStatus;
 		TextView	mTxtHertBeat;
 		ImageView	mImvBuoy;
 		TextView	mTxtLongitude;
 		TextView	mTxtLatitude;
 		ViewHolder(View view) {
 			super(view);
+			mllRow					= view.findViewById(R.id.ll_row);
 			mtxtDatetime			= view.findViewById(R.id.txtDatetime);
 			mTxtSeekerId			= view.findViewById(R.id.txtSeekerId);
 			mTxtDeviceName			= view.findViewById(R.id.txtDeeviceName);
 			mTxtDeviceNameAddress	= view.findViewById(R.id.txtDeviceAddress);
 			mImvConnectStatus		= view.findViewById(R.id.imvConnectStatus);
-			mTxtConnectStatus		= view.findViewById(R.id.txtConnectStatus);
+			mTxtStatus				= view.findViewById(R.id.txtStatus);
 			mTxtHertBeat			= view.findViewById(R.id.txtHertBeat);
 			mImvBuoy				= view.findViewById(R.id.imvBuoy);
 			mTxtLongitude			= view.findViewById(R.id.txtLongitude);
@@ -57,8 +59,8 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	}
 
 	/* インターフェース */
-	public interface OnCheckedChangeListener {
-		void onCheckedChanged(short seekerid, boolean isChecked);
+	public interface OnSelectedChangeListener {
+		void onSelectedChanged(short seekerid, boolean isChecked);
 	}
 
 	public interface OnSetBuoyListener {
@@ -67,15 +69,13 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 
 	/* メンバ変数 */
 	private final List<DeviceInfoModel>		mDeviceList;
-	private final Context					mContext;
-	private final OnCheckedChangeListener	mOnCheckedChangeListener;
+	private final OnSelectedChangeListener	mOnSelectedChangeListener;
 	private final OnSetBuoyListener			mOnSetBuoyListener;
 
 	/* コンストラクタ */
-	public DeviceListAdapter(Context context, List<DeviceInfoModel> list, OnCheckedChangeListener lisner, OnSetBuoyListener lisner2) {
+	public DeviceListAdapter(List<DeviceInfoModel> list, OnSelectedChangeListener lisner, OnSetBuoyListener lisner2) {
 		mDeviceList				= list;
-		mContext				= context;
-		mOnCheckedChangeListener= lisner;
+		mOnSelectedChangeListener= lisner;
 		mOnSetBuoyListener		= lisner2;
 	}
 
@@ -84,9 +84,11 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		public short	mSeekerId;
 		public String	mDeviceName;
 		public String	mDeviceAddress;
+		public int		mStatusId;
 		public double	mLongitude;
 		public double	mLatitude;
 		public short	mHertBeat;
+		public boolean	mConnected;
 		public boolean	mSelected;
 		public boolean	mIsBuoy;
 	}
@@ -101,44 +103,49 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	@Override
 	public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
 		DeviceInfoModel model = mDeviceList.get(position);
-		final short seekerid = model.mSeekerId;
-		final String deviceName = model.mDeviceName;
-		final String deviceAddress = model.mDeviceAddress;
-		final int constsresid = seekerid == -1 ? R.drawable.statusx_waitforconnect :
-								model.mSelected ? R.drawable.status5_ready : R.drawable.status0_none;
+		final short seekerid		= model.mSeekerId;
+		final String deviceName		= model.mDeviceName;
+		final String deviceAddress	= model.mDeviceAddress;
+		final int constsresid		= (!model.mConnected)? R.drawable.statusx_waitforconnect :
+									    model.mSelected  ? R.drawable.status5_ready : R.drawable.status0_none;
+		if(!model.mConnected) {
+			holder.mllRow.setOnClickListener(null);
+			holder.mImvBuoy.setOnClickListener(null);
+		}
+		else {
+			/* メンバ決定 */
+			holder.mllRow.setOnClickListener(view -> {
+				model.mSelected = !model.mSelected;
+				mOnSelectedChangeListener.onSelectedChanged(seekerid, model.mSelected);
+				if(model.mSelected)
+					holder.mImvConnectStatus.setImageResource(R.drawable.status5_ready);
+				else
+					holder.mImvConnectStatus.setImageResource(R.drawable.status0_none);
+			});
+			/* 浮標設定 */
+			holder.mImvBuoy.setOnClickListener(view -> {
+				model.mIsBuoy = !model.mIsBuoy;
+				mOnSetBuoyListener.onSetBuoyListener(seekerid, model.mIsBuoy);
+				if(model.mIsBuoy)
+					holder.mImvBuoy.setImageResource(R.drawable.buoy_enable);
+				else
+					holder.mImvBuoy.setImageResource(R.drawable.buoy_disable);
+			});
+		}
 		holder.mtxtDatetime.setText(d2Str(model.mDatetime));
 		holder.mTxtSeekerId.setText((seekerid == -1) ? " - " : String.valueOf(seekerid));
 		holder.mTxtDeviceName.setText(TextUtils.isEmpty(deviceName) ? "" : deviceName);
 		holder.mTxtDeviceNameAddress.setText(TextUtils.isEmpty(deviceAddress) ? "" : deviceAddress);
 		holder.mImvConnectStatus.setImageResource(constsresid);
-//		holder.mTxtConnectStatus.setText(statusinfo.first);
-//		holder.mTxtConnectStatus.setTextColor(statusinfo.second);
-		holder.mTxtHertBeat.setText(model.mHertBeat == 0 ? "-" : "" + model.mHertBeat);
-//		holder.mBtnBuoy.setOnClickListener(null);
-//		holder.mBtnBuoy.setValue(true);
-		if(seekerid == -1) {
-		}
-		else {
-			holder.mImvBuoy.setOnClickListener(v -> {
-				/* 浮標ボタン押下 */
-				mOnSetBuoyListener.onSetBuoyListener(seekerid, !model.mIsBuoy);
-			});
-//			if(model.mIsBuoy)
-//				holder.mImvBuoy.setBackgroundColor(Color.WHITE);
-//			else
-//				holder.mImvBuoy.setBackgroundColor(Color.GRAY);
-		}
-		holder.mTxtLongitude.setText(String.valueOf(model.mLongitude));
-		holder.mTxtLatitude.setText(String.valueOf(model.mLatitude));
+		holder.mTxtStatus.setText(model.mStatusId);
+		holder.mTxtHertBeat.setText((model.mHertBeat<0) ? "-" : "" + model.mHertBeat);
+		holder.mTxtLongitude.setText(d2Str(model.mLongitude));
+		holder.mTxtLatitude.setText(d2Str(model.mLatitude));
 	}
 
 	@Override
 	public int getItemCount() {
 		return mDeviceList.size();
-	}
-
-	public void setList(List<DeviceInfoModel> devices) {
-		mDeviceList.addAll(devices);
 	}
 
 	public int setSelected(short seekerid, boolean isChecked) {

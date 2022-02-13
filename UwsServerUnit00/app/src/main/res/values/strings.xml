@@ -6,4 +6,5 @@
     <string name="error_end">終了</string>
     <string name="err_btconnect_failured">Bluetoothの接続に失敗。\nクライアントを確認してください。</string>
     <string name="err_btdisconnected">Bluetoothが切断されました。</string>
+    <string name="status_none">- NONE -</string>
 </resources>

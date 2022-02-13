@@ -2,6 +2,7 @@
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/ll_row"
     android:orientation="horizontal"
     android:layout_gravity="center"
     android:layout_width="match_parent"
@@ -32,7 +33,7 @@
                 android:layout_marginStart="20dp">
 
                 <TextView
-                    android:id="@+id/txtConnectStatus"
+                    android:id="@+id/txtStatus"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     app:layout_constraintTop_toTopOf="parent"
@@ -40,7 +41,7 @@
                     android:textSize="8sp"
                     android:ems="5"
                     android:gravity="end"
-                    android:text="- NONE -" />
+                    android:text="@string/status_none" />
 
                 <ImageView
                     android:id="@+id/imvConnectStatus"

@@ -43,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
 	private boolean				mIsSettingLocationON		= false;
 	private final static int	REQUEST_PERMISSIONS			= 1111;
 	private final static int	REQUEST_LOCATION_SETTINGS	= 2222;
+	private ServiceConnection	mCon = null;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -115,17 +116,19 @@ public class MainActivity extends AppCompatActivity {
 		/* Bluetoothリストにペアリング済デバイスを追加 */
 		Set<BluetoothDevice> devices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
 		List<DeviceInfoModel> pairedlist = devices.stream().map(i -> new DeviceInfoModel() {{
-			mDatetime = new Date();
-			mSeekerId = -1;
-			mDeviceName = i.getName();
-			mDeviceAddress = i.getAddress();
-			mLongitude = 0;
-			mLatitude = 0;
-			mHertBeat = 0;
-			mSelected = false;
-			mIsBuoy = false;
+			mDatetime		= new Date();
+			mSeekerId		= -1;
+			mDeviceName		= i.getName();
+			mDeviceAddress	= i.getAddress();
+			mStatusId		= R.string.status_none;
+			mLongitude		= -1;
+			mLatitude		= -1;
+			mHertBeat		= -1;
+			mConnected		= false;
+			mSelected		= false;
+			mIsBuoy			= false;
 		}}).collect(Collectors.toList());
-		mBleViewModel.setDeviceListAdapter(new DeviceListAdapter(getApplicationContext(), pairedlist,
+		mBleViewModel.setDeviceListAdapter(new DeviceListAdapter(pairedlist,
 				(seekerid, isChecked) -> {	mBleViewModel.setSelected(seekerid, isChecked);
 											mMapViewModel.setSelected(seekerid, isChecked);},
 				(seekerid, isChecked) -> mBleViewModel.setBuoy(seekerid, isChecked)
@@ -143,7 +146,6 @@ public class MainActivity extends AppCompatActivity {
 		long ngcnt = Arrays.stream(grantResults).filter(value -> value != PackageManager.PERMISSION_GRANTED).count();
 		if (ngcnt > 0) {
 			ErrDialog.create(MainActivity.this, "このアプリには必要な権限です。\n再起動後に許可してください。\n終了します。").show();
-			return;
 		}
 		else {
 			mMapViewModel.Permission().postValue(true);
@@ -171,6 +173,7 @@ public class MainActivity extends AppCompatActivity {
 		super.onDestroy();
 		TLog.d("");
 		unbindService(mCon);
+		mCon = null;
 	}
 
 	/** **********
@@ -219,6 +222,8 @@ public class MainActivity extends AppCompatActivity {
 			return;
 		}
 
+		mCon = createServiceConnection();
+
 		/* Bluetoothサービス起動 */
 		Intent intent = new Intent(MainActivity.this, UwsServerService.class);
 		bindService(intent, mCon, Context.BIND_AUTO_CREATE);
@@ -226,19 +231,21 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	/* Serviceコールバック */
-	private final ServiceConnection	mCon = new ServiceConnection() {
-		@Override
-		public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-			IUwsServer serverIf = IUwsServer.Stub.asInterface(iBinder);
-			mBleViewModel.onServiceConnected(serverIf);
-			/* BT開始 */
-			try { serverIf.notifyStartCheckCleared();}
-			catch (RemoteException e) { e.printStackTrace(); }
-		}
+	private ServiceConnection createServiceConnection() {
+		return new ServiceConnection() {
+			@Override
+			public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+				IUwsServer serverIf = IUwsServer.Stub.asInterface(iBinder);
+				mBleViewModel.onServiceConnected(serverIf);
+				/* 起動チェックOK */
+				try { serverIf.notifyStartCheckCleared();}
+				catch (RemoteException e) { e.printStackTrace(); }
+			}
 
-		@Override
-		public void onServiceDisconnected(ComponentName componentName) {
-			mBleViewModel.onServiceDisconnected();
-		}
-	};
+			@Override
+			public void onServiceDisconnected(ComponentName componentName) {
+				mBleViewModel.onServiceDisconnected();
+			}
+		};
+	}
 }
