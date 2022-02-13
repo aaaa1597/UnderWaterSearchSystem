@@ -26,7 +26,6 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.location.SettingsClient;
-
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -44,7 +43,6 @@ public class MainActivity extends AppCompatActivity {
 	private boolean				mIsSettingLocationON		= false;
 	private final static int	REQUEST_PERMISSIONS			= 1111;
 	private final static int	REQUEST_LOCATION_SETTINGS	= 2222;
-	private ServiceConnection	mCon = null;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -54,9 +52,6 @@ public class MainActivity extends AppCompatActivity {
 		TLog.d("");
 		mMapViewModel = new ViewModelProvider(this).get(FragMapViewModel.class);
 		mBleViewModel = new ViewModelProvider(this).get(FragBleViewModel.class);
-//		mBleViewModel.ShowSnacbar().observe(this, showMsg -> {
-//			Snackbar.make(findViewById(R.id.root_view), showMsg, Snackbar.LENGTH_LONG).show();
-//		});
 
 		/* Bluetoothのサポート状況チェック 未サポート端末なら起動しない */
 		if( !getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE))
@@ -176,7 +171,6 @@ public class MainActivity extends AppCompatActivity {
 		super.onDestroy();
 		TLog.d("");
 		unbindService(mCon);
-		mCon = null;
 	}
 
 	/** **********
@@ -225,8 +219,6 @@ public class MainActivity extends AppCompatActivity {
 			return;
 		}
 
-		mCon = createServiceConnection();
-
 		/* Bluetoothサービス起動 */
 		Intent intent = new Intent(MainActivity.this, UwsServerService.class);
 		bindService(intent, mCon, Context.BIND_AUTO_CREATE);
@@ -234,21 +226,19 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	/* Serviceコールバック */
-	private ServiceConnection createServiceConnection() {
-		return new ServiceConnection() {
-			@Override
-			public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-				IUwsServer serverIf = IUwsServer.Stub.asInterface(iBinder);
-				mBleViewModel.onServiceConnected(serverIf);
-				/* BT開始 */
-				try { serverIf.notifyStartCheckCleared();}
-				catch (RemoteException e) { e.printStackTrace(); }
-			}
+	private final ServiceConnection	mCon = new ServiceConnection() {
+		@Override
+		public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+			IUwsServer serverIf = IUwsServer.Stub.asInterface(iBinder);
+			mBleViewModel.onServiceConnected(serverIf);
+			/* BT開始 */
+			try { serverIf.notifyStartCheckCleared();}
+			catch (RemoteException e) { e.printStackTrace(); }
+		}
 
-			@Override
-			public void onServiceDisconnected(ComponentName componentName) {
-				mBleViewModel.onServiceDisconnected();
-			}
-		};
-	}
+		@Override
+		public void onServiceDisconnected(ComponentName componentName) {
+			mBleViewModel.onServiceDisconnected();
+		}
+	};
 }
