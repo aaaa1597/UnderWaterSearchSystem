@@ -1,16 +1,20 @@
 package com.tks.uwsclientwearos;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
+
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
+import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -30,16 +34,15 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Pair;
+
 import com.tks.uwsclientwearos.ui.FragMainViewModel;
 import com.tks.uwsclientwearos.Constants.Sender;
 import static com.tks.uwsclientwearos.Constants.ACTION.FINALIZE;
-import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_CONNECTING;
-import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_CON_LOC_BEAT;
 
 public class MainActivity extends AppCompatActivity {
-//	private final static int	REQUEST_LOCATION_SETTINGS	= 1111;	/* ← TicWatch e2にはそもそも実装がないので、チェックしない。常にmIsSetedLocationON = true。 */
-	private final static int	REQUEST_PERMISSIONS			= 2222;
-	private	FragMainViewModel	mViewModel;
+	//	private final static int	REQUEST_LOCATION_SETTINGS	= 1111;	/* ← TicWatch e2にはそもそも実装がないので、チェックしない。常にmIsSetedLocationON = true。 */
+	private final static int REQUEST_PERMISSIONS = 2222;
+	private FragMainViewModel mViewModel;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -47,13 +50,8 @@ public class MainActivity extends AppCompatActivity {
 		setContentView(R.layout.activity_main);
 		TLog.d("MainActivity.class={0}", MainActivity.class);
 
-		/* ペアリング済デバイスを取得 */
-		Set<BluetoothDevice> devices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
-		if(devices.size()==0)
-			ErrDialog.create(MainActivity.this, "ペアリング済デバイスがありません。\n先にペアリングを終了してください。\n終了します。").show();
-
 		/* Bluetoothのサポート状況チェック 未サポート端末なら起動しない */
-		if( !getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE))
+		if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE))
 			ErrDialog.create(MainActivity.this, "Bluetoothが、未サポートの端末です。").show();
 
 		/* 権限(Bluetooth/位置情報)が許可されていない場合はリクエスト. */
@@ -64,23 +62,26 @@ public class MainActivity extends AppCompatActivity {
 				requestPermissions(new String[]{Manifest.permission.BODY_SENSORS, Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_PERMISSIONS);
 		}
 
+		Set<BluetoothDevice> devices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
+		if (devices.size() == 0)
+			ErrDialog.create(MainActivity.this, "ペアリング済デバイスがありません。\n先にペアリングを終了してください。\n終了します。").show();
+
 		/* BluetoothManager取得 */
-		final BluetoothManager bluetoothManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
+		final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
 		BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
 		/* Bluetooth未サポート判定 未サポートならエラーpopupで終了 */
 		if (bluetoothAdapter == null) {
 			ErrDialog.create(MainActivity.this, "Bluetooth未サポートの端末です。\n終了します。").show();
 		}
 		/* Bluetooth ON/OFF判定 -> OFFならONにするようにリクエスト */
-		else if( !bluetoothAdapter.isEnabled()) {
+		else if (!bluetoothAdapter.isEnabled()) {
 			Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
 			ActivityResultLauncher<Intent> startForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
 					result -> {
-						if(result.getResultCode() != Activity.RESULT_OK) {
+						if (result.getResultCode() != Activity.RESULT_OK) {
 							ErrDialog.create(MainActivity.this, "BluetoothがOFFです。ONにして操作してください。\n終了します。").show();
-						}
-						else {
-							if(checkExecution(getApplicationContext()))
+						} else {
+							if (checkExecution(getApplicationContext()))
 								mViewModel.notifyStartCheckCleared();
 						}
 					});
@@ -93,14 +94,18 @@ public class MainActivity extends AppCompatActivity {
 		mViewModel.UnLock().observe(this, new Observer<Pair<Sender, Boolean>>() {
 			@Override
 			public void onChanged(Pair<Sender, Boolean> pair) {
-				if(pair.first == Sender.Service) return;
+				if (pair.first == Sender.Service) return;
 				boolean isUnLock = pair.second;
 
 				/* UI更新はFragMainで実行 */
-				if( !isUnLock) {
+				if (!isUnLock) {
 					TLog.d("mViewModel.getSeekerId()={0}", mViewModel.getSeekerId());
 
 					/* ペアリング済デバイスを取得 */
+					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+						if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED)
+							throw new RuntimeException("ここでは、権限不足はありえない。");
+					}
 					Set<BluetoothDevice> devices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
 					if(devices.size()==0)
 						ErrDialog.create(MainActivity.this, "ペアリング済デバイスがありません。\n先にペアリングを終了してください。\n終了します。").show();
@@ -256,7 +261,8 @@ public class MainActivity extends AppCompatActivity {
 			TLog.d("si=(seekerid={0} Status={1})", si.getSeekerId(), si.getStatus());
 
 			/* サービス状態が、BT接続中 */
-			if(SERVICE_STATUS_CONNECTING <= si.getStatus() && si.getStatus() <= SERVICE_STATUS_CON_LOC_BEAT) {
+			List<Integer> connctstatuses = Arrays.asList(R.string.status_btconnecting, R.string.status_btconnected_and_loc_beat);
+			if(connctstatuses.contains(si.getStatus())) {
 				/* SeekerIdを設定 */
 				mViewModel.setSeekerIdSmoothScrollToPosition(si.getSeekerId());
 				/* 画面をアドバタイズ中/接続中に更新 */

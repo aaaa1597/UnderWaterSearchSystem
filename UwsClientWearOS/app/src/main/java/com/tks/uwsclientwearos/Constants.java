@@ -16,14 +16,6 @@ public class Constants {
 		public final static String FINALIZE		= "uws.action.finalize";
 	}
 
-	/* ***************/
-	/* 状態(Service) */
-	/* ***************/
-	public final static int SERVICE_STATUS_INITIALIZING	= 0;	/* 初期化中 */
-	public final static int SERVICE_STATUS_LOC_BEAT		= 1;	/* 位置情報取得中かつ脈拍取得中 */
-	public final static int SERVICE_STATUS_CONNECTING	= 2;	/* サーバ接続待ち... */
-	public final static int SERVICE_STATUS_CON_LOC_BEAT	= 3;	/* BT接続中かつ位置情報取得中かつ脈拍取得中 */
-
 	public enum Sender {
 		App, Service,
 	}

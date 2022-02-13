@@ -6,24 +6,22 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -33,29 +31,30 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.util.Date;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
 import static com.tks.uwsclientwearos.Constants.ACTION.INITIALIZE;
 import static com.tks.uwsclientwearos.Constants.ACTION.FINALIZE;
 import static com.tks.uwsclientwearos.Constants.BT_CLASSIC_UUID;
-import static com.tks.uwsclientwearos.Constants.ERR_ALREADY_STARTED;
-import static com.tks.uwsclientwearos.Constants.ERR_BT_DISABLE;
-import static com.tks.uwsclientwearos.Constants.ERR_OK;
 import static com.tks.uwsclientwearos.Constants.NOTIFICATION_CHANNEL_ID;
-import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_CONNECTING;
-import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_CON_LOC_BEAT;
-import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_INITIALIZING;
-import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_LOC_BEAT;
+import static com.tks.uwsclientwearos.Constants.ERR_ALREADY_STARTED;
+import static com.tks.uwsclientwearos.Constants.ERR_OK;
 import static com.tks.uwsclientwearos.Constants.d2Str;
 
-import java.io.IOException;
-import java.util.Set;
-
 public class UwsClientService extends Service {
-	private int		mStatus		= SERVICE_STATUS_INITIALIZING;
-	private short	mSeekerId	= -1;
-	private IOnUwsInfoChangeListner			mCallback;
-	private IOnServiceStatusChangeListner	mListner2;
-	private IStartCheckClearedCallback		mCb;
+	private int mStatus = R.string.status_initializing;
+	private short mSeekerId = -1;
+	private IOnUwsInfoChangeListner mCallback;
+	private IStatusNotifier			mListner2;
+	private IStartCheckClearedCallback mCb;
 	private final Handler mHandler = new Handler();
+	private final BlockingQueue<byte[]> mSndQue = new LinkedBlockingQueue<>();
 
 	@Override
 	public void onCreate() {
@@ -80,7 +79,7 @@ public class UwsClientService extends Service {
 	private BroadcastReceiver mReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context context, Intent intent) {
-			if( !intent.getAction().equals(FINALIZE)) return;
+			if(!intent.getAction().equals(FINALIZE)) return;
 
 			LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mReceiver);
 			stopForeground(true);
@@ -90,7 +89,7 @@ public class UwsClientService extends Service {
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		switch (intent.getAction()) {
+		switch(intent.getAction()) {
 			case INITIALIZE:
 				TLog.d("startForeground.");
 				startForeground(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE_BLE, prepareNotification());
@@ -114,11 +113,11 @@ public class UwsClientService extends Service {
 		/* 通知のチャンネル生成 */
 		NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL_ID, "BLE/位置情報", NotificationManager.IMPORTANCE_DEFAULT);
 		channel.enableVibration(false);
-		NotificationManager notificationManager = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+		NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 		notificationManager.createNotificationChannel(channel);
 
 		/* 停止ボタン押下の処理実装 */
-		Intent stopIntent = new Intent(this, UwsClientService.class);	/* まず自分に送信。その後アプリと脈拍サービスに送信する */
+		Intent stopIntent = new Intent(this, UwsClientService.class);    /* まず自分に送信。その後アプリと脈拍サービスに送信する */
 		stopIntent.setAction(FINALIZE);
 		PendingIntent pendingStopIntent = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 		NotificationCompat.Action stopAction = new NotificationCompat.Action.Builder(R.drawable.okicon, "終了", pendingStopIntent).build();
@@ -151,7 +150,7 @@ public class UwsClientService extends Service {
 		}
 
 		@Override
-		public void setListners(IOnUwsInfoChangeListner onUwsInfoChangeListner, IOnServiceStatusChangeListner onServiceStatusChangeListner) {
+		public void setListners(IOnUwsInfoChangeListner onUwsInfoChangeListner, IStatusNotifier onServiceStatusChangeListner) {
 			mCallback = onUwsInfoChangeListner;
 			mListner2 = onServiceStatusChangeListner;
 		}
@@ -165,29 +164,33 @@ public class UwsClientService extends Service {
 			mHandler.postDelayed(new Runnable() {
 				@Override
 				public void run() {
-					if(mCb== null) {
+					if(mCb == null) {
 						mHandler.postDelayed(this, 1000);
 						return;
 					}
 
 					TLog.d("脈拍サービスと接続待ち..");
-					try { mCb.notifyStartCheckCleared(); }
-					catch(RemoteException ignore) { }
+					try {
+						mCb.notifyStartCheckCleared();
+					}
+					catch(RemoteException ignore) {
+					}
 				}
 			}, 1000);
 		}
 
 		@Override
 		public int startBt(int seekerid, BluetoothDevice btServer) {
-			TLog.d("seekerid={0}", seekerid);
-			mStatus = SERVICE_STATUS_CON_LOC_BEAT;
-			mSeekerId = (short)seekerid;
+			TLog.d("bt接続開始 seekerid={0}", seekerid);
+			mStatus = R.string.status_btconnecting;
+			mSeekerId = (short) seekerid;
 			return uwsStartBt(mSeekerId, btServer);
 		}
 
 		@Override
 		public void stopBt() {
-			mStatus = SERVICE_STATUS_LOC_BEAT;
+			TLog.d("bt停止");
+			mStatus = R.string.status_loc_and_beat;
 			uwsStopBt();
 		}
 
@@ -200,8 +203,16 @@ public class UwsClientService extends Service {
 		@Override
 		public void notifyHeartBeat(int heartbeat) {
 			TLog.d("脈拍通知 from HeartBeat-Service!! = {0}", heartbeat);
-			try { mCallback.onHeartbeatResultChange((short)heartbeat); }
-			catch(RemoteException e) { e.printStackTrace();}
+			if(mStatus == R.string.status_btconnected_and_loc_beat) {
+				try { mSndQue.put(createByteArray(heartbeat)); }
+				catch(InterruptedException ignore) {}
+			}
+			try {
+				mCallback.onHeartbeatResultChange((short)heartbeat);
+			}
+			catch(RemoteException e) {
+				e.printStackTrace();
+			}
 		}
 	};
 
@@ -216,7 +227,7 @@ public class UwsClientService extends Service {
 	/* ***************/
 	private void uwsInit() {
 		TLog.d("xxxxx");
-		mStatus = SERVICE_STATUS_LOC_BEAT;
+		mStatus = R.string.status_loc_and_beat;
 		/* 位置情報初期化 */
 		mFlc = LocationServices.getFusedLocationProviderClient(this);
 	}
@@ -229,24 +240,36 @@ public class UwsClientService extends Service {
 	/* *************/
 	/* 位置情報 機能 */
 	/* *************/
-	private final static int			LOC_UPD_INTERVAL = 2000;
-	private FusedLocationProviderClient	mFlc;
-	private final LocationRequest		mLocationRequest = LocationRequest.create().setInterval(LOC_UPD_INTERVAL).setFastestInterval(LOC_UPD_INTERVAL).setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-	private final LocationCallback		mLocationCallback = new LocationCallback() {
+	private final static int LOC_UPD_INTERVAL = 2000;
+	private FusedLocationProviderClient mFlc;
+	private final LocationRequest mLocationRequest = LocationRequest.create().setInterval(LOC_UPD_INTERVAL).setFastestInterval(LOC_UPD_INTERVAL).setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+	private final LocationCallback mLocationCallback = new LocationCallback() {
 		@Override
 		public void onLocationResult(@NonNull LocationResult locationResult) {
 			super.onLocationResult(locationResult);
 			Location location = locationResult.getLastLocation();
 			TLog.d("1秒定期 (緯度:{0} 経度:{1})", d2Str(location.getLatitude()), d2Str(location.getLongitude()));
+			if(mStatus == R.string.status_btconnected_and_loc_beat) {
+				try { mSndQue.put(createByteArray(location.getLongitude(), location.getLatitude())); }
+				catch(InterruptedException ignore) {}
+			}
 
 			if(mCallback != null) {
-				try { mCallback.onLocationResultChange(location); }
-				catch(RemoteException e) { e.printStackTrace();}
+				try {
+					mCallback.onLocationResultChange(location);
+				}
+				catch(RemoteException e) {
+					e.printStackTrace();
+				}
 			}
 
 			/* 毎回OFF->ONにすることで、更新間隔が1秒になるようにしている。 */
 			stoptLoc();
-			try { Thread.sleep(LOC_UPD_INTERVAL); } catch (InterruptedException ignored) { }
+			try {
+				Thread.sleep(LOC_UPD_INTERVAL);
+			}
+			catch(InterruptedException ignored) {
+			}
 			startLoc();
 		}
 	};
@@ -254,7 +277,7 @@ public class UwsClientService extends Service {
 	/* 位置情報取得開始 */
 	private void startLoc() {
 		TLog.d("xxxxx");
-		if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+		if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
 			throw new RuntimeException("ありえない権限エラー。すでにチェック済。");
 		mFlc.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
 	}
@@ -268,7 +291,7 @@ public class UwsClientService extends Service {
 	/* **************/
 	/* Bluetooth機能 */
 	/* **************/
-	private BtClientThread		mBtClientThread;
+	private BtClientThread mBtClientThread;
 
 	/* 接続開始 */
 	private int uwsStartBt(short seekerid, BluetoothDevice btServer) {
@@ -283,24 +306,27 @@ public class UwsClientService extends Service {
 
 	private void uwsStopBt() {
 		/* Bluetooth接続終了 */
-		if(mBtClientThread==null) return;	/* 停止済なら、停止不要。 */
+		if(mBtClientThread == null) return;    /* 停止済なら、停止不要。 */
 		mBtClientThread.interrupt();
 		mBtClientThread = null;
 	}
 
 	/* Bluetooth通信実行スレッド */
 	public class BtClientThread extends Thread {
-		private BluetoothDevice	bluetoothDevice;
-		private BluetoothSocket	bluetoothSocket;
+		private BluetoothDevice bluetoothDevice;
+		private BluetoothSocket bluetoothSocket;
 
 		public BtClientThread(BluetoothDevice device) {
-			if(device==null) throw new RuntimeException("デバイスが選択されてない!!");
+			if(device == null) throw new RuntimeException("デバイスが選択されてない!!");
 			bluetoothDevice = device;
 		}
 
 		@Override
 		public void run() {
-			byte[] incomingBuff = new byte[64];
+			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+				if(ActivityCompat.checkSelfPermission(UwsClientService.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED)
+					throw new RuntimeException("ここではありえない。");
+			}
 
 			try {
 				bluetoothSocket = bluetoothDevice.createRfcommSocketToServiceRecord(BT_CLASSIC_UUID);
@@ -309,10 +335,11 @@ public class UwsClientService extends Service {
 				throw new RuntimeException("bluetootが無効化してると発生。基本的に起きない。");
 			}
 
+			/* サーバとの接続待ち... */
 			while(true) {
 				try {
 					TLog.d("接続中...");
-					try { mListner2.onServiceStatusChange(new StatusInfo(SERVICE_STATUS_CONNECTING , mSeekerId)); }
+					try { mListner2.onStatusChange(R.string.status_btconnecting); }
 					catch(RemoteException ignore) {}
 					bluetoothSocket.connect();
 					break;
@@ -324,8 +351,126 @@ public class UwsClientService extends Service {
 				}
 			}
 
+			/* 成功ログ出力 */
+			String name = bluetoothDevice.getName();
+			String addr = bluetoothDevice.getAddress();
+			TLog.d("Connected. {0}:{1}", name, addr);
+			try { mListner2.onStatusChange(R.string.status_btconnected_and_loc_beat); }
+			catch(RemoteException ignore) {}
+
+			/* Stream取得 */
+			InputStream inputStream = null;
+			OutputStream outputStrem= null;
+			try {
+				inputStream = bluetoothSocket.getInputStream();
+				outputStrem = bluetoothSocket.getOutputStream();
+			}
+			catch(IOException e) {
+				e.printStackTrace();
+				TLog.d("切断!!というより接続失敗!! {0}:{1}", name, addr);
+				try { mListner2.onStatusChange(R.string.status_btdisconnected); }
+				catch(RemoteException ignore) {}
+				try {
+					if(inputStream!=null) inputStream.close();
+					if(outputStrem!=null) outputStrem.close();
+					bluetoothSocket.close();
+				}
+				catch(IOException ioException) { ioException.printStackTrace(); /* ここで発生してもどうしようもない */}
+				return;	/* Stream取得に失敗したらThread終了。 */
+			}
+
+			byte[] incomingBuff = new byte[64];
+			mStatus = R.string.status_btconnected_and_loc_beat;
+			/* 接続確立 -> 送受信中 */
+			while(true) {
+				if(Thread.interrupted()){
+					try {
+						inputStream.close();
+						outputStrem.close();
+						bluetoothSocket.close();
+					}
+					catch(IOException ioException) { ioException.printStackTrace(); /* ここで発生してもどうしようもない */}
+					break;
+				}
+
+				TLog.d("送信中...");
+
+				/* 送信データがなければ待つ。 */
+				if(mSndQue.size() == 0) {
+					try { Thread.sleep(10); }
+					catch(InterruptedException ignore) {}
+					continue;
+				}
+
+				/* 送信データtake */
+				byte[] sndData = null;
+				try { sndData = mSndQue.take();}
+				catch(InterruptedException ignore) {}
+				if(sndData== null) continue;
+
+				/* 送信 */
+				try { outputStrem.write(sndData);}
+				catch(IOException e) {
+					e.printStackTrace();
+					TLog.d("切断!! {0}:{1}", name, addr);
+					try { mListner2.onStatusChange(R.string.status_btdisconnected); }
+					catch(RemoteException ignore) {}
+					try {
+						inputStream.close();
+						outputStrem.close();
+						bluetoothSocket.close();
+					}
+					catch(IOException ioException) { ioException.printStackTrace(); /* ここで発生してもどうしようもない */}
+					return;	/* Stream取得に失敗したらThread終了。 */
+				}
+			}
 		}
 	}
 
+	private byte[] createByteArray(int heartbeat) {
+		byte[] sndBin = new byte[13];
+		int spos = 0;
+		/* 日付(8byte) */
+		byte[] bdate = l2bs(new Date().getTime());
+		System.arraycopy(bdate, 0, sndBin, spos, bdate.length);
+		spos += bdate.length;
+		/* データ種別(1byte) */
+		byte[] btype = new byte[]{'h'};
+		System.arraycopy(btype, 0, sndBin, spos, btype.length);
+		spos += btype.length;
+		/* 脈拍(4byte) */
+		byte[] bheartbeat = i2bs(heartbeat);
+		System.arraycopy(bheartbeat, 0, sndBin, spos, bheartbeat.length);
+		return sndBin;
+	}
+	private byte[] createByteArray(double longitude, double latitude) {
+		byte[] sndBin = new byte[25];
+		int spos = 0;
+		/* 日付(8byte) */
+		byte[] bdate = l2bs(new Date().getTime());
+		System.arraycopy(bdate, 0, sndBin, spos, bdate.length);
+		spos += bdate.length;
+		/* データ種別(1byte) */
+		byte[] btype = new byte[]{'l'};
+		System.arraycopy(btype, 0, sndBin, spos, btype.length);
+		spos += btype.length;
+		/* 経度(8byte) */
+		byte[] blongitude = d2bs(longitude);
+		System.arraycopy(blongitude, 0, sndBin, spos, blongitude.length);
+		spos += blongitude.length;
+		/* 緯度(8byte) */
+		byte[] blatitude = d2bs(latitude);
+		System.arraycopy(blatitude, 0, sndBin, spos, blatitude.length);
+		return sndBin;
+	}
+	private byte[] i2bs(int value) {
+		return ByteBuffer.allocate(4).putInt(value).array();
+	}
+	private byte[] l2bs(long value) {
+		return ByteBuffer.allocate(8).putLong(value).array();
+	}
+	private byte[] d2bs(double value) {
+		return ByteBuffer.allocate(8).putDouble(value).array();
+	}
 }
 

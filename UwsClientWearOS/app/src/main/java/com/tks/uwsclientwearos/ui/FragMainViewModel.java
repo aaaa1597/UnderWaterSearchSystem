@@ -1,29 +1,34 @@
 package com.tks.uwsclientwearos.ui;
 
+import android.app.Application;
 import android.bluetooth.BluetoothDevice;
 import android.location.Location;
 import android.os.RemoteException;
 import android.util.Pair;
+
+import androidx.annotation.NonNull;
+import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 import com.tks.uwsclientwearos.Constants.Sender;
 import com.tks.uwsclientwearos.IClientService;
-import com.tks.uwsclientwearos.IOnServiceStatusChangeListner;
+import com.tks.uwsclientwearos.IStatusNotifier;
 import com.tks.uwsclientwearos.IOnUwsInfoChangeListner;
-import com.tks.uwsclientwearos.StatusInfo;
 import com.tks.uwsclientwearos.TLog;
 
-import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_CONNECTING;
-import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_CON_LOC_BEAT;
-import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_INITIALIZING;
-import static com.tks.uwsclientwearos.Constants.SERVICE_STATUS_LOC_BEAT;
-
-public class FragMainViewModel extends ViewModel {
+public class FragMainViewModel extends AndroidViewModel {
 	private final MutableLiveData<Double>					mLatitude		= new MutableLiveData<>(0.0);
 	private final MutableLiveData<Double>					mLongitude		= new MutableLiveData<>(0.0);
 	private final MutableLiveData<Short>					mHearBeat		= new MutableLiveData<>((short)0);
 	private final MutableLiveData<String>					mStatusStr		= new MutableLiveData<>("");
 	private final MutableLiveData<Pair<Sender, Boolean>>	mUnLock			= new MutableLiveData<>(Pair.create(Sender.App, true));
+	private Application										mContext;
+
+	public FragMainViewModel(@NonNull Application application) {
+		super(application);
+		mContext = application;
+	}
+
 	public MutableLiveData<Double>					Latitude()		{ return mLatitude; }
 	public MutableLiveData<Double>					Longitude()		{ return mLongitude; }
 	public MutableLiveData<Short>					HearBeat()		{ return mHearBeat; }
@@ -55,17 +60,10 @@ public class FragMainViewModel extends ViewModel {
 				public void onHeartbeatResultChange(int heartbeat) {
 					mHearBeat.postValue((short)heartbeat);
 				}
-			}, new IOnServiceStatusChangeListner.Stub() {
+			}, new IStatusNotifier.Stub() {
 				@Override
-				public void onServiceStatusChange(StatusInfo statusInfo) {
-					String statusstr = "";
-					switch(statusInfo.getStatus()) {
-						case SERVICE_STATUS_INITIALIZING:	statusstr = "初期化中";			break;
-						case SERVICE_STATUS_LOC_BEAT:		statusstr = "脈拍/GPS取得中";		break;
-						case SERVICE_STATUS_CONNECTING:		statusstr = "サーバ接続待ち...";	break;
-						case SERVICE_STATUS_CON_LOC_BEAT:	statusstr = "Bluetooth通信中";	break;
-					}
-					mStatusStr.postValue("   " + statusstr);
+				public void onStatusChange(int statusid) {
+					mStatusStr.postValue(mContext.getString(statusid));
 				}
 			});
 		}
