@@ -77,10 +77,10 @@ public class FragMap extends SupportMapFragment {
 		mBizLogicViewModel = new ViewModelProvider(requireActivity()).get(FragBizLogicViewModel.class);
 
 		mBleViewModel = new ViewModelProvider(requireActivity()).get(FragBleViewModel.class);
-		mBleViewModel.UpdUwsInfo().observe(getViewLifecycleOwner(), uwsInfo -> {
-			if(uwsInfo==null) return;
-			updMapDrawInfo(mGoogleMap, mMapDrawInfos, uwsInfo);
-		});
+//		mBleViewModel.UpdUwsInfo().observe(getViewLifecycleOwner(), uwsInfo -> {
+//			if(uwsInfo==null) return;
+//			updMapDrawInfo(mGoogleMap, mMapDrawInfos, uwsInfo);
+//		});
 
 		mMapViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
 		mMapViewModel.Permission().observe(getViewLifecycleOwner(), aBoolean -> {
@@ -232,23 +232,23 @@ public class FragMap extends SupportMapFragment {
 		if(drawinfo == null) {
 			/* 新規追加 */
 			LatLng nowposgps = new LatLng(uwsInfo.getLatitude(), uwsInfo.getLongitude());
-			if(mBleViewModel.getDeviceListAdapter().isSelected(seekerid)/*選択中*/) {
-				Marker marker = googleMap.addMarker(new MarkerOptions()
-						.position(nowposgps)
-						.title(String.valueOf(seekerid))
-						.icon(createIcon(uwsInfo.getSeekerId())));
-
-				Circle nowPoint = googleMap.addCircle(new CircleOptions()
-						.center(nowposgps)
-						.radius(0.5)
-						.fillColor(Color.MAGENTA)
-						.strokeColor(Color.MAGENTA));
-				TLog.d("Circle = {0}", nowPoint);
-				mdList.put(seekerid, new MapDrawInfo(){{pos=nowposgps;maker=marker;circle=nowPoint;}});
-			}
-			else {
-				mdList.put(seekerid, new MapDrawInfo(){{pos=nowposgps;maker=null;circle=null;}});
-			}
+//			if(mBleViewModel.getDeviceListAdapter().isSelected(seekerid)/*選択中*/) {
+//				Marker marker = googleMap.addMarker(new MarkerOptions()
+//						.position(nowposgps)
+//						.title(String.valueOf(seekerid))
+//						.icon(createIcon(uwsInfo.getSeekerId())));
+//
+//				Circle nowPoint = googleMap.addCircle(new CircleOptions()
+//						.center(nowposgps)
+//						.radius(0.5)
+//						.fillColor(Color.MAGENTA)
+//						.strokeColor(Color.MAGENTA));
+//				TLog.d("Circle = {0}", nowPoint);
+//				mdList.put(seekerid, new MapDrawInfo(){{pos=nowposgps;maker=marker;circle=nowPoint;}});
+//			}
+//			else {
+//				mdList.put(seekerid, new MapDrawInfo(){{pos=nowposgps;maker=null;circle=null;}});
+//			}
 		}
 		else {
 			/* 位置更新 */
@@ -274,32 +274,32 @@ public class FragMap extends SupportMapFragment {
 //				drawinfo.polygon.remove();
 //				drawinfo.polygon = null;
 //			}
-			if(mBleViewModel.getDeviceListAdapter().isSelected(uwsInfo.getSeekerId())/*選抜中*/) {
-				Marker marker = googleMap.addMarker(new MarkerOptions()
-						.position(epos)
-						.title(String.valueOf(seekerid))
-						.icon(createIcon(uwsInfo.getSeekerId())));
-				Circle nowPoint = googleMap.addCircle(new CircleOptions()
-						.center(epos)
-						.radius(0.5)
-						.fillColor(Color.MAGENTA)
-						.strokeColor(Color.MAGENTA));
-				drawinfo.maker = marker;
-				drawinfo.circle= nowPoint;
-
-				/* 検索線描画の頂点情報取得 */
-				LatLng[] square = createSquare(spos, epos, UWS_LOC_BASE_DISTANCE_X, UWS_LOC_BASE_DISTANCE_Y);
-
-				if(mBizLogicViewModel.getSerchStatus()/*検索中*/) {
-					/* 矩形追加 */
-					Polygon polygon = googleMap.addPolygon(new PolygonOptions()
-							.fillColor(mMapViewModel.getFillColor())
-							.strokeColor(Color.BLUE)
-							.strokeWidth(1)
-							.add(square[0], square[1], square[3], square[2]));
-					drawinfo.polygon = polygon;
-				}
-			}
+//			if(mBleViewModel.getDeviceListAdapter().isSelected(uwsInfo.getSeekerId())/*選抜中*/) {
+//				Marker marker = googleMap.addMarker(new MarkerOptions()
+//						.position(epos)
+//						.title(String.valueOf(seekerid))
+//						.icon(createIcon(uwsInfo.getSeekerId())));
+//				Circle nowPoint = googleMap.addCircle(new CircleOptions()
+//						.center(epos)
+//						.radius(0.5)
+//						.fillColor(Color.MAGENTA)
+//						.strokeColor(Color.MAGENTA));
+//				drawinfo.maker = marker;
+//				drawinfo.circle= nowPoint;
+//
+//				/* 検索線描画の頂点情報取得 */
+//				LatLng[] square = createSquare(spos, epos, UWS_LOC_BASE_DISTANCE_X, UWS_LOC_BASE_DISTANCE_Y);
+//
+//				if(mBizLogicViewModel.getSerchStatus()/*検索中*/) {
+//					/* 矩形追加 */
+//					Polygon polygon = googleMap.addPolygon(new PolygonOptions()
+//							.fillColor(mMapViewModel.getFillColor())
+//							.strokeColor(Color.BLUE)
+//							.strokeWidth(1)
+//							.add(square[0], square[1], square[3], square[2]));
+//					drawinfo.polygon = polygon;
+//				}
+//			}
 		}
 	}
 

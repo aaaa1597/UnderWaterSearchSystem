@@ -5,10 +5,10 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
-
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.content.ComponentName;
 import android.content.Context;
@@ -20,18 +20,23 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
-
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.location.SettingsClient;
-import com.google.android.material.snackbar.Snackbar;
-import com.tks.uwsserverunit00.ui.FragBleViewModel;
-import com.tks.uwsserverunit00.ui.FragMapViewModel;
 
 import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import com.tks.uwsserverunit00.ui.DeviceListAdapter;
+import com.tks.uwsserverunit00.ui.DeviceListAdapter.DeviceInfoModel;
+import com.tks.uwsserverunit00.ui.FragBleViewModel;
+import com.tks.uwsserverunit00.ui.FragMapViewModel;
 
 public class MainActivity extends AppCompatActivity {
 	private FragBleViewModel	mBleViewModel;
@@ -49,9 +54,9 @@ public class MainActivity extends AppCompatActivity {
 		TLog.d("");
 		mMapViewModel = new ViewModelProvider(this).get(FragMapViewModel.class);
 		mBleViewModel = new ViewModelProvider(this).get(FragBleViewModel.class);
-		mBleViewModel.ShowSnacbar().observe(this, showMsg -> {
-			Snackbar.make(findViewById(R.id.root_view), showMsg, Snackbar.LENGTH_LONG).show();
-		});
+//		mBleViewModel.ShowSnacbar().observe(this, showMsg -> {
+//			Snackbar.make(findViewById(R.id.root_view), showMsg, Snackbar.LENGTH_LONG).show();
+//		});
 
 		/* Bluetoothのサポート状況チェック 未サポート端末なら起動しない */
 		if( !getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE))
@@ -112,6 +117,24 @@ public class MainActivity extends AppCompatActivity {
 			startForResult.launch(enableBtIntent);
 		}
 
+		/* Bluetoothリストにペアリング済デバイスを追加 */
+		Set<BluetoothDevice> devices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
+		List<DeviceInfoModel> pairedlist = devices.stream().map(i -> new DeviceInfoModel() {{
+			mDatetime = new Date();
+			mSeekerId = -1;
+			mDeviceName = i.getName();
+			mDeviceAddress = i.getAddress();
+			mLongitude = 0;
+			mLatitude = 0;
+			mHertBeat = 0;
+			mSelected = false;
+			mIsBuoy = false;
+		}}).collect(Collectors.toList());
+		mBleViewModel.setDeviceListAdapter(new DeviceListAdapter(getApplicationContext(), pairedlist,
+				(seekerid, isChecked) -> {	mBleViewModel.setSelected(seekerid, isChecked);
+											mMapViewModel.setSelected(seekerid, isChecked);},
+				(seekerid, isChecked) -> mBleViewModel.setBuoy(seekerid, isChecked)
+		));
 	}
 
 	@Override
