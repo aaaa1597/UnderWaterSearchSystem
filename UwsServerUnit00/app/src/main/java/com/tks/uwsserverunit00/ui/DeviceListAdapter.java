@@ -1,32 +1,22 @@
 package com.tks.uwsserverunit00.ui;
 
-import android.Manifest;
-import android.bluetooth.BluetoothDevice;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.widget.SwitchCompat;
-import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
-import com.tks.uwsserverunit00.DeviceInfo;
 import com.tks.uwsserverunit00.R;
-import com.tks.uwsserverunit00.UwsInfo;
 
 import static com.tks.uwsserverunit00.Constants.ERR_DEVICE_NOTFOUND;
 import static com.tks.uwsserverunit00.Constants.d2Str;
@@ -48,7 +38,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		ImageView	mImvConnectStatus;
 		TextView	mTxtConnectStatus;
 		TextView	mTxtHertBeat;
-		ImageButton	mBtnBuoy;
+		ImageView	mImvBuoy;
 		TextView	mTxtLongitude;
 		TextView	mTxtLatitude;
 		ViewHolder(View view) {
@@ -60,7 +50,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			mImvConnectStatus		= view.findViewById(R.id.imvConnectStatus);
 			mTxtConnectStatus		= view.findViewById(R.id.txtConnectStatus);
 			mTxtHertBeat			= view.findViewById(R.id.txtHertBeat);
-			mBtnBuoy				= view.findViewById(R.id.btnBuoy);
+			mImvBuoy				= view.findViewById(R.id.imvBuoy);
 			mTxtLongitude			= view.findViewById(R.id.txtLongitude);
 			mTxtLatitude			= view.findViewById(R.id.txtLatitude);
 		}
@@ -127,19 +117,16 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 //		holder.mBtnBuoy.setOnClickListener(null);
 //		holder.mBtnBuoy.setValue(true);
 		if(seekerid == -1) {
-			holder.mBtnBuoy.setEnabled(false);
-			holder.mBtnBuoy.setBackgroundColor(Color.DKGRAY);
 		}
 		else {
-			holder.mBtnBuoy.setEnabled(true);
-			holder.mBtnBuoy.setOnClickListener(v -> {
+			holder.mImvBuoy.setOnClickListener(v -> {
 				/* 浮標ボタン押下 */
 				mOnSetBuoyListener.onSetBuoyListener(seekerid, !model.mIsBuoy);
 			});
-			if(model.mIsBuoy)
-				holder.mBtnBuoy.setBackgroundColor(Color.WHITE);
-			else
-				holder.mBtnBuoy.setBackgroundColor(Color.GRAY);
+//			if(model.mIsBuoy)
+//				holder.mImvBuoy.setBackgroundColor(Color.WHITE);
+//			else
+//				holder.mImvBuoy.setBackgroundColor(Color.GRAY);
 		}
 		holder.mTxtLongitude.setText(String.valueOf(model.mLongitude));
 		holder.mTxtLatitude.setText(String.valueOf(model.mLatitude));
