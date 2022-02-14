@@ -3,156 +3,150 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/ll_row"
-    android:orientation="horizontal"
+    android:orientation="vertical"
     android:layout_gravity="center"
-    android:layout_width="match_parent"
+    android:layout_width="wrap_content"
     android:layout_height="wrap_content">
 
     <LinearLayout
         android:layout_width="wrap_content"
-        android:layout_height="80dp"
-        android:orientation="vertical">
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
 
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
+        <TextView
+            android:id="@+id/txtSeekerId"
+            android:layout_width="40dp"
+            android:layout_height="match_parent"
+            android:textSize="36sp"
+            android:gravity="center"
+            android:layout_gravity="center"
+            android:text=" - " />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="80dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="20dp">
 
             <TextView
-                android:id="@+id/txtSeekerId"
-                android:layout_width="40dp"
-                android:layout_height="match_parent"
-                android:textSize="36sp"
-                android:gravity="center"
-                android:layout_gravity="center"
-                android:text=" - " />
-
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:layout_width="80dp"
-                android:layout_height="match_parent"
-                android:layout_marginStart="20dp">
-
-                <TextView
-                    android:id="@+id/txtStatus"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintRight_toRightOf="parent"
-                    android:textSize="8sp"
-                    android:ems="5"
-                    android:gravity="end"
-                    android:text="@string/status_none" />
-
-                <ImageView
-                    android:id="@+id/imvConnectStatus"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:adjustViewBounds="true"
-                    android:layout_gravity="center"
-                    android:src="@drawable/status0_none" />
-
-            </androidx.constraintlayout.widget.ConstraintLayout>
-
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:layout_width="40dp"
-                android:layout_height="match_parent"
-                android:layout_gravity="center"
-                android:layout_marginStart="20dp">
-
-                <ImageView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:src="@drawable/heartbeat"
-                    android:padding="5dp"
-                    app:layout_constraintLeft_toLeftOf="parent"
-                    app:layout_constraintRight_toRightOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintBottom_toBottomOf="parent"/>
-
-                <TextView
-                    android:id="@+id/txtHertBeat"
-                    android:layout_height="wrap_content"
-                    android:layout_width="40dp"
-                    android:textSize="24sp"
-                    android:gravity="center"
-                    app:layout_constraintLeft_toLeftOf="parent"
-                    app:layout_constraintRight_toRightOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    android:text="11" />
-                
-            </androidx.constraintlayout.widget.ConstraintLayout>
+                android:id="@+id/txtStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintRight_toRightOf="parent"
+                android:textSize="8sp"
+                android:ems="5"
+                android:gravity="end"
+                android:text="@string/status_none" />
 
             <ImageView
-                android:id="@+id/imvBuoy"
-                android:layout_height="40dp"
-                android:layout_width="40dp"
+                android:id="@+id/imvConnectStatus"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:adjustViewBounds="true"
                 android:layout_gravity="center"
-                android:src="@drawable/buoy_disable"
-                android:scaleType="centerCrop"
-                android:layout_marginStart="20dp"
-                android:layout_marginTop="5dp"/>
-        </LinearLayout>
+                android:src="@drawable/status0_none" />
 
-        <LinearLayout
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="40dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:layout_marginStart="20dp">
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/heartbeat"
+                android:padding="5dp"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintRight_toRightOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"/>
+
+            <TextView
+                android:id="@+id/txtHertBeat"
+                android:layout_height="wrap_content"
+                android:layout_width="40dp"
+                android:textSize="24sp"
+                android:gravity="center"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintRight_toRightOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:text="11" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <ImageView
+            android:id="@+id/imvBuoy"
+            android:layout_height="40dp"
+            android:layout_width="40dp"
+            android:layout_gravity="center"
+            android:src="@drawable/buoy_disable"
+            android:scaleType="centerCrop"
+            android:layout_marginStart="20dp"
+            android:layout_marginTop="5dp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:textSize="8dp"
+            android:text="緯度 : "/>
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="8dp"
-                android:text="緯度 : "/>
-
-            <TextView
-                android:id="@+id/txtLatitude"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:ems="13"
-                android:textSize="8dp"
-                android:text="cccccccc"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
-                android:textSize="8dp"
-                android:text="経度 : "/>
-
-            <TextView
-                android:id="@+id/txtLongitude"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:ems="13"
-                android:textSize="8dp"
-                android:text="dddddddddd"/>
-        </LinearLayout>
-
-        <LinearLayout
+        <TextView
+            android:id="@+id/txtLatitude"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:ems="13"
+            android:textSize="8dp"
+            android:text="cccccccc"/>
 
-            <TextView
-                android:id="@+id/txtDeviceAddress"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="bbbbbbbbb"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:textSize="8dp"
+            android:text="経度 : "/>
 
-            <TextView
-                android:id="@+id/txtDeeviceName"
-                android:layout_marginStart="10dp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="ffffffff"/>
+        <TextView
+            android:id="@+id/txtLongitude"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ems="13"
+            android:textSize="8dp"
+            android:text="dddddddddd"/>
+    </LinearLayout>
 
-            <TextView
-                android:id="@+id/txtDatetime"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:visibility="gone"
-                android:text="ggggggg"/>
-        </LinearLayout>
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/txtDeviceAddress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="bbbbbbbbb"/>
+
+        <TextView
+            android:id="@+id/txtDeeviceName"
+            android:layout_marginStart="10dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ffffffff"/>
+
+        <TextView
+            android:id="@+id/txtDatetime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:text="ggggggg"/>
     </LinearLayout>
 </LinearLayout>
