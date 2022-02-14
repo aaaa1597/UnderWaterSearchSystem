@@ -14,10 +14,8 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.RemoteException;
-
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -138,7 +136,7 @@ public class UwsServerService extends Service {
 				/* Client接続待ち */
 				String name = null, addr = null;
 				try {
-					TLog.d("Client接続待ち...");
+					TLog.d("新Client待ち...");
 					BluetoothSocket btSocket = bluetoothServerSocket.accept();
 					name = btSocket.getRemoteDevice().getName();
 					addr = btSocket.getRemoteDevice().getAddress();
@@ -169,6 +167,7 @@ public class UwsServerService extends Service {
 		private InputStream		inputStream;
 		private OutputStream	outputStream;
 		public BtSndRcvThread(String aname, String aaddr, BluetoothSocket btSocket) throws IOException {
+			TLog.d("送受信スレッド起動 {0}:{1}", name, addr);
 			name = aname;
 			addr = aaddr;
 			bluetoothSocket	= btSocket;
@@ -178,7 +177,9 @@ public class UwsServerService extends Service {
 
 		@Override
 		public void run() {
-			byte[] incomingBuff = new byte[64];
+			TLog.d("送受信スレッド開始 {0}:{1}", name, addr);
+			byte[] incomingLength = new byte[1]; /* 制限:最大256byteまで */
+			byte[] incomingBuff = new byte[256];
 			while(true) {
 				/* スレッド停止チェック */
 				if (Thread.interrupted()) {
@@ -188,30 +189,55 @@ public class UwsServerService extends Service {
 					break;
 				}
 
-				int incomingSize = 0;
+				TLog.d("受信待ち... {0}:{1}", name, addr);
+
+				/* 1st-メッセージ長受信 */
+				int incomingbodySize = 0;
 				try {
-					incomingSize = inputStream.read(incomingBuff);}
+					inputStream.read(incomingLength);
+					incomingbodySize = incomingLength[0];
+				}
 				catch(IOException e) {
 					e.printStackTrace();
 					try { mStatusCb.OnChangeStatus(name, addr, R.string.err_btdisconnected); }
-					catch(RemoteException ignore) {/* ここで例外が発生するとどうしようもない */}
+					catch(RemoteException ignore) {/* ここで例外が発生してもどうしようもない */}
 					super.interrupt();
 					continue;
 				}
 
-				byte[] buff = new byte[incomingSize];
-				System.arraycopy(incomingBuff, 0, buff, 0, incomingSize);
-				parseRcvAndCallback(name, addr, buff);
-
+				/* 2nd-body受信 */
+				byte[] completedata = new byte[incomingbodySize];
+				int recieved = 0;
 				try {
-					outputStream.write((new Date().toString() + " OK").getBytes(StandardCharsets.UTF_8));}
+					while(recieved < completedata.length) {	/* recieved > rcvdata.lengthになることはない。 */
+						int rcvSize = inputStream.read(incomingBuff, 0, incomingbodySize-recieved);
+						System.arraycopy(incomingBuff, 0, completedata, recieved, rcvSize);
+						recieved+=rcvSize;
+					}
+					/* TODO 削除予定 */if(recieved > completedata.length) {
+					/* TODO 削除予定 */	TLog.d("ありえない!! 受信データが(recieved({0}) > completedata.length({1}))になるのは想定外。", recieved, completedata.length);
+					/* TODO 削除予定 */	throw new RuntimeException("ありえない!! 受信データが(recieved > rcvdata.length)になるのは想定外。");
+					/* TODO 削除予定 */}
+				}
 				catch(IOException e) {
 					e.printStackTrace();
 					try { mStatusCb.OnChangeStatus(name, addr, R.string.err_btdisconnected); }
-					catch(RemoteException ignore) {/* ここで例外が発生するとどうしようもない */}
+					catch(RemoteException ignore) {/* ここで例外が発生してもどうしようもない */}
 					super.interrupt();
 					continue;
 				}
+				TLog.d("body受信 {0}:{1} rcv:({2},{3})", name, addr, completedata.length, Arrays.toString(completedata));
+				parseRcvAndCallback(name, addr, completedata);
+
+//				try {
+//					outputStream.write((new Date().toString() + " OK").getBytes(StandardCharsets.UTF_8));}
+//				catch(IOException e) {
+//					e.printStackTrace();
+//					try { mStatusCb.OnChangeStatus(name, addr, R.string.err_btdisconnected); }
+//					catch(RemoteException ignore) {/* ここで例外が発生してもどうしようもない */}
+//					super.interrupt();
+//					continue;
+//				}
 			}
 		}
 	}
@@ -223,11 +249,11 @@ public class UwsServerService extends Service {
 		/* 日付 */
 		long 	ldatetime	= ByteBuffer.wrap(buff).getLong();
 		/* データ種別 */
-		char	datatype	= ByteBuffer.wrap(buff).getChar(8);	/* 'h':脈拍, 'l':位置情報  */
+		char	datatype	= (char)buff[8];	/* 'h':脈拍, 'l':位置情報  */
 		if(datatype == 'h') {
 			/* 脈拍 */
 			int	heartbeat	= ByteBuffer.wrap(buff).getInt(9);
-			TLog.d("脈拍受信 {0} {1} {2}:{3}", d2Str(new Date(ldatetime)), heartbeat, name, addr);
+			TLog.d("脈拍データ {0} {1} {2}:{3}", d2Str(new Date(ldatetime)), heartbeat, name, addr);
 			/* 脈拍コールバック */
 			try { mHearbertGb.OnChange(name, addr, ldatetime, heartbeat);}
 			catch(RemoteException e) { e.printStackTrace(); }
@@ -236,7 +262,7 @@ public class UwsServerService extends Service {
 			/* 位置情報 */
 			double longitude= ByteBuffer.wrap(buff).getDouble(9);
 			double latitude	= ByteBuffer.wrap(buff).getDouble(17);
-			TLog.d("位置情報受信 {0} ({1},{2}) {3}:{4}", d2Str(new Date(ldatetime)), longitude,latitude , name, addr);
+			TLog.d("位置情報データ {0} ({1},{2}) {3}:{4}", d2Str(new Date(ldatetime)), longitude,latitude , name, addr);
 			Location retloc =new Location(LocationManager.GPS_PROVIDER);
 			retloc.setLongitude(longitude);
 			retloc.setLatitude(latitude);
