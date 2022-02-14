@@ -244,17 +244,23 @@ public class MainActivity extends AppCompatActivity {
 					serverIf.setListners(new IHearbertChangeListner.Stub() {
 						@Override
 						public void OnChange(String name, String addr, long datetime, int hearbeat) {
-							mBleViewModel.setHeartBeat(name, addr, datetime, (short)hearbeat);
+							runOnUiThread(() -> {
+								mBleViewModel.setHeartBeat(name, addr, datetime, (short)hearbeat);
+							});
 						}
 					}, new ILocationChangeListner.Stub() {
 						@Override
 						public void OnChange(String name, String addr, long datetime, Location loc) {
-							mBleViewModel.setLocation(name, addr, datetime, loc);
+							runOnUiThread(() -> {
+								mBleViewModel.setLocation(name, addr, datetime, loc);
+							});
 						}
 					}, new IStatusNotifier.Stub() {
 						@Override
 						public void OnChangeStatus(String name, String addr, int resourceid) {
-							mBleViewModel.OnChangeStatus(name, addr, resourceid);
+							runOnUiThread(() -> {
+								mBleViewModel.OnChangeStatus(name, addr, resourceid);
+							});
 						}
 					});
 				}
