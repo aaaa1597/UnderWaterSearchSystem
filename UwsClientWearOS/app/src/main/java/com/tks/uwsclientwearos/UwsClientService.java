@@ -30,11 +30,11 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -183,15 +183,20 @@ public class UwsClientService extends Service {
 		public int startBt(int seekerid, BluetoothDevice btServer) {
 			TLog.d("bt接続開始 seekerid={0}", seekerid);
 			mStatus = R.string.status_btconnecting;
-			mSeekerId = (short) seekerid;
+			mSeekerId = (short)seekerid;
+
+			try { mSndQue.put(createFstMsg(mSeekerId)); }
+			catch(InterruptedException ignore) {}
+
 			return uwsStartBt(mSeekerId, btServer);
 		}
 
 		@Override
 		public void stopBt() {
 			TLog.d("bt停止");
-			mStatus = R.string.status_loc_and_beat;
 			uwsStopBt();
+			mStatus = R.string.status_loc_and_beat;
+			mSeekerId = -1;
 		}
 
 		/* UwsHeartBeatServiceから、脈拍通知で呼ばれる */
@@ -393,8 +398,6 @@ public class UwsClientService extends Service {
 					break;
 				}
 
-				TLog.d("送信中...");
-
 				/* 送信データがなければ待つ。 */
 				if(mSndQue.size() == 0) {
 					try { Thread.sleep(10); }
@@ -402,11 +405,15 @@ public class UwsClientService extends Service {
 					continue;
 				}
 
+				TLog.d("送信開始");
+
 				/* 送信データtake */
 				byte[] sndData = null;
 				try { sndData = mSndQue.take();}
 				catch(InterruptedException ignore) {}
 				if(sndData== null) continue;
+
+				TLog.d("	送信開始2 snd({0},{1})", sndData.length, Arrays.toString(sndData));
 
 				/* 送信 */
 				try { outputStrem.write(sndData);}
@@ -423,13 +430,39 @@ public class UwsClientService extends Service {
 					catch(IOException ioException) { ioException.printStackTrace(); /* ここで発生してもどうしようもない */}
 					return;	/* Stream取得に失敗したらThread終了。 */
 				}
+
+				TLog.d("	送信終了");
 			}
 		}
 	}
 
-	private byte[] createByteArray(int heartbeat) {
-		byte[] sndBin = new byte[13];
+	private byte[] createFstMsg(short seekerid) {
+		byte[] sndBin = new byte[12];
 		int spos = 0;
+		/* (ヘッダを含まない)メッセージ長(1byte) 制限:最大256byteまで */
+		byte[] blen = new byte[]{(byte)(sndBin.length-1)};
+		System.arraycopy(blen, 0, sndBin, spos, blen.length);
+		spos += blen.length;
+		/* 日付(8byte) */
+		byte[] bdate = l2bs(new Date().getTime());
+		System.arraycopy(bdate, 0, sndBin, spos, bdate.length);
+		spos += bdate.length;
+		/* データ種別(1byte) */
+		byte[] btype = new byte[]{'1'};
+		System.arraycopy(btype, 0, sndBin, spos, btype.length);
+		spos += btype.length;
+		/* Seekerid(2byte) */
+		byte[] bseekerid = s2bs(seekerid);
+		System.arraycopy(bseekerid, 0, sndBin, spos, bseekerid.length);
+		return sndBin;
+	}
+	private byte[] createByteArray(int heartbeat) {
+		byte[] sndBin = new byte[14];
+		int spos = 0;
+		/* (ヘッダを含まない)メッセージ長(1byte) 制限:最大256byteまで */
+		byte[] blen = new byte[]{(byte)(sndBin.length-1)};
+		System.arraycopy(blen, 0, sndBin, spos, blen.length);
+		spos += blen.length;
 		/* 日付(8byte) */
 		byte[] bdate = l2bs(new Date().getTime());
 		System.arraycopy(bdate, 0, sndBin, spos, bdate.length);
@@ -444,8 +477,12 @@ public class UwsClientService extends Service {
 		return sndBin;
 	}
 	private byte[] createByteArray(double longitude, double latitude) {
-		byte[] sndBin = new byte[25];
+		byte[] sndBin = new byte[26];
 		int spos = 0;
+		/* (ヘッダを含まない)メッセージ長(1byte) 制限:最大256byteまで */
+		byte[] blen = new byte[]{(byte)(sndBin.length-1)};
+		System.arraycopy(blen, 0, sndBin, spos, blen.length);
+		spos += blen.length;
 		/* 日付(8byte) */
 		byte[] bdate = l2bs(new Date().getTime());
 		System.arraycopy(bdate, 0, sndBin, spos, bdate.length);
@@ -462,6 +499,9 @@ public class UwsClientService extends Service {
 		byte[] blatitude = d2bs(latitude);
 		System.arraycopy(blatitude, 0, sndBin, spos, blatitude.length);
 		return sndBin;
+	}
+	private byte[] s2bs(short value) {
+		return ByteBuffer.allocate(2).putShort(value).array();
 	}
 	private byte[] i2bs(int value) {
 		return ByteBuffer.allocate(4).putInt(value).array();

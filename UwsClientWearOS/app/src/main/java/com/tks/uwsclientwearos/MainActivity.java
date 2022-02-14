@@ -205,7 +205,6 @@ public class MainActivity extends AppCompatActivity {
 //	}
 //	/* ↑↑↑ TicWatch e2にはそもそも実装がないので、チェックしない。常にmIsSetedLocationON = true。 */
 
-
 	@Override
 	protected void onStart() {
 		super.onStart();
