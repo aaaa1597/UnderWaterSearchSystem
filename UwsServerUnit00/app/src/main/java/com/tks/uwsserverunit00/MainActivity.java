@@ -16,6 +16,7 @@ import android.content.Intent;
 import android.content.IntentSender;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -237,6 +238,28 @@ public class MainActivity extends AppCompatActivity {
 			public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
 				IUwsServer serverIf = IUwsServer.Stub.asInterface(iBinder);
 				mBleViewModel.onServiceConnected(serverIf);
+
+				/* Callback設定 */
+				try {
+					serverIf.setListners(new IHearbertChangeListner.Stub() {
+						@Override
+						public void OnChange(String name, String addr, long datetime, int hearbeat) {
+							mBleViewModel.setHeartBeat(name, addr, datetime, (short)hearbeat);
+						}
+					}, new ILocationChangeListner.Stub() {
+						@Override
+						public void OnChange(String name, String addr, long datetime, Location loc) {
+							mBleViewModel.setLocation(name, addr, datetime, loc);
+						}
+					}, new IStatusNotifier.Stub() {
+						@Override
+						public void OnChangeStatus(String name, String addr, int resourceid) {
+							mBleViewModel.OnChangeStatus(name, addr, resourceid);
+						}
+					});
+				}
+				catch(RemoteException e) { e.printStackTrace(); }
+
 				/* 起動チェックOK */
 				try { serverIf.notifyStartCheckCleared();}
 				catch (RemoteException e) { e.printStackTrace(); }

@@ -1,6 +1,7 @@
 package com.tks.uwsserverunit00.ui;
 
 import android.content.Context;
+import android.location.Location;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -172,5 +173,26 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		DeviceInfoModel nowbuoy = mDeviceList.stream().filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
 		if(nowbuoy!=null)
 			nowbuoy.mIsBuoy = isChecked;
+	}
+
+	/* 脈拍更新 */
+	public void setHeartBeat(String name, String addr, long datetime, short hearbeat) {
+		AtomicInteger index = new AtomicInteger(-1);
+		DeviceInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mDeviceAddress.equals(addr)).findAny().orElse(null);
+		if(device != null) {
+			device.mHertBeat = hearbeat;
+			notifyItemChanged(index.get());
+		}
+	}
+
+	/* 経度/緯度更新 */
+	public void setLocation(String name, String addr, long datetime, Location loc) {
+		AtomicInteger index = new AtomicInteger(-1);
+		DeviceInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mDeviceAddress.equals(addr)).findAny().orElse(null);
+		if(device != null) {
+			device.mLongitude= loc.getLongitude();
+			device.mLatitude = loc.getLatitude();
+			notifyItemChanged(index.get());
+		}
 	}
 }
