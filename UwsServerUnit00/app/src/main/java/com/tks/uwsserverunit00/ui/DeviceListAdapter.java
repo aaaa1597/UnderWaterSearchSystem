@@ -109,9 +109,10 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		final String deviceAddress	= model.mDeviceAddress;
 		final int constsresid		= (!model.mConnected)? R.drawable.statusx_waitforconnect :
 									    model.mSelected  ? R.drawable.status5_ready : R.drawable.status0_none;
-		if(!model.mConnected) {
+		if( !model.mConnected) {
 			holder.mllRow.setOnClickListener(null);
 			holder.mImvBuoy.setOnClickListener(null);
+			holder.mImvBuoy.setImageResource(R.drawable.buoy_disable);
 		}
 		else {
 			/* メンバ決定 */
@@ -124,13 +125,13 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 					holder.mImvConnectStatus.setImageResource(R.drawable.status0_none);
 			});
 			/* 浮標設定 */
+			if(model.mIsBuoy)	holder.mImvBuoy.setImageResource(R.drawable.buoy_enable);
+			else				holder.mImvBuoy.setImageResource(R.drawable.buoy_disable);
 			holder.mImvBuoy.setOnClickListener(view -> {
 				model.mIsBuoy = !model.mIsBuoy;
 				mOnSetBuoyListener.onSetBuoyListener(seekerid, model.mIsBuoy);
-				if(model.mIsBuoy)
-					holder.mImvBuoy.setImageResource(R.drawable.buoy_enable);
-				else
-					holder.mImvBuoy.setImageResource(R.drawable.buoy_disable);
+				if(model.mIsBuoy)	holder.mImvBuoy.setImageResource(R.drawable.buoy_enable);
+				else				holder.mImvBuoy.setImageResource(R.drawable.buoy_disable);
 			});
 		}
 		holder.mtxtDatetime.setText(d2Str(model.mDatetime));
