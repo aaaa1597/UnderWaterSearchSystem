@@ -8,4 +8,7 @@
     <string name="err_btdisconnected">Bluetoothが切断されました。</string>
     <string name="status_none">- NONE -</string>
     <string name="status_waitforconnect">接続待ち</string>
+    <string name="status_connected">接続OK</string>
+    <string name="status_waitforrecieve">受信待ち…</string>
+    <string name="status_recieved">受信!!</string>
 </resources>

@@ -3,7 +3,6 @@ package com.tks.uwsserverunit00;
 import android.Manifest;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
@@ -20,14 +19,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
 import static com.tks.uwsserverunit00.Constants.BT_CLASSIC_UUID;
-import static com.tks.uwsserverunit00.Constants.UWS_UUID_CHARACTERISTIC_HRATBEAT;
+import static com.tks.uwsserverunit00.Constants.BT_NORTIFY_SEEKERID;
 import static com.tks.uwsserverunit00.Constants.d2Str;
 
 /**
@@ -86,7 +84,7 @@ public class UwsServerService extends Service {
 	/** *****
 	 * Binder
 	 * ******/
-	private Binder mBinder = new IUwsServer.Stub() {
+	private final Binder mBinder = new IUwsServer.Stub() {
 		@Override
 		public void setListners(IHearbertChangeListner hGb, ILocationChangeListner lGb, IStatusNotifier sCb) {
 			mHearbertGb	= hGb;
@@ -134,13 +132,17 @@ public class UwsServerService extends Service {
 				}
 
 				/* Client接続待ち */
-				String name = null, addr = null;
+				String name, addr;
 				try {
 					TLog.d("新Client待ち...");
 					BluetoothSocket btSocket = bluetoothServerSocket.accept();
 					name = btSocket.getRemoteDevice().getName();
 					addr = btSocket.getRemoteDevice().getAddress();
-					TLog.d("Client接続確立 {0}:{1}", name, addr);
+
+					TLog.d("Client接続OK {0}:{1}", name, addr);
+					try { mStatusCb.OnChangeStatus(name, addr, R.string.status_connected); }
+					catch(RemoteException ignore) {/* ここで例外が発生してもどうもしない */}
+
 					try {
 						BtSndRcvThread thred = new BtSndRcvThread(name, addr, btSocket);
 						mBtSndRcvThreads.add(thred);
@@ -163,9 +165,9 @@ public class UwsServerService extends Service {
 	public class BtSndRcvThread extends Thread {
 		private String	name;
 		private String	addr;
-		private BluetoothSocket	bluetoothSocket;
-		private InputStream		inputStream;
-		private OutputStream	outputStream;
+		private final BluetoothSocket	bluetoothSocket;
+		private final InputStream		inputStream;
+		private final OutputStream		outputStream;
 		public BtSndRcvThread(String aname, String aaddr, BluetoothSocket btSocket) throws IOException {
 			TLog.d("送受信スレッド起動 {0}:{1}", name, addr);
 			name = aname;
@@ -190,9 +192,11 @@ public class UwsServerService extends Service {
 				}
 
 				TLog.d("受信待ち... {0}:{1}", name, addr);
+				try { mStatusCb.OnChangeStatus(name, addr, R.string.status_waitforrecieve); }
+				catch(RemoteException ignore) {/* ここで例外が発生してもどうもしない */}
 
 				/* 1st-メッセージ長受信 */
-				int incomingbodySize = 0;
+				int incomingbodySize;
 				try {
 					inputStream.read(incomingLength);
 					incomingbodySize = incomingLength[0];
@@ -204,6 +208,10 @@ public class UwsServerService extends Service {
 					super.interrupt();
 					continue;
 				}
+
+				TLog.d("受信!! {0}:{1}", name, addr);
+				try { mStatusCb.OnChangeStatus(name, addr, R.string.status_recieved); }
+				catch(RemoteException ignore) {/* ここで例外が発生してもどうもしない */}
 
 				/* 2nd-body受信 */
 				byte[] completedata = new byte[incomingbodySize];
@@ -249,8 +257,16 @@ public class UwsServerService extends Service {
 		/* 日付 */
 		long 	ldatetime	= ByteBuffer.wrap(buff).getLong();
 		/* データ種別 */
-		char	datatype	= (char)buff[8];	/* 'h':脈拍, 'l':位置情報  */
-		if(datatype == 'h') {
+		char	datatype	= (char)buff[8];	/* '1':初回msg, 'h':脈拍, 'l':位置情報  */
+		if(datatype == '1') {
+			/* seekerid */
+			short seekerid	= ByteBuffer.wrap(buff).getShort(9);
+			TLog.d("初回受信 {0} seekerid={1} {2}:{3}", d2Str(new Date(ldatetime)), seekerid, name, addr);
+			/* 脈拍コールバック */
+			try { mStatusCb.OnChangeStatus(BT_NORTIFY_SEEKERID/*←例外的にSeekerid通知に使う*/, addr, seekerid);}
+			catch(RemoteException e) { e.printStackTrace(); }
+		}
+		else if(datatype == 'h') {
 			/* 脈拍 */
 			int	heartbeat	= ByteBuffer.wrap(buff).getInt(9);
 			TLog.d("脈拍データ {0} {1} {2}:{3}", d2Str(new Date(ldatetime)), heartbeat, name, addr);

@@ -121,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
 			mSeekerId		= -1;
 			mDeviceName		= i.getName();
 			mDeviceAddress	= i.getAddress();
-			mStatusId		= R.string.status_waitforconnect;
+			mStatusResId = R.string.status_waitforconnect;
 			mLongitude		= -1;
 			mLatitude		= -1;
 			mHertBeat		= -1;

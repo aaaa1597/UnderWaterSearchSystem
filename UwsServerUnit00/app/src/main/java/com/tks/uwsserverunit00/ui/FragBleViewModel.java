@@ -8,6 +8,7 @@ import com.tks.uwsserverunit00.IUwsServer;
 import com.tks.uwsserverunit00.TLog;
 import com.tks.uwsserverunit00.ui.DeviceListAdapter.DeviceInfoModel;
 
+import static com.tks.uwsserverunit00.Constants.BT_NORTIFY_SEEKERID;
 import static com.tks.uwsserverunit00.Constants.d2Str;
 
 import android.app.Application;
@@ -99,7 +100,8 @@ public class FragBleViewModel extends AndroidViewModel {
 
 	/* 状態変化通知 */
 	public void OnChangeStatus(String name, String addr, int resourceid) {
-		/* TODO */
-		TLog.d(" 状態変化通知 {0}", mContext.getString(resourceid));
+		if( !name.equals(BT_NORTIFY_SEEKERID))
+			TLog.d(" 状態変化通知 {0}", mContext.getString(resourceid));
+		mDeviceListAdapter.OnChangeStatus(name, addr, resourceid);
 	}
 }

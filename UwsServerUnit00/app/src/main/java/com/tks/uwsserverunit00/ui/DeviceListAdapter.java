@@ -1,6 +1,5 @@
 package com.tks.uwsserverunit00.ui;
 
-import android.content.Context;
 import android.location.Location;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -19,6 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.tks.uwsserverunit00.R;
 
+import static com.tks.uwsserverunit00.Constants.BT_NORTIFY_SEEKERID;
 import static com.tks.uwsserverunit00.Constants.ERR_DEVICE_NOTFOUND;
 import static com.tks.uwsserverunit00.Constants.d2Str;
 
@@ -85,7 +85,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		public short	mSeekerId;
 		public String	mDeviceName;
 		public String	mDeviceAddress;
-		public int		mStatusId;
+		public int		mStatusResId;
 		public double	mLongitude;
 		public double	mLatitude;
 		public short	mHertBeat;
@@ -138,7 +138,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		holder.mTxtDeviceName.setText(TextUtils.isEmpty(deviceName) ? "" : deviceName);
 		holder.mTxtDeviceNameAddress.setText(TextUtils.isEmpty(deviceAddress) ? "" : deviceAddress);
 		holder.mImvConnectStatus.setImageResource(constsresid);
-		holder.mTxtStatus.setText(model.mStatusId);
+		holder.mTxtStatus.setText(model.mStatusResId);
 		holder.mTxtHertBeat.setText((model.mHertBeat<0) ? "-" : "" + model.mHertBeat);
 		holder.mTxtLongitude.setText(d2Str(model.mLongitude));
 		holder.mTxtLatitude.setText(d2Str(model.mLatitude));
@@ -193,6 +193,23 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			device.mLongitude= loc.getLongitude();
 			device.mLatitude = loc.getLatitude();
 			notifyItemChanged(index.get());
+		}
+	}
+
+	/* 状態変化通知 */
+	public void OnChangeStatus(String name, String addr, int resourceid) {
+		AtomicInteger index = new AtomicInteger(-1);
+		DeviceInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mDeviceAddress.equals(addr)).findAny().orElse(null);
+
+		if(device != null) {
+			if(name.equals(BT_NORTIFY_SEEKERID)) {
+				device.mSeekerId = (short)resourceid;
+			}
+			else {
+				device.mStatusResId = resourceid;
+				device.mConnected= true;
+				notifyItemChanged(index.get());
+			}
 		}
 	}
 }
