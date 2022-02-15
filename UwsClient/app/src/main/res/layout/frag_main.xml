@@ -27,12 +27,15 @@
             android:id="@+id/swhUnLock"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            android:paddingStart="0dp"
-            android:paddingEnd="50dp"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginStart="120dp"
             android:checked="true"
+            android:textColor="#ff35B6"
             android:text="Lock"
+            android:textSize="24sp"
+            android:textStyle="bold"
             tools:ignore="HardcodedText" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
@@ -53,12 +56,12 @@
             android:columnCount="1">
 
             <TextView
-                android:id="@+id/txtAddress"
+                android:id="@+id/txtStatus"
                 android:layout_column="0"
                 android:layout_row="0"
                 android:ems="11"
                 android:textColor="@color/white"
-                android:text=""/>
+                android:text="aa-bb-cc-dd-ee-ff"/>
 
             <TextView
                 android:id="@+id/txtLatitude"
@@ -84,15 +87,19 @@
                 android:textColor="@color/white"
                 android:text=""/>
 
-            <TextView
-                android:id="@+id/txtStatus"
-                android:layout_column="0"
-                android:layout_row="4"
-                android:ems="11"
-                android:textColor="@color/white"
-                android:text="-- none --"
-                tools:ignore="HardcodedText" />
-
         </GridLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        <Button
+            android:id="@+id/btnFin"
+            android:layout_width="70dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:paddingStart="-20dp"
+            android:text="終了"/>
     </androidx.constraintlayout.widget.ConstraintLayout>
 </FrameLayout>

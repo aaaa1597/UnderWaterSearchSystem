@@ -2,7 +2,6 @@ package com.tks.uwsclient;
 
 import android.app.AlertDialog;
 import android.content.Context;
-import android.util.Log;
 import java.text.MessageFormat;
 
 public class ErrDialog {

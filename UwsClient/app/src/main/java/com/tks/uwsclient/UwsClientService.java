@@ -1,40 +1,25 @@
 package com.tks.uwsclient;
 
-import java.nio.ByteBuffer;
-import java.text.MessageFormat;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.Locale;
-import java.util.UUID;
 import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothGatt;
-import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattDescriptor;
-import android.bluetooth.BluetoothGattServer;
-import android.bluetooth.BluetoothGattServerCallback;
-import android.bluetooth.BluetoothGattService;
-import android.bluetooth.BluetoothManager;
-import android.bluetooth.le.AdvertiseCallback;
-import android.bluetooth.le.AdvertiseData;
-import android.bluetooth.le.AdvertiseSettings;
-import android.bluetooth.le.BluetoothLeAdvertiser;
+import android.bluetooth.BluetoothSocket;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
-import android.widget.RemoteViews;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
@@ -45,44 +30,119 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
-import static com.tks.uwsclient.Constants.ACTION.FINALIZEFROMS;
-import static com.tks.uwsclient.Constants.NOTIFICATION_CHANNEL_STARTSTOP;
-import static com.tks.uwsclient.Constants.SERVICE_STATUS_AD_LOC_BEAT;
-import static com.tks.uwsclient.Constants.SERVICE_STATUS_INITIALIZING;
-import static com.tks.uwsclient.Constants.SERVICE_STATUS_IDLE;
-import static com.tks.uwsclient.Constants.UWS_OWNDATA_KEY;
-import static com.tks.uwsclient.Constants.UWS_UUID_CHARACTERISTIC_HRATBEAT;
+import static com.tks.uwsclient.Constants.ACTION.INITIALIZE;
+import static com.tks.uwsclient.Constants.ACTION.FINALIZE;
+import static com.tks.uwsclient.Constants.BT_CLASSIC_UUID;
+import static com.tks.uwsclient.Constants.NOTIFICATION_CHANNEL_ID;
+import static com.tks.uwsclient.Constants.ERR_ALREADY_STARTED;
+import static com.tks.uwsclient.Constants.ERR_OK;
 import static com.tks.uwsclient.Constants.d2Str;
 
 public class UwsClientService extends Service {
-	private int mStatus = SERVICE_STATUS_INITIALIZING;
-	private IOnStatusChangeListner	mOnStatusChangeListner;
-	private IOnUwsInfoListner		mOnUwsInfoListner;
+	private int mStatus = R.string.status_initializing;
+	private short mSeekerId = -1;
+	private IOnUwsInfoChangeListner mCallback;
+	private IStatusNotifier			mListner2;
+	private IStartCheckClearedCallback mCb;
+	private final Handler mHandler = new Handler();
+	private final BlockingQueue<byte[]> mSndQue = new LinkedBlockingQueue<>();
 
 	@Override
 	public void onCreate() {
 		super.onCreate();
-		uwsInit();
-		mStatus = SERVICE_STATUS_IDLE;
 		TLog.d("xxxxx");
+		uwsInit();
+//		startLoc();		このタイミングだとまだ権限許可が得られてない可能性がある。
+		IntentFilter filter = new IntentFilter();
+		filter.addAction(FINALIZE);
+		LocalBroadcastManager.getInstance(getApplicationContext()).registerReceiver(mReceiver, filter);
 	}
 
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
-		stoptLoc();
-		stopAdvertise();
-		uwsFin();
 		TLog.d("xxxxx");
+		LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mReceiver);
+		stoptLoc();
+		uwsFin();
 	}
 
+	private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			if(!intent.getAction().equals(FINALIZE)) return;
+
+			LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mReceiver);
+			stopForeground(true);
+			stopSelf();
+		}
+	};
+
+	@Override
+	public int onStartCommand(Intent intent, int flags, int startId) {
+		switch(intent.getAction()) {
+			case INITIALIZE:
+				TLog.d("startForeground.");
+				startForeground(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE_BLE, prepareNotification());
+				break;
+//			/* この処理は不要。FINALIZEは、mReceiver::onReceive()で処理する */
+//			case FINALIZE:
+//				TLog.d("stopForeground.");
+//				LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(new Intent(FINALIZE));
+//				try { Thread.sleep(1000); } catch(InterruptedException ignore) { }
+//				stopForeground(true);
+//				stopSelf();
+//				break;
+		}
+		return START_NOT_STICKY;
+	}
+
+	/* ****************************/
+	/* フォアグランドサービス機能 */
+	/* ****************************/
+	private Notification prepareNotification() {
+		/* 通知のチャンネル生成 */
+		NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL_ID, "BLE/位置情報", NotificationManager.IMPORTANCE_DEFAULT);
+		channel.enableVibration(false);
+		NotificationManager notificationManager = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+		notificationManager.createNotificationChannel(channel);
+
+		/* 停止ボタン押下の処理実装 */
+		Intent stopIntent = new Intent(this, UwsClientService.class);    /* まず自分に送信。その後アプリと脈拍サービスに送信する */
+		stopIntent.setAction(FINALIZE);
+		PendingIntent pendingStopIntent = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+		NotificationCompat.Action stopAction = new NotificationCompat.Action.Builder(R.drawable.okicon, "終了", pendingStopIntent).build();
+
+		/* Notification生成 */
+		return new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+				.setSmallIcon(R.mipmap.ic_launcher)
+				.setContentTitle("BLE/位置情報")
+				.setContentText("頑張ってBLE/位置情報 取得中...")
+				.setStyle(new NotificationCompat.BigTextStyle().bigText("頑張ってBLE/位置情報 取得中..."))
+				.setPriority(NotificationCompat.PRIORITY_DEFAULT)
+				.addAction(stopAction)
+				.build();
+	}
+
+	/* *****************/
+	/* onBind/onUnbind */
+	/* *****************/
 	@Nullable
 	@Override
 	public IBinder onBind(Intent intent) {
 		TLog.d("xxxxx");
 		return mBinder;
 	}
+
 	private final Binder mBinder = new IClientService.Stub() {
 		@Override
 		public StatusInfo getServiceStatus() {
@@ -90,17 +150,74 @@ public class UwsClientService extends Service {
 		}
 
 		@Override
-		public int startUws(int seekerid, IOnUwsInfoListner onUwsInfoListner, IOnStatusChangeListner listner) {
-			mStatus = SERVICE_STATUS_AD_LOC_BEAT;
-			TLog.d("seekerid={0}", seekerid);
-			uwsStart((short)seekerid, onUwsInfoListner, listner);
-			return 0;
+		public void setListners(IOnUwsInfoChangeListner onUwsInfoChangeListner, IStatusNotifier onServiceStatusChangeListner) {
+			mCallback = onUwsInfoChangeListner;
+			mListner2 = onServiceStatusChangeListner;
 		}
 
 		@Override
-		public void stopUws() {
-			mStatus = SERVICE_STATUS_IDLE;
-			uwsStop();
+		public void notifyStartCheckCleared() throws RemoteException {
+			/* 位置情報取得開始 */
+			startLoc();
+
+			/* 脈拍サービスと接続待ち */
+			mHandler.postDelayed(new Runnable() {
+				@Override
+				public void run() {
+					if(mCb == null) {
+						mHandler.postDelayed(this, 1000);
+						return;
+					}
+
+					TLog.d("脈拍サービスと接続待ち..");
+					try {
+						mCb.notifyStartCheckCleared();
+					}
+					catch(RemoteException ignore) {
+					}
+				}
+			}, 1000);
+		}
+
+		@Override
+		public int startBt(int seekerid, BluetoothDevice btServer) {
+			TLog.d("bt接続開始 seekerid={0}", seekerid);
+			mStatus = R.string.status_btconnecting;
+			mSeekerId = (short)seekerid;
+
+			try { mSndQue.put(createFstMsg(mSeekerId)); }
+			catch(InterruptedException ignore) {}
+
+			return uwsStartBt(mSeekerId, btServer);
+		}
+
+		@Override
+		public void stopBt() {
+			TLog.d("bt停止");
+			uwsStopBt();
+			mStatus = R.string.status_loc_and_beat;
+			mSeekerId = -1;
+		}
+
+		/* UwsHeartBeatServiceから、脈拍通知で呼ばれる */
+		@Override
+		public void setNotifyStartCheckCleared(IStartCheckClearedCallback cb) {
+			mCb = cb;
+		}
+
+		@Override
+		public void notifyHeartBeat(int heartbeat) {
+			TLog.d("脈拍通知 from HeartBeat-Service!! = {0}", heartbeat);
+			if(mStatus == R.string.status_btconnected_and_loc_beat) {
+				try { mSndQue.put(createByteArray(heartbeat)); }
+				catch(InterruptedException ignore) {}
+			}
+			try {
+				mCallback.onHeartbeatResultChange((short)heartbeat);
+			}
+			catch(RemoteException e) {
+				e.printStackTrace();
+			}
 		}
 	};
 
@@ -110,112 +227,19 @@ public class UwsClientService extends Service {
 		return super.onUnbind(intent);
 	}
 
-	@Override
-	public int onStartCommand(Intent intent, int flags, int startId) {
-		switch (intent.getAction()) {
-			case Constants.ACTION.INITIALIZE:
-				TLog.d("xxxxx startForeground.");
-				startForeground(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
-				break;
-			case Constants.ACTION.FINALIZE:
-				TLog.d("xxxxx stopForeground.");
-				stopForeground(true);
-				stopSelf();
-				reqAppFinish();
-				break;
-		}
-		return START_NOT_STICKY;
-	}
-
-	/* ***********************/
-	/* フォアグランドサービス機能 */
-	/* ***********************/
-	private Notification prepareNotification() {
-		/* 通知のチャンネル生成 */
-		NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL_STARTSTOP, "startstop", NotificationManager.IMPORTANCE_DEFAULT);
-		channel.enableVibration(false);
-		NotificationManager notificationManager = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
-		notificationManager.createNotificationChannel(channel);
-
-		/* 停止ボタン押下の処理実装 */
-		Intent stopIntent = new Intent(this, UwsClientService.class)
-								.setAction(Constants.ACTION.FINALIZE);
-		PendingIntent pendingStopIntent = PendingIntent.getService(this, 2222, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-		RemoteViews remoteViews = new RemoteViews(getPackageName(), R.layout.notification);
-		remoteViews.setOnClickPendingIntent(R.id.btnStop, pendingStopIntent);
-
-		/* Notification生成 */
-		return new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_STARTSTOP)
-				.setContent(remoteViews)
-				.setSmallIcon(R.mipmap.ic_launcher)
-//				.setCategory(NotificationCompat.CATEGORY_SERVICE)
-//				.setOnlyAlertOnce(true)
-//				.setOngoing(true)
-//				.setAutoCancel(true)
-//				.setContentIntent(pendingIntent);
-//				.setVisibility(Notification.VISIBILITY_PUBLIC)
-				.build();
-	}
-
-	/* アプリ終了要求 */
-	private void reqAppFinish() {
-		Intent intent = new Intent(FINALIZEFROMS);
-		LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcastSync(intent);
-	}
-
 	/* ***************/
 	/* 初期化/終了処理 */
 	/* ***************/
 	private void uwsInit() {
-		TLog.d("");
+		TLog.d("xxxxx");
+		mStatus = R.string.status_loc_and_beat;
 		/* 位置情報初期化 */
 		mFlc = LocationServices.getFusedLocationProviderClient(this);
-		/* Bluetooth初期化 */
-		final BluetoothManager bluetoothManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
-		if(bluetoothManager == null)
-			throw new RuntimeException("Bluetooth未サポート.使用不可!!");
-
-		BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
-		if (bluetoothAdapter == null)
-			throw new RuntimeException("Bluetooth未サポート.使用不可2!!");
-
-		mBluetoothLeAdvertiser = bluetoothAdapter.getBluetoothLeAdvertiser();
-		if (mBluetoothLeAdvertiser == null)
-			throw new RuntimeException("Bluetooth未サポート.使用不可3!!");
-
-		mGattServer = bluetoothManager.openGattServer(this, mGattServerCallback);
-		if(mGattServer == null)
-			throw new RuntimeException("Bluetooth未サポート.使用不可4!!");
-
-		TLog.d( "アドバタイズの最大サイズ={0}", bluetoothAdapter.getLeMaximumAdvertisingDataLength());
 	}
 
 	private void uwsFin() {
-		TLog.d("");
+		TLog.d("xxxxx");
 		mFlc = null;
-		mGattServer.close();
-		mGattServer = null;
-		mBluetoothLeAdvertiser = null;
-	}
-
-	/* *************/
-	/* 開始/停止処理 */
-	/* *************/
-	private void uwsStart(short seekerid, IOnUwsInfoListner onUwsInfoResult, IOnStatusChangeListner listner) {
-		TLog.d("seekerid={0}", seekerid);
-		mOnStatusChangeListner	= listner;
-		mOnUwsInfoListner		= onUwsInfoResult;
-		/* 位置情報 取得開始 */
-		startLoc();
-		/* BLEアドバタイズ 開始 */
-		startAdvertise(seekerid);
-	}
-
-	private void uwsStop() {
-		/* 位置情報 停止 */
-		stoptLoc();
-		/* BLE停止 */
-		stopAdvertise();
 	}
 
 	/* *************/
@@ -223,386 +247,261 @@ public class UwsClientService extends Service {
 	/* *************/
 	private final static int			LOC_UPD_INTERVAL = 2000;
 	private FusedLocationProviderClient mFlc;
-	private final LocationRequest		mLocationRequest = LocationRequest.create()
-															.setInterval(LOC_UPD_INTERVAL)
-															.setFastestInterval(LOC_UPD_INTERVAL)
-															.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-	private double						mLongitude;
-	private double						mLatitude;
+	private final LocationRequest		mLocationRequest = LocationRequest.create().setInterval(LOC_UPD_INTERVAL).setFastestInterval(LOC_UPD_INTERVAL).setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 	private final LocationCallback		mLocationCallback = new LocationCallback() {
 		@Override
 		public void onLocationResult(@NonNull LocationResult locationResult) {
 			super.onLocationResult(locationResult);
 			Location location = locationResult.getLastLocation();
-			mLongitude = location.getLongitude();
-			mLatitude  = location.getLatitude();
-			TLog.d("1秒定期 (緯度:{0} 経度:{1})", d2Str(mLatitude), d2Str(mLongitude));
+			TLog.d("1秒定期 (緯度:{0} 経度:{1})", d2Str(location.getLatitude()), d2Str(location.getLongitude()));
+			if(mStatus == R.string.status_btconnected_and_loc_beat) {
+				try { mSndQue.put(createByteArray(location.getLongitude(), location.getLatitude())); }
+				catch(InterruptedException ignore) {}
+			}
+
+			if(mCallback != null) {
+				try {
+					mCallback.onLocationResultChange(location);
+				}
+				catch(RemoteException e) {
+					e.printStackTrace();
+				}
+			}
 
 			/* 毎回OFF->ONにすることで、更新間隔が1秒になるようにしている。 */
 			stoptLoc();
-			try { Thread.sleep(LOC_UPD_INTERVAL); } catch (InterruptedException ignored) { }
+			try {
+				Thread.sleep(LOC_UPD_INTERVAL);
+			}
+			catch(InterruptedException ignored) {
+			}
 			startLoc();
 		}
 	};
 
 	/* 位置情報取得開始 */
 	private void startLoc() {
-		TLog.d("");
-		if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+		TLog.d("xxxxx");
+		if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
 			throw new RuntimeException("ありえない権限エラー。すでにチェック済。");
 		mFlc.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
 	}
 
 	/* 位置情報取得停止 */
 	private void stoptLoc() {
+		TLog.d("xxxxx");
 		mFlc.removeLocationUpdates(mLocationCallback);
 	}
 
-	/* ********/
-	/* BLE機能 */
-	/* ********/
-	private short						mSeekerId = -1;
-	private BluetoothLeAdvertiser		mBluetoothLeAdvertiser;
-	private BluetoothGattCharacteristic	mUwsCharacteristic;
-	private BluetoothGattServer			mGattServer;
-	private BluetoothDevice				mServerDevice;
+	/* **************/
+	/* Bluetooth機能 */
+	/* **************/
+	private BtClientThread mBtClientThread;
 
-	/* アドバタイズ開始 */
-	Handler mHandler = new Handler();
-	Runnable mAdvertiseRunner = null;
-	private void startAdvertise(short seekerid) {
-		if(mSeekerId == seekerid && mAdvertiseRunner != null) {
-			TLog.d("すでにアドバタイズ中...続行します。");
-			return;
+	/* 接続開始 */
+	private int uwsStartBt(short seekerid, BluetoothDevice btServer) {
+		TLog.d("seekerid={0} device={1}", seekerid, btServer);
+
+		if(mBtClientThread != null) return ERR_ALREADY_STARTED;
+		mBtClientThread = new BtClientThread(btServer);
+		mBtClientThread.start();
+
+		return ERR_OK;
+	}
+
+	private void uwsStopBt() {
+		/* Bluetooth接続終了 */
+		if(mBtClientThread == null) return;    /* 停止済なら、停止不要。 */
+		mBtClientThread.interrupt();
+		mBtClientThread = null;
+	}
+
+	/* Bluetooth通信実行スレッド */
+	public class BtClientThread extends Thread {
+		private BluetoothDevice bluetoothDevice;
+		private BluetoothSocket bluetoothSocket;
+
+		public BtClientThread(BluetoothDevice device) {
+			if(device == null) throw new RuntimeException("デバイスが選択されてない!!");
+			bluetoothDevice = device;
 		}
-		else if(mSeekerId != seekerid) {
-			mSeekerId = seekerid;
-			boolean ret = BluetoothAdapter.getDefaultAdapter().setName(MessageFormat.format("消防士{0}", seekerid));
-			TLog.d("デバイス名変更 {0} ret={1}", MessageFormat.format("消防士{0}", seekerid), ret);
-		}
 
-		/* Advertiseのタイミングで、自分自身のペリフェラル特性定義も実施しておく(gatt接続に備えておく) */
-		mUwsCharacteristic = createOwnCharacteristic(seekerid, mGattServer);
-
-		mAdvertiseRunner = new Runnable() {
-			@Override
-			public void run() {
-				/* 一旦、アドバタイズ停止 */
-				mBluetoothLeAdvertiser.stopAdvertising(mAdvertiseCallback);
-				try { Thread.sleep(100); }
-				catch (InterruptedException e) { e.printStackTrace(); }
-
-				/* 新データでアドバタイズ開始 */
-				AdvertiseSettings settings	= buildAdvertiseSettings();
-				AdvertiseData data			= buildAdvertiseData((float)mLongitude, (float)mLatitude, mHeartbeat);
-				try { mOnUwsInfoListner.onUwsInfoResult(new UwsInfo(mLongitude, mLatitude, mHeartbeat)); }
-				catch(RemoteException ignored) { }
-				mBluetoothLeAdvertiser.startAdvertising(settings, data, mAdvertiseCallback);
-
-				/* 3秒後再開 */
-				mHandler.postDelayed(this, 5000);
+		@Override
+		public void run() {
+			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+				if(ActivityCompat.checkSelfPermission(UwsClientService.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED)
+					throw new RuntimeException("ここではありえない。");
 			}
-		};
-		mHandler.post(mAdvertiseRunner);
-	}
 
-	/* アドバタイズ終了 */
-	private void stopAdvertise() {
-		mHandler.removeCallbacks(mAdvertiseRunner);
-		mAdvertiseRunner = null;
-		mBluetoothLeAdvertiser.stopAdvertising(mAdvertiseCallback);
-	}
+			try {
+				bluetoothSocket = bluetoothDevice.createRfcommSocketToServiceRecord(BT_CLASSIC_UUID);
+			}
+			catch(IOException e) {
+				throw new RuntimeException("bluetootが無効化してると発生。基本的に起きない。");
+			}
 
-	/** **********************
-	 * 自身のペリフェラル特性を定義
-	 * ***********************/
-	private BluetoothGattCharacteristic createOwnCharacteristic(int seekerid, BluetoothGattServer gattManager) {
-		BluetoothGattService old = gattManager.getService(UUID.fromString(Constants.createServiceUuid(seekerid)));
-		if(old != null) {
-			/* TODO */TLog.d("古いUUID-Serviceを削除={0}", old);
-			gattManager.removeService(old);
-		}
-
-		/* 自身が提供するサービスを定義 */
-		BluetoothGattService ownService = new BluetoothGattService(UUID.fromString(Constants.createServiceUuid(seekerid)), BluetoothGattService.SERVICE_TYPE_PRIMARY);
-
-		/* 自身が提供するCharacteristic(特性)を定義 : 通知と読込みに対し、読込み許可 */
-		BluetoothGattCharacteristic charac = new BluetoothGattCharacteristic(/*UUID*/UWS_UUID_CHARACTERISTIC_HRATBEAT,
-				BluetoothGattCharacteristic.PROPERTY_NOTIFY | BluetoothGattCharacteristic.PROPERTY_READ,
-				/*permissions*/BluetoothGattCharacteristic.PERMISSION_READ);
-
-		charac.setValue(new byte[]{'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f',16,17,18,19,20,21,22,23,24,25,26,27});
-
-		/* 定義したサービスにCharacteristic(特性)を付与 */
-		ownService.addCharacteristic(charac);
-
-		/* Gattサーバに定義したサービスを付与 */
-		gattManager.addService(ownService);
-
-		return charac;
-	}
-
-	/* アドバタイズ設定生成 */
-	private AdvertiseSettings buildAdvertiseSettings() {
-		AdvertiseSettings.Builder settingsBuilder = new AdvertiseSettings.Builder();
-		settingsBuilder.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY);
-		settingsBuilder.setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
-		settingsBuilder.setTimeout(0);  /* タイムアウトは自前で管理する。 */
-		return settingsBuilder.build();
-	}
-
-	/* アドバタイズのデータ生成 */
-	private byte mSeqNo = 0;
-	private AdvertiseData buildAdvertiseData(float longitude, float latitude, short heartbeat) {
-		AdvertiseData.Builder dataBuilder = new AdvertiseData.Builder();
-//		↓↓↓ TODO 削除予定
-//		dataBuilder.addServiceUuid(ParcelUuid.fromString(Constants.createServiceUuid(seekerid)));
-		dataBuilder.setIncludeDeviceName(true);
-
-		/* 拡張データ生成 */
-		byte[] sndBin = new byte[12];	/* 全部で12byteまでは送信可 */
-		int spos = 0;
-		/* SeqNo(1byte) */
-		sndBin[0] = mSeqNo++;
-		spos += 1;
-		/* 経度(4byte) */
-		byte[] bdifflong = f2bs(longitude);
-		System.arraycopy(bdifflong, 0, sndBin, spos, bdifflong.length);
-		spos += bdifflong.length;
-		/* 緯度(4byte) */
-		byte[] bdifflat = f2bs(latitude);
-		System.arraycopy(bdifflat, 0, sndBin, spos, bdifflat.length);
-		spos += bdifflat.length;
-		/* 脈拍(2byte) */
-		byte[] bheartbeat = s2bs(heartbeat);
-		System.arraycopy(bheartbeat, 0, sndBin, spos, bheartbeat.length);
-		/* 拡張データ設定 */
-		dataBuilder.addManufacturerData(UWS_OWNDATA_KEY, sndBin);
-
-		return dataBuilder.build();
-	}
-	private byte[] s2bs(short value) {
-		return ByteBuffer.allocate(2).putShort(value).array();
-	}
-	private byte[] f2bs(float value) {
-		return ByteBuffer.allocate(4).putFloat(value).array();
-	}
-
-	private final AdvertiseCallback mAdvertiseCallback = new AdvertiseCallback() {
-		@Override
-		public void onStartSuccess(AdvertiseSettings settingsInEffect) {
-			TLog.d("アドバタイズ開始OK.");
-		}
-		@Override
-		public void onStartFailure(int errorCode) {
-			TLog.d("アドバタイズ開始失敗 error={0}", errorCode);
-		}
-	};
-
-	/** *****************
-	 * GattサーバCallBack
-	 * ******************/
-	private final BluetoothGattServerCallback mGattServerCallback = new BluetoothGattServerCallback() {
-		/** ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-		 * 接続状態変化通知
-		 * @param serverdevice	サーバ側デバイス
-		 * @param status	int: Status of the connect or disconnect operation. BluetoothGatt.GATT_SUCCESS if the operation succeeds.
-		 * @param newState	BluetoothProfile.STATE_DISCONNECTED, BluetoothProfile#STATE_CONNECTED
-		 * ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-		@Override
-		public void onConnectionStateChange(BluetoothDevice serverdevice, final int status, int newState) {
-			super.onConnectionStateChange(serverdevice, status, newState);
-			if (status == BluetoothGatt.GATT_SUCCESS) {
-				if (newState == BluetoothGatt.STATE_CONNECTED) {
-					stopAdvertise();
-					mServerDevice = serverdevice;
-					TLog.d("接続 -> serverdevice: {0}", serverdevice.getAddress());
+			/* サーバとの接続待ち... */
+			while(true) {
+				try {
+					TLog.d("接続中...");
+					try { mListner2.onStatusChange(R.string.status_btconnecting); }
+					catch(RemoteException ignore) {}
+					bluetoothSocket.connect();
+					break;
 				}
-				else if (newState == BluetoothGatt.STATE_DISCONNECTED) {
-					startAdvertise(mSeekerId);
-					mServerDevice = null;
-					TLog.d("切断 <- serverdevice");
+				catch(IOException e) {
+					TLog.d("ServerアプリがOpenしてない。リトライします");
+					try {Thread.sleep(1000);} catch(InterruptedException ignore) {}
+//					continue;
 				}
 			}
-			else {
-				startAdvertise(mSeekerId);
-				mServerDevice = null;
-				TLog.d("エラー切断 <- serverdevice");
+
+			/* 成功ログ出力 */
+			String name = bluetoothDevice.getName();
+			String addr = bluetoothDevice.getAddress();
+			TLog.d("Connected. {0}:{1}", name, addr);
+			try { mListner2.onStatusChange(R.string.status_btconnected_and_loc_beat); }
+			catch(RemoteException ignore) {}
+
+			/* Stream取得 */
+			InputStream inputStream = null;
+			OutputStream outputStrem= null;
+			try {
+				inputStream = bluetoothSocket.getInputStream();
+				outputStrem = bluetoothSocket.getOutputStream();
+			}
+			catch(IOException e) {
+				e.printStackTrace();
+				TLog.d("切断!!というより接続失敗!! {0}:{1}", name, addr);
+				try { mListner2.onStatusChange(R.string.status_btdisconnected); }
+				catch(RemoteException ignore) {}
+				try {
+					if(inputStream!=null) inputStream.close();
+					if(outputStrem!=null) outputStrem.close();
+					bluetoothSocket.close();
+				}
+				catch(IOException ioException) { ioException.printStackTrace(); /* ここで発生してもどうしようもない */}
+				return;	/* Stream取得に失敗したらThread終了。 */
+			}
+
+			byte[] incomingBuff = new byte[64];
+			mStatus = R.string.status_btconnected_and_loc_beat;
+			/* 接続確立 -> 送受信中 */
+			while(true) {
+				if(Thread.interrupted()){
+					try {
+						inputStream.close();
+						outputStrem.close();
+						bluetoothSocket.close();
+					}
+					catch(IOException ioException) { ioException.printStackTrace(); /* ここで発生してもどうしようもない */}
+					break;
+				}
+
+				/* 送信データがなければ待つ。 */
+				if(mSndQue.size() == 0) {
+					try { Thread.sleep(10); }
+					catch(InterruptedException ignore) {}
+					continue;
+				}
+
+				TLog.d("送信開始");
+
+				/* 送信データtake */
+				byte[] sndData = null;
+				try { sndData = mSndQue.take();}
+				catch(InterruptedException ignore) {}
+				if(sndData== null) continue;
+
+				TLog.d("	送信開始2 snd({0},{1})", sndData.length, Arrays.toString(sndData));
+
+				/* 送信 */
+				try { outputStrem.write(sndData);}
+				catch(IOException e) {
+					e.printStackTrace();
+					TLog.d("切断!! {0}:{1}", name, addr);
+					try { mListner2.onStatusChange(R.string.status_btdisconnected); }
+					catch(RemoteException ignore) {}
+					try {
+						inputStream.close();
+						outputStrem.close();
+						bluetoothSocket.close();
+					}
+					catch(IOException ioException) { ioException.printStackTrace(); /* ここで発生してもどうしようもない */}
+					return;	/* Stream取得に失敗したらThread終了。 */
+				}
+
+				TLog.d("	送信終了");
 			}
 		}
+	}
 
-//		/* 通知/指示送信の結果 */
-//		@Override
-//		public void onNotificationSent(BluetoothDevice server, int status) {
-//			super.onNotificationSent(server, status);
-//			/* 積まれた通知データを送信 */
-//			Runnable runner = mNotifySender.poll();
-//			if(runner != null) runner.run();
-//			TLog.d("Notification sent. Status:{0} 残:{1}",status, mNotifySender.size());
-//		}
-
-		/* Read要求受信 */
-		@Override
-		public void onCharacteristicReadRequest(BluetoothDevice server, int requestId, int offset, BluetoothGattCharacteristic characteristic) {
-			super.onCharacteristicReadRequest(server, requestId, offset, characteristic);
-			/* 初回送信時のみ値設定 */
-			if(offset == 0) {
-				double longitude = mLongitude;
-				double latitude = mLatitude;
-				int heartbeat = mHeartbeat;
-				setValuetoCharacteristic(characteristic, new Date(),  longitude, latitude,  heartbeat);
-				try { mOnUwsInfoListner.onUwsInfoResult(new UwsInfo(mLongitude, mLatitude, mHeartbeat)); }
-				catch(RemoteException ignored) { }
-			}
-			/* 分割送信処理対応 */
-			byte[] resData = new byte[characteristic.getValue().length-offset];
-			System.arraycopy(characteristic.getValue(), offset, resData, 0, resData.length);
-
-			if(offset == 0)
-				TLog.d("Server->Read要求({0}) snd({1}:{2}:{3}) 返却値:(UUID:{4},resData(byte数{5}:データ{6}) org(offset{7},val:{8}))", requestId, d2Str(mLongitude), d2Str(mLatitude), mHeartbeat, characteristic.getUuid(), resData.length, Arrays.toString(resData), offset, Arrays.toString(characteristic.getValue()));
-			else
-				TLog.d("Server->Read要求({0}) 返却値:(UUID:{1},resData(byte数{2}:データ{3}) org(offset{4},val:{5}))", requestId, characteristic.getUuid(), resData.length, Arrays.toString(resData), offset, Arrays.toString(characteristic.getValue()));
-
-			mGattServer.sendResponse(server, requestId, BluetoothGatt.GATT_SUCCESS, 0, resData);
-		}
-
-		/* Write要求受信 */
-		@Override
-		public void onCharacteristicWriteRequest(BluetoothDevice device, int requestId, BluetoothGattCharacteristic characteristic, boolean preparedWrite, boolean responseNeeded, int offset, byte[] value) {
-			super.onCharacteristicWriteRequest(device, requestId, characteristic, preparedWrite, responseNeeded, offset, value);
-
-			TLog.d("CentralからのWrite要求 受信値:(UUID:{0},vat:{1}))", mUwsCharacteristic.getUuid(), Arrays.toString(value));
-			setValuetoCharacteristic(mUwsCharacteristic, new Date(), 555, 666,  123);
-			if (responseNeeded)
-				mGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, value);
-		}
-
-		/* Read要求受信 */
-		@Override
-		public void onDescriptorReadRequest(BluetoothDevice device, int requestId, int offset, BluetoothGattDescriptor descriptor) {
-			super.onDescriptorReadRequest(device, requestId, offset, descriptor);
-
-			TLog.d("CentralからのDescriptor_Read要求 返却値:(UUID:{0},vat:{1}))", descriptor.getUuid(), Arrays.toString(descriptor.getValue()));
-			mGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, descriptor.getValue());
-		}
-
-		/* Write要求受信 */
-		@Override
-		public void onDescriptorWriteRequest(BluetoothDevice device, int requestId,
-											 BluetoothGattDescriptor descriptor, boolean preparedWrite, boolean responseNeeded,
-											 int offset,
-											 byte[] value) {
-			super.onDescriptorWriteRequest(device, requestId, descriptor, preparedWrite, responseNeeded, offset, value);
-
-			TLog.d("CentralからのDescriptor_Write要求 受信値:(UUID:{0},vat:{1}))", descriptor.getUuid(), Arrays.toString(value));
-
-//            int status = BluetoothGatt.GATT_SUCCESS;
-//            if (descriptor.getUuid() == CLIENT_CHARACTERISTIC_CONFIGURATION_UUID) {
-//                BluetoothGattCharacteristic characteristic = descriptor.getCharacteristic();
-//                boolean supportsNotifications = (characteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_NOTIFY) != 0;
-//                boolean supportsIndications   = (characteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0;
-//
-//                if (!(supportsNotifications || supportsIndications)) {
-//                    status = BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED;
-//                }
-//                else if (value.length != 2) {
-//                    status = BluetoothGatt.GATT_INVALID_ATTRIBUTE_LENGTH;
-//                }
-//                else if (Arrays.equals(value, BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE)) {
-//                    status = BluetoothGatt.GATT_SUCCESS;
-//                    mCurrentServiceFragment.notificationsDisabled(characteristic);
-//                    descriptor.setValue(value);
-//                }
-//                else if (supportsNotifications &&
-//                        Arrays.equals(value, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)) {
-//                    status = BluetoothGatt.GATT_SUCCESS;
-//                    mCurrentServiceFragment.notificationsEnabled(characteristic, false /* indicate */);
-//                    descriptor.setValue(value);
-//                }
-//                else if (supportsIndications &&
-//                        Arrays.equals(value, BluetoothGattDescriptor.ENABLE_INDICATION_VALUE)) {
-//                    status = BluetoothGatt.GATT_SUCCESS;
-//                    mCurrentServiceFragment.notificationsEnabled(characteristic, true /* indicate */);
-//                    descriptor.setValue(value);
-//                }
-//                else {
-//                    status = BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED;
-//                }
-//            }
-//            else {
-//                status = BluetoothGatt.GATT_SUCCESS;
-//                descriptor.setValue(value);
-//            }
-			if (responseNeeded)
-				mGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS,0,null);
-
-		}
-	};
-
-	private void set1stValuetoCharacteristic(BluetoothGattCharacteristic charac, short msgid, Date datetime, double longitude/*経度*/) {
-		TLog.d("1st送信データ生成");
-		byte[] ret = new byte[20];
+	private byte[] createFstMsg(short seekerid) {
+		byte[] sndBin = new byte[12];
 		int spos = 0;
-		/* メッセージID(2byte) */
-		byte[] bmsgid = s2bs(msgid);
-		System.arraycopy(bmsgid, 0, ret, spos, bmsgid.length);
-		spos += bmsgid.length;
-		/* Seq番号(2byte) */
-		byte[] bseqno = s2bs((short)0);
-		System.arraycopy(bseqno, 0, ret, spos, bseqno.length);
-		spos += bseqno.length;
+		/* (ヘッダを含まない)メッセージ長(1byte) 制限:最大256byteまで */
+		byte[] blen = new byte[]{(byte)(sndBin.length-1)};
+		System.arraycopy(blen, 0, sndBin, spos, blen.length);
+		spos += blen.length;
 		/* 日付(8byte) */
-		byte[] bdatetime = l2bs(datetime.getTime());
-		System.arraycopy(bdatetime, 0, ret, spos, bdatetime.length);
-		spos += bdatetime.length;
-		/* 経度(8byte) */
-		byte[] blongitude = d2bs(longitude);
-		System.arraycopy(blongitude, 0, ret, spos, blongitude.length);
-		/* 値 設定 */
-		charac.setValue(ret);
+		byte[] bdate = l2bs(new Date().getTime());
+		System.arraycopy(bdate, 0, sndBin, spos, bdate.length);
+		spos += bdate.length;
+		/* データ種別(1byte) */
+		byte[] btype = new byte[]{'1'};
+		System.arraycopy(btype, 0, sndBin, spos, btype.length);
+		spos += btype.length;
+		/* Seekerid(2byte) */
+		byte[] bseekerid = s2bs(seekerid);
+		System.arraycopy(bseekerid, 0, sndBin, spos, bseekerid.length);
+		return sndBin;
 	}
-	private void set2ndValuetoCharacteristic(BluetoothGattCharacteristic charac, short msgid, double latitude/*緯度*/, int heartbeat) {
-		TLog.d("2nd送信データ生成");
-		byte[] ret = new byte[16];
+	private byte[] createByteArray(int heartbeat) {
+		byte[] sndBin = new byte[14];
 		int spos = 0;
-		/* メッセージID(2byte) */
-		byte[] bmsgid = s2bs(msgid);
-		System.arraycopy(bmsgid, 0, ret, spos, bmsgid.length);
-		spos += bmsgid.length;
-		/* Seq番号(2byte) */
-		byte[] bseqno = s2bs((short)1);
-		System.arraycopy(bseqno, 0, ret, spos, bseqno.length);
-		spos += bseqno.length;
-		/* 緯度(8byte) */
-		byte[] blatitude = d2bs(latitude);
-		System.arraycopy(blatitude, 0, ret, spos, blatitude.length);
-		spos += blatitude.length;
+		/* (ヘッダを含まない)メッセージ長(1byte) 制限:最大256byteまで */
+		byte[] blen = new byte[]{(byte)(sndBin.length-1)};
+		System.arraycopy(blen, 0, sndBin, spos, blen.length);
+		spos += blen.length;
+		/* 日付(8byte) */
+		byte[] bdate = l2bs(new Date().getTime());
+		System.arraycopy(bdate, 0, sndBin, spos, bdate.length);
+		spos += bdate.length;
+		/* データ種別(1byte) */
+		byte[] btype = new byte[]{'h'};
+		System.arraycopy(btype, 0, sndBin, spos, btype.length);
+		spos += btype.length;
 		/* 脈拍(4byte) */
 		byte[] bheartbeat = i2bs(heartbeat);
-		System.arraycopy(bheartbeat, 0, ret, spos, bheartbeat.length);
-		/* 値 設定 */
-		charac.setValue(ret);
+		System.arraycopy(bheartbeat, 0, sndBin, spos, bheartbeat.length);
+		return sndBin;
 	}
-	private void setValuetoCharacteristic(BluetoothGattCharacteristic charac, Date datetime, double longitude/*経度*/, double latitude/*緯度*/, int heartbeat) {
-		byte[] ret = new byte[28];
+	private byte[] createByteArray(double longitude, double latitude) {
+		byte[] sndBin = new byte[26];
 		int spos = 0;
+		/* (ヘッダを含まない)メッセージ長(1byte) 制限:最大256byteまで */
+		byte[] blen = new byte[]{(byte)(sndBin.length-1)};
+		System.arraycopy(blen, 0, sndBin, spos, blen.length);
+		spos += blen.length;
 		/* 日付(8byte) */
-		byte[] bdatetime = l2bs(datetime.getTime());
-		System.arraycopy(bdatetime, 0, ret, spos, bdatetime.length);
-		spos += bdatetime.length;
+		byte[] bdate = l2bs(new Date().getTime());
+		System.arraycopy(bdate, 0, sndBin, spos, bdate.length);
+		spos += bdate.length;
+		/* データ種別(1byte) */
+		byte[] btype = new byte[]{'l'};
+		System.arraycopy(btype, 0, sndBin, spos, btype.length);
+		spos += btype.length;
 		/* 経度(8byte) */
 		byte[] blongitude = d2bs(longitude);
-		System.arraycopy(blongitude, 0, ret, spos, blongitude.length);
+		System.arraycopy(blongitude, 0, sndBin, spos, blongitude.length);
 		spos += blongitude.length;
 		/* 緯度(8byte) */
 		byte[] blatitude = d2bs(latitude);
-		System.arraycopy(blatitude, 0, ret, spos, blatitude.length);
-		spos += blatitude.length;
-		/* 脈拍(4byte) */
-		byte[] bheartbeat = i2bs(heartbeat);
-		System.arraycopy(bheartbeat, 0, ret, spos, bheartbeat.length);
-		/* 値 設定 */
-		charac.setValue(ret);
+		System.arraycopy(blatitude, 0, sndBin, spos, blatitude.length);
+		return sndBin;
+	}
+	private byte[] s2bs(short value) {
+		return ByteBuffer.allocate(2).putShort(value).array();
 	}
 	private byte[] i2bs(int value) {
 		return ByteBuffer.allocate(4).putInt(value).array();
@@ -613,9 +512,5 @@ public class UwsClientService extends Service {
 	private byte[] d2bs(double value) {
 		return ByteBuffer.allocate(8).putDouble(value).array();
 	}
-
-	/* *********/
-	/* 脈拍機能 */
-	/* *********/
-	private short mHeartbeat;
 }
+

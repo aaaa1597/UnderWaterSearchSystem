@@ -1,97 +1,106 @@
 package com.tks.uwsclient.ui;
 
-import android.os.IBinder;
+import android.app.Application;
+import android.bluetooth.BluetoothDevice;
+import android.location.Location;
 import android.os.RemoteException;
 import android.util.Pair;
-import androidx.lifecycle.LiveData;
+
+import androidx.annotation.NonNull;
+import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
-
 import com.tks.uwsclient.Constants.Sender;
 import com.tks.uwsclient.IClientService;
-import com.tks.uwsclient.IOnStatusChangeListner;
-import com.tks.uwsclient.IOnUwsInfoListner;
+import com.tks.uwsclient.IStatusNotifier;
+import com.tks.uwsclient.IOnUwsInfoChangeListner;
 import com.tks.uwsclient.TLog;
-import com.tks.uwsclient.UwsInfo;
 
-public class FragMainViewModel extends ViewModel {
+public class FragMainViewModel extends AndroidViewModel {
 	private final MutableLiveData<Double>					mLatitude		= new MutableLiveData<>(0.0);
 	private final MutableLiveData<Double>					mLongitude		= new MutableLiveData<>(0.0);
 	private final MutableLiveData<Short>					mHearBeat		= new MutableLiveData<>((short)0);
+	private final MutableLiveData<String>					mStatusStr		= new MutableLiveData<>("");
 	private final MutableLiveData<Pair<Sender, Boolean>>	mUnLock			= new MutableLiveData<>(Pair.create(Sender.App, true));
-	private final MutableLiveData<ConnectStatus>			mStatus			= new MutableLiveData<>(ConnectStatus.NONE);
+	private Application										mContext;
+
+	public FragMainViewModel(@NonNull Application application) {
+		super(application);
+		mContext = application;
+	}
+
 	public MutableLiveData<Double>					Latitude()		{ return mLatitude; }
 	public MutableLiveData<Double>					Longitude()		{ return mLongitude; }
 	public MutableLiveData<Short>					HearBeat()		{ return mHearBeat; }
+	public MutableLiveData<String>					StatusStr()		{ return mStatusStr; }
 	public MutableLiveData<Pair<Sender, Boolean>>	UnLock()		{ return mUnLock; }
-	public MutableLiveData<ConnectStatus>			ConnectStatus()	{ return mStatus; }
 
-	public enum ConnectStatus {
-		NONE,
-		SETTING_ID,		/* ID設定中 */
-		START_ADVERTISE,/* アドバタイズ開始 */
-		ADVERTISING,	/* アドバタイズ中... */
-		CONNECTED,		/* 接続確立 */
-		DISCONNECTED,	/* 接続断 */
-		ERROR,			/* エラー発生!! */
-	}
-
-	private final MutableLiveData<Boolean>	mAdvertisingFlg	= new MutableLiveData<>(false);
-	public MutableLiveData<Boolean>			AdvertisingFlg()	{ return mAdvertisingFlg; }
 	private short	mSeekerId = 0;
 	public void		setSeekerId(short id)	{ mSeekerId = id; }
 	public short	getSeekerId()			{ return mSeekerId; }
-	public MutableLiveData<Object>			UpdDisplaySeerkerId = new MutableLiveData<>();
+	public MutableLiveData<Short>			UpdDisplaySeerkerId = new MutableLiveData<>();
+	public void setSeekerIdSmoothScrollToPosition(short seekerId) {
+		mSeekerId = seekerId;
+		UpdDisplaySeerkerId.postValue(seekerId);
+	}
 
-	private final MutableLiveData<String>	mShowSnacbar			= new MutableLiveData<>();
-	public LiveData<String>					ShowSnacbar()			{ return mShowSnacbar; }
-	public void								showSnacbar(String showmMsg) { mShowSnacbar.postValue(showmMsg);}
-	private final MutableLiveData<String>	mShowErrMsg				= new MutableLiveData<>();
-	public LiveData<String>					ShowErrMsg()			{ return mShowErrMsg; }
-	public void								showErrMsg(String showmMsg) { mShowErrMsg.postValue(showmMsg);}
+	IClientService mClientServiceIf;
+	public void setClientServiceIf(IClientService serviceIf) {
+		mClientServiceIf = serviceIf;
+
+		try {
+			serviceIf.setListners(new IOnUwsInfoChangeListner.Stub() {
+				@Override
+				public void onLocationResultChange(Location location) {
+					mLongitude.postValue(location.getLongitude());
+					mLatitude .postValue(location.getLatitude());
+				}
+
+				@Override
+				public void onHeartbeatResultChange(int heartbeat) {
+					mHearBeat.postValue((short)heartbeat);
+				}
+			}, new IStatusNotifier.Stub() {
+				@Override
+				public void onStatusChange(int statusid) {
+					mStatusStr.postValue(mContext.getString(statusid));
+				}
+			});
+		}
+		catch(RemoteException e) {
+			e.printStackTrace();
+		}
+	}
 
 	/** ********
 	 *  Location
 	 *  ********/
 	public boolean mIsSetedLocationON = false;
 
-	IClientService mClientServiceIf;
-	public void setClientServiceIf(IClientService serviceIf) {
-		mClientServiceIf = serviceIf;
-	}
-
-	public void setSeekerIdSmoothScrollToPosition(short seekerId) {
-		mSeekerId = seekerId;
-		UpdDisplaySeerkerId.postValue(seekerId);
-	}
-
-	/* ****************************/
-	/* 業務プロセス(BLE,位置情報,脈拍) */
-	/* ****************************/
-	/* 開始 */
-	public void startUws(short seekerId) {
+	/** ********
+	 *  Bluetooth
+	 *  ********/
+	/* Bluetooth開始 */
+	public void startBt(short seekerId, BluetoothDevice device) {
 		TLog.d("seekerid={0}", seekerId);
 		if(mClientServiceIf == null) return;
-		try { mClientServiceIf.startUws(seekerId, new IOnUwsInfoListner.Stub() {
-													@Override
-													public void onUwsInfoResult(UwsInfo uwsinfo) {
-														mLongitude.postValue(uwsinfo.getLogitude());
-														mLatitude .postValue(uwsinfo.getLatitude());
-														mHearBeat .postValue(uwsinfo.getHeartbeat());
-													}
-												},
-												new IOnStatusChangeListner.Stub() {
-													@Override
-													public void OnStatusChange(int oldStatus, int newStatus) {
-													}
-												});
-		}
+		try { mClientServiceIf.startBt(seekerId, device); }
 		catch (RemoteException e) { e.printStackTrace(); }
 	}
-	/* 終了 */
-	public void stopUws() {
+
+	/* Bluetooth終了 */
+	public void stopBt() {
+		TLog.d("");
 		if(mClientServiceIf == null) return;
-		try { mClientServiceIf.stopUws(); }
+		try { mClientServiceIf.stopBt(); }
+		catch (RemoteException e) { e.printStackTrace(); }
+	}
+
+	/* 開始条件クリア */
+	public void notifyStartCheckCleared() {
+		TLog.d("");
+		if(mClientServiceIf == null) return;
+		try { mClientServiceIf.notifyStartCheckCleared(); }
 		catch (RemoteException e) { e.printStackTrace(); }
 	}
 }
