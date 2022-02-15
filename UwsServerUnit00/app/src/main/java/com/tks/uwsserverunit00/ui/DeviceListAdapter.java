@@ -150,17 +150,8 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		return mDeviceList.size();
 	}
 
-	public int setSelected(short seekerid, boolean isChecked) {
-		AtomicInteger index = new AtomicInteger(-1);
-		DeviceInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
-		if(device == null) return ERR_DEVICE_NOTFOUND;	/* 対象外デバイスが存在しない。ありえないはず。 */
-
-		device.mSelected = isChecked;
-		return index.get();
-	}
-
-	public boolean isSelected(short seekerid) {
-		DeviceInfoModel device = mDeviceList.stream().filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
+	public boolean isSelected(String address) {
+		DeviceInfoModel device = mDeviceList.stream().filter(item->item.mDeviceAddress.equals(address)).findAny().orElse(null);
 		return (device!=null) && device.mSelected;
 	}
 
@@ -212,5 +203,10 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 				notifyItemChanged(index.get());
 			}
 		}
+	}
+
+	public short getSeekerId(String address) {
+		DeviceInfoModel findit = mDeviceList.stream().filter(item->item.mDeviceAddress.equals(address)).findAny().orElse(null);
+		return findit==null ? -1 : findit.mSeekerId;
 	}
 }

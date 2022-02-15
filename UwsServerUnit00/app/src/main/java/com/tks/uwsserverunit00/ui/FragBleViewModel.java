@@ -48,41 +48,6 @@ public class FragBleViewModel extends AndroidViewModel {
 		return mDeviceListAdapter;
 	}
 
-	public void setSelected(short seekerid, boolean isChecked) {
-//		/* TODO */TLog.d("seekerid={0} isChecked={1}", seekerid, isChecked);
-//		boolean nowStatus = mDeviceListAdapter.getChecked(seekerid);
-//		if(nowStatus == isChecked) return;
-//		/* TODO */TLog.d("seekerid={0} nowStatus:({1})->isChecked:({2})", seekerid, nowStatus, isChecked);
-//
-//		/* メンバ選択Switchに設定 */
-//		int pos = mDeviceListAdapter.setSelected(seekerid, isChecked);
-//		mNotifyItemChanged.postValue(pos);
-//
-//		/* サービスに通知(開始/終了) */
-//		int ret = ERR_OK;
-//		try {
-//			if(isChecked)
-//				ret = mUwsServiceIf.startPeriodicNotify(seekerid, new IUwsInfoCallback.Stub() {
-//						@Override
-//						public void notifyUwsData(UwsInfo uwsInfo) {
-//							int pos = mDeviceListAdapter.updDeviceInfo(uwsInfo);
-//							mNotifyItemChanged.postValue(pos);
-//							mUpdUwsInfo.postValue(uwsInfo);
-//							TLog.d("UwsInfo受信({0} {1} {2} {3})", d2Str(uwsInfo.getDate()), d2Str(uwsInfo.getLongitude()), d2Str(uwsInfo.getLatitude()), uwsInfo.getHeartbeat());
-//						}
-//
-//					@Override
-//					public void notifyStatus(int status) {
-//						/* TODO 要実装 */
-//					}
-//				});
-//			else
-//				mUwsServiceIf.stopPeriodicNotify(seekerid);
-//		}
-//		catch (RemoteException e) { e.printStackTrace(); ret = ERR_AIDL_REMOTE_ERROR; }
-//		TLog.d("ret={0}", ret);
-	}
-
 	public void setBuoy(short seekerid, boolean isChecked) {
 //		mDeviceListAdapter.setBuoy(seekerid, isChecked);
 //		mNotifyDataSetChanged.postValue(true);

@@ -121,17 +121,16 @@ public class MainActivity extends AppCompatActivity {
 			mSeekerId		= -1;
 			mDeviceName		= i.getName();
 			mDeviceAddress	= i.getAddress();
-			mStatusResId = R.string.status_waitforconnect;
-			mLongitude		= -1;
-			mLatitude		= -1;
+			mStatusResId	= R.string.status_waitforconnect;
+			mLongitude		= 0;
+			mLatitude		= 0;
 			mHertBeat		= -1;
 			mConnected		= false;
 			mSelected		= false;
 			mIsBuoy			= false;
 		}}).collect(Collectors.toList());
 		mBleViewModel.setDeviceListAdapter(new DeviceListAdapter(pairedlist,
-				(seekerid, isChecked) -> {	mBleViewModel.setSelected(seekerid, isChecked);
-											mMapViewModel.setSelected(seekerid, isChecked);},
+				(seekerid, isChecked) -> mMapViewModel.setSelected(seekerid, isChecked),
 				(seekerid, isChecked) -> mBleViewModel.setBuoy(seekerid, isChecked)
 		));
 	}
@@ -253,6 +252,7 @@ public class MainActivity extends AppCompatActivity {
 						public void OnChange(String name, String addr, long datetime, Location loc) {
 							runOnUiThread(() -> {
 								mBleViewModel.setLocation(name, addr, datetime, loc);
+								mMapViewModel.onLocationUpdated(name, addr, datetime, loc);
 							});
 						}
 					}, new IStatusNotifier.Stub() {

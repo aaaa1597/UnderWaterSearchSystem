@@ -1,11 +1,7 @@
 package com.tks.uwsserverunit00.ui;
 
-import static com.tks.uwsserverunit00.Constants.UWS_LOC_BASE_DISTANCE_X;
-import static com.tks.uwsserverunit00.Constants.UWS_LOC_BASE_DISTANCE_Y;
-import static com.tks.uwsserverunit00.Constants.d2Str;
-
+import java.util.Date;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.Observer;
@@ -43,10 +39,11 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polygon;
 
 import com.google.android.gms.maps.model.PolygonOptions;
-import com.tks.uwsserverunit00.DeviceInfo;
 import com.tks.uwsserverunit00.R;
 import com.tks.uwsserverunit00.TLog;
-import com.tks.uwsserverunit00.UwsInfo;
+import static com.tks.uwsserverunit00.Constants.UWS_LOC_BASE_DISTANCE_X;
+import static com.tks.uwsserverunit00.Constants.UWS_LOC_BASE_DISTANCE_Y;
+import static com.tks.uwsserverunit00.Constants.d2Str;
 
 public class FragMap extends SupportMapFragment {
 	private final short						BASE_COMMANDER_LOCATION_IDX = 9999;
@@ -55,9 +52,12 @@ public class FragMap extends SupportMapFragment {
 	private FragBizLogicViewModel			mBizLogicViewModel;
 	private GoogleMap						mGoogleMap;
 	private Location						mLocation;
-	private final Map<Short, MapDrawInfo>	mMapDrawInfos = new HashMap<>();
+	private final Map<String, MapDrawInfo>	mMapDrawInfos = new HashMap<>();
 	/* 検索情報 */
 	static class MapDrawInfo {
+		public String	name;
+		public String	address;
+		public Date		date;
 		public LatLng	pos;
 		public Marker	maker;	/* GoogleMapの Marker */
 		public Polygon	polygon;/* GoogleMapの Polygon */
@@ -75,17 +75,16 @@ public class FragMap extends SupportMapFragment {
 		super.onViewCreated(view, savedInstanceState);
 
 		mBizLogicViewModel = new ViewModelProvider(requireActivity()).get(FragBizLogicViewModel.class);
-
 		mBleViewModel = new ViewModelProvider(requireActivity()).get(FragBleViewModel.class);
-//		mBleViewModel.UpdUwsInfo().observe(getViewLifecycleOwner(), uwsInfo -> {
-//			if(uwsInfo==null) return;
-//			updMapDrawInfo(mGoogleMap, mMapDrawInfos, uwsInfo);
-//		});
 
 		mMapViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
 		mMapViewModel.Permission().observe(getViewLifecycleOwner(), aBoolean -> {
 			getNowPosAndDraw();
 		});
+		mMapViewModel.OnLocationUpdated().observe(getViewLifecycleOwner(), mapDrawInfo -> {
+			updMapDrawInfo(mGoogleMap, mMapDrawInfos, mapDrawInfo);
+		});
+
 
 		/* SupportMapFragmentを取得し、マップを使用する準備ができたら通知を受取る */
 		SupportMapFragment mapFragment = (SupportMapFragment) getActivity().getSupportFragmentManager().findFragmentById(R.id.frgMap);
@@ -111,8 +110,8 @@ public class FragMap extends SupportMapFragment {
 			@Override
 			public void onChanged(Pair<Short, Boolean> selected) {
 				if(selected.first==-32768) return;/* 初期設定なので、何もしない。 */
-				short	seekerid = selected.first;
-				boolean	isSelected = selected.second;
+				short	seekerid	= selected.first;
+				boolean	isSelected	= selected.second;
 
 				MapDrawInfo si = mMapDrawInfos.get(seekerid);
 				if(si==null) return;
@@ -120,8 +119,8 @@ public class FragMap extends SupportMapFragment {
 				if(isSelected) {
 					Marker marker = mGoogleMap.addMarker(new MarkerOptions()
 							.position(si.pos)
-							.title(String.valueOf(selected.first))
-							.icon(createIcon(selected.first)));
+							.title(String.valueOf(seekerid))
+							.icon(createIcon(seekerid)));
 					Circle nowPoint = mGoogleMap.addCircle(new CircleOptions().center(si.pos)
 							.radius(0.5)
 							.fillColor(Color.MAGENTA)
@@ -188,7 +187,7 @@ public class FragMap extends SupportMapFragment {
 												.fillColor(Color.CYAN)
 												.strokeColor(Color.CYAN));
 
-		mMapDrawInfos.put(BASE_COMMANDER_LOCATION_IDX, new MapDrawInfo(){{pos=nowposgps;maker=basemarker; circle=nowPoint; polygon=null;}});
+		mMapDrawInfos.put("COMMANDER_LOCATION", new MapDrawInfo(){{pos=nowposgps;maker=basemarker; circle=nowPoint; polygon=null;}});
 
 		/* 現在地マーカを中心に */
 		googleMap.moveCamera(CameraUpdateFactory.newLatLng(nowposgps));
@@ -221,39 +220,37 @@ public class FragMap extends SupportMapFragment {
 	}
 
 	/* Map用描画情報 表示 */
-	private void updMapDrawInfo(GoogleMap googleMap, Map<Short, MapDrawInfo> mdList, UwsInfo uwsInfo) {
-		short seekerid = uwsInfo.getSeekerId();
-		if(seekerid < 0) {
-			TLog.d("対象外エントリ.何もしない.uwsinfo({0}, {1}, {2}, {3}, {4})", uwsInfo.getDate(), uwsInfo.getSeekerId(), uwsInfo.getLongitude(), uwsInfo.getLatitude(), uwsInfo.getHeartbeat());
-			return;
-		}
+	private void updMapDrawInfo(GoogleMap googleMap, Map<String, MapDrawInfo> mdList, MapDrawInfo mapInfo) {
+		String	aaddress	= mapInfo.address;
+		LatLng	apos		= mapInfo.pos;
+		short	aseekerid	= mBleViewModel.getDeviceListAdapter().getSeekerId(aaddress);
+		boolean	aIsSelected	= mBleViewModel.getDeviceListAdapter().isSelected(aaddress);/*選択中*/
 
-		MapDrawInfo drawinfo = mdList.get(seekerid);
+		MapDrawInfo drawinfo = mdList.get(aaddress);
 		if(drawinfo == null) {
 			/* 新規追加 */
-			LatLng nowposgps = new LatLng(uwsInfo.getLatitude(), uwsInfo.getLongitude());
-//			if(mBleViewModel.getDeviceListAdapter().isSelected(seekerid)/*選択中*/) {
-//				Marker marker = googleMap.addMarker(new MarkerOptions()
-//						.position(nowposgps)
-//						.title(String.valueOf(seekerid))
-//						.icon(createIcon(uwsInfo.getSeekerId())));
-//
-//				Circle nowPoint = googleMap.addCircle(new CircleOptions()
-//						.center(nowposgps)
-//						.radius(0.5)
-//						.fillColor(Color.MAGENTA)
-//						.strokeColor(Color.MAGENTA));
-//				TLog.d("Circle = {0}", nowPoint);
-//				mdList.put(seekerid, new MapDrawInfo(){{pos=nowposgps;maker=marker;circle=nowPoint;}});
-//			}
-//			else {
-//				mdList.put(seekerid, new MapDrawInfo(){{pos=nowposgps;maker=null;circle=null;}});
-//			}
+			if(aIsSelected) {
+				Marker lmarker = googleMap.addMarker(new MarkerOptions()
+						.position(apos)
+						.title(String.valueOf(aseekerid))
+						.icon(createIcon(aseekerid)));
+
+				Circle nowPoint = googleMap.addCircle(new CircleOptions()
+						.center(apos)
+						.radius(0.5)
+						.fillColor(Color.MAGENTA)
+						.strokeColor(Color.MAGENTA));
+				TLog.d("Circle = {0}", nowPoint);
+				mdList.put(aaddress, new MapDrawInfo(){{pos=apos;maker=lmarker;circle=nowPoint;}});
+			}
+			else {
+				mdList.put(aaddress, new MapDrawInfo(){{pos=apos;maker=null;circle=null;}});
+			}
 		}
 		else {
 			/* 位置更新 */
 			LatLng spos = drawinfo.pos;
-			LatLng epos = new LatLng(uwsInfo.getLatitude(), uwsInfo.getLongitude());
+			LatLng epos = apos;
 			drawinfo.pos = epos;
 			double dx = epos.longitude- spos.longitude;
 			double dy = epos.latitude - spos.latitude;
@@ -274,32 +271,32 @@ public class FragMap extends SupportMapFragment {
 //				drawinfo.polygon.remove();
 //				drawinfo.polygon = null;
 //			}
-//			if(mBleViewModel.getDeviceListAdapter().isSelected(uwsInfo.getSeekerId())/*選抜中*/) {
-//				Marker marker = googleMap.addMarker(new MarkerOptions()
-//						.position(epos)
-//						.title(String.valueOf(seekerid))
-//						.icon(createIcon(uwsInfo.getSeekerId())));
-//				Circle nowPoint = googleMap.addCircle(new CircleOptions()
-//						.center(epos)
-//						.radius(0.5)
-//						.fillColor(Color.MAGENTA)
-//						.strokeColor(Color.MAGENTA));
-//				drawinfo.maker = marker;
-//				drawinfo.circle= nowPoint;
-//
-//				/* 検索線描画の頂点情報取得 */
-//				LatLng[] square = createSquare(spos, epos, UWS_LOC_BASE_DISTANCE_X, UWS_LOC_BASE_DISTANCE_Y);
-//
-//				if(mBizLogicViewModel.getSerchStatus()/*検索中*/) {
-//					/* 矩形追加 */
-//					Polygon polygon = googleMap.addPolygon(new PolygonOptions()
-//							.fillColor(mMapViewModel.getFillColor())
-//							.strokeColor(Color.BLUE)
-//							.strokeWidth(1)
-//							.add(square[0], square[1], square[3], square[2]));
-//					drawinfo.polygon = polygon;
-//				}
-//			}
+			if(aIsSelected) {
+				Marker marker = googleMap.addMarker(new MarkerOptions()
+						.position(epos)
+						.title(String.valueOf(aseekerid))
+						.icon(createIcon(aseekerid)));
+				Circle nowPoint = googleMap.addCircle(new CircleOptions()
+						.center(epos)
+						.radius(0.5)
+						.fillColor(Color.MAGENTA)
+						.strokeColor(Color.MAGENTA));
+				drawinfo.maker = marker;
+				drawinfo.circle= nowPoint;
+
+				/* 検索線描画の頂点情報取得 */
+				LatLng[] square = createSquare(spos, epos, UWS_LOC_BASE_DISTANCE_X, UWS_LOC_BASE_DISTANCE_Y);
+
+				if(mBizLogicViewModel.getSerchStatus()/*検索中*/) {
+					/* 矩形追加 */
+					Polygon polygon = googleMap.addPolygon(new PolygonOptions()
+							.fillColor(mMapViewModel.getFillColor())
+							.strokeColor(Color.BLUE)
+							.strokeWidth(1)
+							.add(square[0], square[1], square[3], square[2]));
+					drawinfo.polygon = polygon;
+				}
+			}
 		}
 	}
 
