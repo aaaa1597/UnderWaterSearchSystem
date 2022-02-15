@@ -44,7 +44,7 @@
                 android:layout_height="match_parent"
                 android:adjustViewBounds="true"
                 android:layout_gravity="center"
-                android:src="@drawable/status0_none" />
+                android:src="@drawable/status_none" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

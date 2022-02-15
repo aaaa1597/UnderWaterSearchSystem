@@ -1,5 +1,6 @@
 package com.tks.uwsserverunit00.ui;
 
+import android.graphics.Color;
 import android.location.Location;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -15,11 +16,11 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import com.tks.uwsserverunit00.R;
 
 import static com.tks.uwsserverunit00.Constants.BT_NORTIFY_SEEKERID;
-import static com.tks.uwsserverunit00.Constants.ERR_DEVICE_NOTFOUND;
 import static com.tks.uwsserverunit00.Constants.d2Str;
 
 /**
@@ -105,10 +106,19 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
 		DeviceInfoModel model = mDeviceList.get(position);
 		final short seekerid		= model.mSeekerId;
+		final int	seekeridcolor	= (seekerid==0) ? Color.parseColor("#000000") :
+									  (seekerid==1) ? Color.parseColor("#7f4f21") :
+									  (seekerid==2) ? Color.parseColor("#ff0000") :
+									  (seekerid==3) ? Color.parseColor("#ff6a36") :
+									  (seekerid==4) ? Color.parseColor("#eabe3b") :
+									  (seekerid==5) ? Color.parseColor("#00ff00") :
+									  (seekerid==6) ? Color.parseColor("#0000ff") :
+									  (seekerid==7) ? Color.parseColor("#9555aa") :
+									  (seekerid==8) ? Color.parseColor("#4c4c4c") : Color.parseColor("#c6c6c6");
 		final String deviceName		= model.mDeviceName;
 		final String deviceAddress	= model.mDeviceAddress;
 		final int constsresid		= (!model.mConnected)? R.drawable.statusx_waitforconnect :
-									    model.mSelected  ? R.drawable.status5_ready : R.drawable.status0_none;
+									    model.mSelected  ? R.drawable.status_ready0 : R.drawable.status_none;
 		if( !model.mConnected) {
 			holder.mllRow.setOnClickListener(null);
 			holder.mImvBuoy.setOnClickListener(null);
@@ -120,9 +130,9 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 				model.mSelected = !model.mSelected;
 				mOnSelectedChangeListener.onSelectedChanged(seekerid, model.mSelected);
 				if(model.mSelected)
-					holder.mImvConnectStatus.setImageResource(R.drawable.status5_ready);
+					holder.mImvConnectStatus.setImageResource(R.drawable.status_ready0);
 				else
-					holder.mImvConnectStatus.setImageResource(R.drawable.status0_none);
+					holder.mImvConnectStatus.setImageResource(R.drawable.status_none);
 			});
 			/* 浮標設定 */
 			if(model.mIsBuoy)	holder.mImvBuoy.setImageResource(R.drawable.buoy_enable);
@@ -136,6 +146,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		}
 		holder.mtxtDatetime.setText(d2Str(model.mDatetime));
 		holder.mTxtSeekerId.setText((seekerid == -1) ? " - " : String.valueOf(seekerid));
+		holder.mTxtSeekerId.setTextColor(seekeridcolor);
 		holder.mTxtDeviceName.setText(TextUtils.isEmpty(deviceName) ? "" : deviceName);
 		holder.mTxtDeviceNameAddress.setText(TextUtils.isEmpty(deviceAddress) ? "" : deviceAddress);
 		holder.mImvConnectStatus.setImageResource(constsresid);
@@ -168,13 +179,15 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	}
 
 	/* 脈拍更新 */
-	public void setHeartBeat(String name, String addr, long datetime, short hearbeat) {
+	public short setHeartBeat(String name, String addr, long datetime, short hearbeat) {
 		AtomicInteger index = new AtomicInteger(-1);
 		DeviceInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mDeviceAddress.equals(addr)).findAny().orElse(null);
 		if(device != null) {
 			device.mHertBeat = hearbeat;
 			notifyItemChanged(index.get());
+			return device.mSeekerId;
 		}
+		return -1;
 	}
 
 	/* 経度/緯度更新 */

@@ -35,12 +35,14 @@ import java.util.stream.Collectors;
 
 import com.tks.uwsserverunit00.ui.DeviceListAdapter;
 import com.tks.uwsserverunit00.ui.DeviceListAdapter.DeviceInfoModel;
+import com.tks.uwsserverunit00.ui.FragBizLogicViewModel;
 import com.tks.uwsserverunit00.ui.FragBleViewModel;
 import com.tks.uwsserverunit00.ui.FragMapViewModel;
 
 public class MainActivity extends AppCompatActivity {
 	private FragBleViewModel	mBleViewModel;
 	private FragMapViewModel	mMapViewModel;
+	private FragBizLogicViewModel mBizViewModel;
 	private boolean				mIsSettingLocationON		= false;
 	private final static int	REQUEST_PERMISSIONS			= 1111;
 	private final static int	REQUEST_LOCATION_SETTINGS	= 2222;
@@ -54,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
 		TLog.d("");
 		mMapViewModel = new ViewModelProvider(this).get(FragMapViewModel.class);
 		mBleViewModel = new ViewModelProvider(this).get(FragBleViewModel.class);
+		mBizViewModel = new ViewModelProvider(this).get(FragBizLogicViewModel.class);
 
 		/* Bluetoothのサポート状況チェック 未サポート端末なら起動しない */
 		if( !getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE))
@@ -130,7 +133,8 @@ public class MainActivity extends AppCompatActivity {
 			mIsBuoy			= false;
 		}}).collect(Collectors.toList());
 		mBleViewModel.setDeviceListAdapter(new DeviceListAdapter(pairedlist,
-				(seekerid, isChecked) -> mMapViewModel.setSelected(seekerid, isChecked),
+				(seekerid, isChecked) -> {mMapViewModel.setSelected(seekerid, isChecked);
+										  mBizViewModel.setSelected(seekerid, isChecked);},
 				(seekerid, isChecked) -> mBleViewModel.setBuoy(seekerid, isChecked)
 		));
 	}
@@ -244,7 +248,8 @@ public class MainActivity extends AppCompatActivity {
 						@Override
 						public void OnChange(String name, String addr, long datetime, int hearbeat) {
 							runOnUiThread(() -> {
-								mBleViewModel.setHeartBeat(name, addr, datetime, (short)hearbeat);
+								short seekerid = mBleViewModel.setHeartBeat(name, addr, datetime, (short)hearbeat);
+								mBizViewModel.setHeartBeat(name, addr, datetime, seekerid, (short)hearbeat);
 							});
 						}
 					}, new ILocationChangeListner.Stub() {

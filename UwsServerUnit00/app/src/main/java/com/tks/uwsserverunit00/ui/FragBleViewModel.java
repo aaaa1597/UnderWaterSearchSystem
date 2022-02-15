@@ -49,13 +49,12 @@ public class FragBleViewModel extends AndroidViewModel {
 	}
 
 	public void setBuoy(short seekerid, boolean isChecked) {
-//		mDeviceListAdapter.setBuoy(seekerid, isChecked);
-//		mNotifyDataSetChanged.postValue(true);
+		mDeviceListAdapter.setBuoy(seekerid, isChecked);
 	}
 
 	/* 脈拍設定 */
-	public void setHeartBeat(String name, String addr, long datetime, short hearbeat) {
-		mDeviceListAdapter.setHeartBeat(name, addr, datetime, hearbeat);
+	public short setHeartBeat(String name, String addr, long datetime, short hearbeat) {
+		return mDeviceListAdapter.setHeartBeat(name, addr, datetime, hearbeat);
 	}
 
 	/* 経度/緯度設定 */

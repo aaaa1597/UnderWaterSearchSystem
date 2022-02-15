@@ -2,21 +2,27 @@ package com.tks.uwsserverunit00.ui;
 
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import android.os.Bundle;
+import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.TextView;
+import java.util.List;
 
 import com.tks.uwsserverunit00.R;
 import com.tks.uwsserverunit00.TLog;
 
 public class FragBizLogic extends Fragment {
 	private FragMapViewModel		mMapViewModel;
+	private FragBleViewModel		mBleViewModel;
 	private FragBizLogicViewModel	mBizLogicViewModel;
 
 	@Override
@@ -29,7 +35,41 @@ public class FragBizLogic extends Fragment {
 		super.onViewCreated(view, savedInstanceState);
 
 		mMapViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
+		mBleViewModel = new ViewModelProvider(requireActivity()).get(FragBleViewModel.class);
 		mBizLogicViewModel = new ViewModelProvider(requireActivity()).get(FragBizLogicViewModel.class);
+		mBizLogicViewModel.onHearBeatChange().observe(getViewLifecycleOwner(), pair -> {
+			short seekerid = pair.first;
+			short hearbeat = pair.second;
+			switch(seekerid) {
+				case 0: ((TextView)view.findViewById(R.id.txtHb0)).setText(String.valueOf(hearbeat)); break;
+				case 1: ((TextView)view.findViewById(R.id.txtHb1)).setText(String.valueOf(hearbeat)); break;
+				case 2: ((TextView)view.findViewById(R.id.txtHb2)).setText(String.valueOf(hearbeat)); break;
+				case 3: ((TextView)view.findViewById(R.id.txtHb3)).setText(String.valueOf(hearbeat)); break;
+				case 4: ((TextView)view.findViewById(R.id.txtHb4)).setText(String.valueOf(hearbeat)); break;
+				case 5: ((TextView)view.findViewById(R.id.txtHb5)).setText(String.valueOf(hearbeat)); break;
+				case 6: ((TextView)view.findViewById(R.id.txtHb6)).setText(String.valueOf(hearbeat)); break;
+				case 7: ((TextView)view.findViewById(R.id.txtHb7)).setText(String.valueOf(hearbeat)); break;
+				case 8: ((TextView)view.findViewById(R.id.txtHb8)).setText(String.valueOf(hearbeat)); break;
+				case 9: ((TextView)view.findViewById(R.id.txtHb9)).setText(String.valueOf(hearbeat)); break;
+			}
+		});
+		mBizLogicViewModel.onSelectedChange().observe(getViewLifecycleOwner(), pair -> {
+			short   seekerid  = pair.first;
+			boolean isselected= pair.second;
+			switch(seekerid) {
+				case 0: view.findViewById(R.id.llHb0).setVisibility(isselected?View.VISIBLE:View.GONE); break;
+				case 1: view.findViewById(R.id.llHb1).setVisibility(isselected?View.VISIBLE:View.GONE); break;
+				case 2: view.findViewById(R.id.llHb2).setVisibility(isselected?View.VISIBLE:View.GONE); break;
+				case 3: view.findViewById(R.id.llHb3).setVisibility(isselected?View.VISIBLE:View.GONE); break;
+				case 4: view.findViewById(R.id.llHb4).setVisibility(isselected?View.VISIBLE:View.GONE); break;
+				case 5: view.findViewById(R.id.llHb5).setVisibility(isselected?View.VISIBLE:View.GONE); break;
+				case 6: view.findViewById(R.id.llHb6).setVisibility(isselected?View.VISIBLE:View.GONE); break;
+				case 7: view.findViewById(R.id.llHb7).setVisibility(isselected?View.VISIBLE:View.GONE); break;
+				case 8: view.findViewById(R.id.llHb8).setVisibility(isselected?View.VISIBLE:View.GONE); break;
+				case 9: view.findViewById(R.id.llHb9).setVisibility(isselected?View.VISIBLE:View.GONE); break;
+			}
+		});
+
 		/* メンバ選択ボタン */
 		view.findViewById(R.id.btnSelectMember).setOnClickListener(v -> {
 			DrawerLayout naviview = getActivity().findViewById(R.id.root_view);
