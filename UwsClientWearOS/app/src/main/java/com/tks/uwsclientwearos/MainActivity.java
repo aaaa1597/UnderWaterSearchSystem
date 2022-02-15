@@ -109,6 +109,14 @@ public class MainActivity extends AppCompatActivity {
 					Set<BluetoothDevice> devices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
 					if(devices.size()==0)
 						ErrDialog.create(MainActivity.this, "ペアリング済デバイスがありません。\n先にペアリングを終了してください。\n終了します。").show();
+					else if(devices.size()==1) {
+						new Handler().postDelayed(() -> {
+							/* デバイス取得 */
+							BluetoothDevice device = (BluetoothDevice)devices.toArray()[0];
+							/* Bluetooth通信開始 */
+							mViewModel.startBt(mViewModel.getSeekerId(), device);
+						}, 100);
+					}
 					/* 選択Dialog(ペアリング済デバイスから一つを選ぶ) */
 					final String[] items = devices.stream().map(i -> i.getName() + " : " + i.getAddress()).toArray(String[]::new);
 					new AlertDialog.Builder(MainActivity.this)
