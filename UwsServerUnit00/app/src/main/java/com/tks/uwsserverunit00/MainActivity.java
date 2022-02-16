@@ -116,27 +116,6 @@ public class MainActivity extends AppCompatActivity {
 					});
 			startForResult.launch(enableBtIntent);
 		}
-
-		/* Bluetoothリストにペアリング済デバイスを追加 */
-		Set<BluetoothDevice> devices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
-		List<DeviceInfoModel> pairedlist = devices.stream().map(i -> new DeviceInfoModel() {{
-			mDatetime		= new Date();
-			mSeekerId		= -1;
-			mDeviceName		= i.getName();
-			mDeviceAddress	= i.getAddress();
-			mStatusResId	= R.string.status_waitforconnect;
-			mLongitude		= 0;
-			mLatitude		= 0;
-			mHertBeat		= -1;
-			mConnected		= false;
-			mSelected		= false;
-			mIsBuoy			= false;
-		}}).collect(Collectors.toList());
-		mBleViewModel.setDeviceListAdapter(new DeviceListAdapter(pairedlist,
-				(seekerid, isChecked) -> {mMapViewModel.setSelected(seekerid, isChecked);
-										  mBizViewModel.setSelected(seekerid, isChecked);},
-				(seekerid, isChecked) -> mBleViewModel.setBuoy(seekerid, isChecked)
-		));
 	}
 
 	@Override
@@ -225,6 +204,27 @@ public class MainActivity extends AppCompatActivity {
 			TLog.d("位置情報がOFF.何もしない.");
 			return;
 		}
+
+		/* Bluetoothリストにペアリング済デバイスを追加 */
+		Set<BluetoothDevice> devices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
+		List<DeviceInfoModel> pairedlist = devices.stream().map(i -> new DeviceInfoModel() {{
+			mDatetime		= new Date();
+			mSeekerId		= -1;
+			mDeviceName		= i.getName();
+			mDeviceAddress	= i.getAddress();
+			mStatusResId	= R.string.status_waitforconnect;
+			mLongitude		= 0;
+			mLatitude		= 0;
+			mHertBeat		= -1;
+			mConnected		= false;
+			mSelected		= false;
+			mIsBuoy			= false;
+		}}).collect(Collectors.toList());
+		mBleViewModel.setDeviceListAdapter(new DeviceListAdapter(pairedlist,
+				(seekerid, isChecked) -> {mMapViewModel.setSelected(seekerid, isChecked);
+										  mBizViewModel.setSelected(seekerid, isChecked);},
+				(seekerid, isChecked) -> mBleViewModel.setBuoy(seekerid, isChecked)
+		));
 
 		mCon = createServiceConnection();
 

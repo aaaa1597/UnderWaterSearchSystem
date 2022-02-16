@@ -20,6 +20,8 @@ public class FragBleViewModel extends AndroidViewModel {
 	private IUwsServer			mUwsServiceIf;
 	private DeviceListAdapter	mDeviceListAdapter;
 	private Application			mContext;
+	private final MutableLiveData<DeviceListAdapter>	mSetDeviceListAdapter = new MutableLiveData<>();
+	public MutableLiveData<DeviceListAdapter>			setDeviceListAdapter() { return mSetDeviceListAdapter; }
 
 	public FragBleViewModel(@NonNull Application application) {
 		super(application);
@@ -42,6 +44,7 @@ public class FragBleViewModel extends AndroidViewModel {
 
 	public void setDeviceListAdapter(DeviceListAdapter deviceListAdapter) {
 		mDeviceListAdapter = deviceListAdapter;
+		mSetDeviceListAdapter.postValue(deviceListAdapter);
 	}
 
 	public DeviceListAdapter getDeviceListAdapter() {

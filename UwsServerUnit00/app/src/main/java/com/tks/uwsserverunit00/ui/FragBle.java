@@ -1,5 +1,6 @@
 package com.tks.uwsserverunit00.ui;
 
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
@@ -33,6 +34,12 @@ public class FragBle extends Fragment {
 
 		mMapViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
 		mBleViewModel = new ViewModelProvider(requireActivity()).get(FragBleViewModel.class);
+		mBleViewModel.setDeviceListAdapter().observe(getViewLifecycleOwner(), deviceListAdapter -> {
+			/* BLEデバイスリストの初期化 */
+			RecyclerView deviceListRvw = view.findViewById(R.id.rvw_devices);
+			deviceListRvw.setAdapter(deviceListAdapter);
+		});
+
 
 		/* BLEデバイスリストの初期化 */
 		RecyclerView deviceListRvw = view.findViewById(R.id.rvw_devices);
@@ -41,6 +48,5 @@ public class FragBle extends Fragment {
 		deviceListRvw.addItemDecoration(dividerItemDecoration);
 		deviceListRvw.setHasFixedSize(true);
 		deviceListRvw.setLayoutManager(new LinearLayoutManager(getActivity().getApplicationContext()));
-		deviceListRvw.setAdapter(mBleViewModel.getDeviceListAdapter());
 	}
 }
