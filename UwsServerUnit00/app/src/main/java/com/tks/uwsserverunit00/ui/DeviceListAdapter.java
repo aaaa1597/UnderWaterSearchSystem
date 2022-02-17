@@ -138,10 +138,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			if(model.mIsBuoy)	holder.mImvBuoy.setImageResource(R.drawable.buoy_enable);
 			else				holder.mImvBuoy.setImageResource(R.drawable.buoy_disable);
 			holder.mImvBuoy.setOnClickListener(view -> {
-				model.mIsBuoy = !model.mIsBuoy;
-				mOnSetBuoyListener.onSetBuoyListener(seekerid, model.mIsBuoy);
-				if(model.mIsBuoy)	holder.mImvBuoy.setImageResource(R.drawable.buoy_enable);
-				else				holder.mImvBuoy.setImageResource(R.drawable.buoy_disable);
+				mOnSetBuoyListener.onSetBuoyListener(seekerid, !model.mIsBuoy);
 			});
 		}
 		holder.mtxtDatetime.setText(d2Str(model.mDatetime));
@@ -167,15 +164,21 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	}
 
 	public void setBuoy(short seekerid, boolean isChecked) {
-		/* 以前のBuoyは無効化 */
-		DeviceInfoModel oldbuoy = mDeviceList.stream().filter(item->item.mIsBuoy).findAny().orElse(null);
-		if(oldbuoy!=null)
-			oldbuoy.mIsBuoy = false;
+		if(isChecked) {
+			/* 以前のBuoyは無効化 */
+			AtomicInteger index = new AtomicInteger(-1);
+			DeviceInfoModel oldbuoy = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mIsBuoy).findAny().orElse(null);
+			if(oldbuoy!=null) {
+				oldbuoy.mIsBuoy = false;
+				notifyItemChanged(index.get());
+			}
+		}
 
-		/* 今回のBuoyを有効化 */
-		DeviceInfoModel nowbuoy = mDeviceList.stream().filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
-		if(nowbuoy!=null)
-			nowbuoy.mIsBuoy = isChecked;
+		/* 今回のbuyを有効/無効化 */
+		AtomicInteger index = new AtomicInteger(-1);
+		DeviceInfoModel newbuoy = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
+		newbuoy.mIsBuoy = isChecked;
+		notifyItemChanged(index.get());
 	}
 
 	/* 脈拍更新 */
