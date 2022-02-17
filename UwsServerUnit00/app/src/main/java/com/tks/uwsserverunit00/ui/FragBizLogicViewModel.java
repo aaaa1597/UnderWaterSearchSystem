@@ -16,7 +16,7 @@ public class FragBizLogicViewModel extends ViewModel {
 	public boolean getSerchStatus() { return mIsSerching; }
 	public void setSerchStatus(boolean isSerching) { mIsSerching = isSerching; }
 
-	public void setHeartBeat(String name, String addr, long datetime, short seekerid, short hearbeat) {
+	public void setHeartBeat(short seekerid, String name, String addr, long datetime, short hearbeat) {
 		if(seekerid == -1) return;
 		mOnHearBeatChange.postValue(new Pair<>(seekerid, hearbeat));
 	}

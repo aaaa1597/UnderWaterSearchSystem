@@ -254,13 +254,14 @@ public class UwsServerService extends Service {
 	 * データParse
 	 ** **********/
 	private void parseRcvAndCallback(String name, String addr, byte[] buff) {
+		/* seekerid */
+		short 	seekerid	= ByteBuffer.wrap(buff).getShort();
 		/* 日付 */
-		long 	ldatetime	= ByteBuffer.wrap(buff).getLong();
+		long 	ldatetime	= ByteBuffer.wrap(buff).getLong(2);
 		/* データ種別 */
-		char	datatype	= (char)buff[8];	/* '1':初回msg, 'h':脈拍, 'l':位置情報  */
+		char	datatype	= (char)buff[10];	/* '1':初回msg, 'h':脈拍, 'l':位置情報  */
 		if(datatype == '1') {
 			/* seekerid */
-			short seekerid	= ByteBuffer.wrap(buff).getShort(9);
 			TLog.d("初回受信 {0} seekerid={1} {2}:{3}", d2Str(new Date(ldatetime)), seekerid, name, addr);
 			/* 脈拍コールバック */
 			try { mStatusCb.OnChangeStatus(BT_NORTIFY_SEEKERID/*←例外的にSeekerid通知に使う*/, addr, seekerid);}
@@ -268,22 +269,22 @@ public class UwsServerService extends Service {
 		}
 		else if(datatype == 'h') {
 			/* 脈拍 */
-			int	heartbeat	= ByteBuffer.wrap(buff).getInt(9);
+			int	heartbeat	= ByteBuffer.wrap(buff).getInt(11);
 			TLog.d("脈拍データ {0} {1} {2}:{3}", d2Str(new Date(ldatetime)), heartbeat, name, addr);
 			/* 脈拍コールバック */
-			try { mHearbertGb.OnChange(name, addr, ldatetime, heartbeat);}
+			try { mHearbertGb.OnChange(seekerid, name, addr, ldatetime, heartbeat);}
 			catch(RemoteException e) { e.printStackTrace(); }
 		}
 		else if(datatype == 'l') {
 			/* 位置情報 */
-			double longitude= ByteBuffer.wrap(buff).getDouble(9);
-			double latitude	= ByteBuffer.wrap(buff).getDouble(17);
+			double longitude= ByteBuffer.wrap(buff).getDouble(11);
+			double latitude	= ByteBuffer.wrap(buff).getDouble(19);
 			TLog.d("位置情報データ {0} ({1},{2}) {3}:{4}", d2Str(new Date(ldatetime)), longitude,latitude , name, addr);
 			Location retloc =new Location(LocationManager.GPS_PROVIDER);
 			retloc.setLongitude(longitude);
 			retloc.setLatitude(latitude);
 			/* 位置情報コールバック */
-			try { mLocationGb.OnChange(name, addr, ldatetime, retloc); }
+			try { mLocationGb.OnChange(seekerid, name, addr, ldatetime, retloc); }
 			catch(RemoteException e) { e.printStackTrace(); }
 		}
 	}

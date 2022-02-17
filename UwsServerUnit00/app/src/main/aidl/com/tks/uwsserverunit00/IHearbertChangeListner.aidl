@@ -2,5 +2,5 @@
 package com.tks.uwsserverunit00;
 
 interface IHearbertChangeListner {
-    void OnChange(String name, String addr, long datetime, int hearbeat);
+    void OnChange(int seekerid, String name, String addr, long datetime, int hearbeat);
 }

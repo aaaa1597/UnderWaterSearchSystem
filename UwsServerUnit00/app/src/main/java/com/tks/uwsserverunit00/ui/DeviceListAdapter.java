@@ -179,21 +179,19 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 	}
 
 	/* 脈拍更新 */
-	public short setHeartBeat(String name, String addr, long datetime, short hearbeat) {
+	public void setHeartBeat(String name, String addr, long datetime, short hearbeat) {
 		AtomicInteger index = new AtomicInteger(-1);
 		DeviceInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mDeviceAddress.equals(addr)).findAny().orElse(null);
 		if(device != null) {
 			device.mHertBeat = hearbeat;
 			notifyItemChanged(index.get());
-			return device.mSeekerId;
 		}
-		return -1;
 	}
 
 	/* 経度/緯度更新 */
-	public void setLocation(String name, String addr, long datetime, Location loc) {
+	public void setLocation(short seekerid, String name, String addr, long datetime, Location loc) {
 		AtomicInteger index = new AtomicInteger(-1);
-		DeviceInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mDeviceAddress.equals(addr)).findAny().orElse(null);
+		DeviceInfoModel device = mDeviceList.stream().peek(x->index.incrementAndGet()).filter(item->item.mSeekerId==seekerid).findAny().orElse(null);
 		if(device != null) {
 			device.mLongitude= loc.getLongitude();
 			device.mLatitude = loc.getLatitude();

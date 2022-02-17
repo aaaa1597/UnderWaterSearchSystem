@@ -60,8 +60,9 @@ public class FragMapViewModel extends ViewModel {
 		return createColor(mFillColorCnt);
 	}
 
-	public void onLocationUpdated(String aname, String addr, long datetime, Location loc) {
+	public void onLocationUpdated(short aseekerid, String aname, String addr, long datetime, Location loc) {
 		MapDrawInfo mapinfo = new MapDrawInfo() {{
+			seekerid= aseekerid;
 			name	= aname;
 			address	= addr;
 			date	= new Date(datetime);

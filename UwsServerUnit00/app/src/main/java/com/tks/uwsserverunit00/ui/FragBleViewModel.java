@@ -56,13 +56,13 @@ public class FragBleViewModel extends AndroidViewModel {
 	}
 
 	/* 脈拍設定 */
-	public short setHeartBeat(String name, String addr, long datetime, short hearbeat) {
-		return mDeviceListAdapter.setHeartBeat(name, addr, datetime, hearbeat);
+	public void setHeartBeat(String name, String addr, long datetime, short hearbeat) {
+		mDeviceListAdapter.setHeartBeat(name, addr, datetime, hearbeat);
 	}
 
 	/* 経度/緯度設定 */
-	public void setLocation(String name, String addr, long datetime, Location loc) {
-		mDeviceListAdapter.setLocation(name, addr, datetime, loc);
+	public void setLocation(short seekerid, String name, String addr, long datetime, Location loc) {
+		mDeviceListAdapter.setLocation(seekerid, name, addr, datetime, loc);
 	}
 
 	/* 状態変化通知 */

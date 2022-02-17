@@ -246,18 +246,18 @@ public class MainActivity extends AppCompatActivity {
 				try {
 					serverIf.setListners(new IHearbertChangeListner.Stub() {
 						@Override
-						public void OnChange(String name, String addr, long datetime, int hearbeat) {
+						public void OnChange(int seekerid, String name, String addr, long datetime, int hearbeat) {
 							runOnUiThread(() -> {
-								short seekerid = mBleViewModel.setHeartBeat(name, addr, datetime, (short)hearbeat);
-								mBizViewModel.setHeartBeat(name, addr, datetime, seekerid, (short)hearbeat);
+								mBleViewModel.setHeartBeat(name, addr, datetime, (short)hearbeat);
+								mBizViewModel.setHeartBeat((short)seekerid, name, addr, datetime, (short)hearbeat);
 							});
 						}
 					}, new ILocationChangeListner.Stub() {
 						@Override
-						public void OnChange(String name, String addr, long datetime, Location loc) {
+						public void OnChange(int seekerid, String name, String addr, long datetime, Location loc) {
 							runOnUiThread(() -> {
-								mBleViewModel.setLocation(name, addr, datetime, loc);
-								mMapViewModel.onLocationUpdated(name, addr, datetime, loc);
+								mBleViewModel.setLocation((short)seekerid, name, addr, datetime, loc);
+								mMapViewModel.onLocationUpdated((short)seekerid, name, addr, datetime, loc);
 							});
 						}
 					}, new IStatusNotifier.Stub() {
