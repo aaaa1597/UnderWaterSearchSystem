@@ -48,13 +48,13 @@ import static com.tks.uwsclient.Constants.ERR_OK;
 import static com.tks.uwsclient.Constants.d2Str;
 
 public class UwsClientService extends Service {
-	private int mStatus = R.string.status_initializing;
-	private short mSeekerId = -1;
-	private IOnUwsInfoChangeListner mCallback;
-	private IStatusNotifier			mListner2;
-	private IStartCheckClearedCallback mCb;
-	private final Handler mHandler = new Handler();
-	private final BlockingQueue<byte[]> mSndQue = new LinkedBlockingQueue<>();
+	private int							mStatus = R.string.status_initializing;
+	private short						mSeekerId = -1;
+	private IOnUwsInfoChangeListner		mCallback;
+	private IStatusNotifier				mListner2;
+	private IStartCheckClearedCallback	mCb;
+	private final Handler				mHandler = new Handler();
+	private final BlockingQueue<byte[]>	mSndQue = new LinkedBlockingQueue<>();
 
 	@Override
 	public void onCreate() {
@@ -119,7 +119,7 @@ public class UwsClientService extends Service {
 		/* 停止ボタン押下の処理実装 */
 		Intent stopIntent = new Intent(this, UwsClientService.class);    /* まず自分に送信。その後アプリと脈拍サービスに送信する */
 		stopIntent.setAction(FINALIZE);
-		PendingIntent pendingStopIntent = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+		PendingIntent pendingStopIntent = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE);
 		NotificationCompat.Action stopAction = new NotificationCompat.Action.Builder(R.drawable.okicon, "終了", pendingStopIntent).build();
 
 		/* Notification生成 */
@@ -185,7 +185,7 @@ public class UwsClientService extends Service {
 			mStatus = R.string.status_btconnecting;
 			mSeekerId = (short)seekerid;
 
-			try { mSndQue.put(createFstMsg(mSeekerId)); }
+			try { mSndQue.put(createFstMsg()); }
 			catch(InterruptedException ignore) {}
 
 			return uwsStartBt(mSeekerId, btServer);
@@ -436,13 +436,17 @@ public class UwsClientService extends Service {
 		}
 	}
 
-	private byte[] createFstMsg(short seekerid) {
+	private byte[] createFstMsg() {
 		byte[] sndBin = new byte[12];
 		int spos = 0;
 		/* (ヘッダを含まない)メッセージ長(1byte) 制限:最大256byteまで */
 		byte[] blen = new byte[]{(byte)(sndBin.length-1)};
 		System.arraycopy(blen, 0, sndBin, spos, blen.length);
 		spos += blen.length;
+		/* seekerid(2byte) */
+		byte[] bseekerid = s2bs(mSeekerId);
+		System.arraycopy(bseekerid, 0, sndBin, spos, bseekerid.length);
+		spos += bseekerid.length;
 		/* 日付(8byte) */
 		byte[] bdate = l2bs(new Date().getTime());
 		System.arraycopy(bdate, 0, sndBin, spos, bdate.length);
@@ -450,19 +454,19 @@ public class UwsClientService extends Service {
 		/* データ種別(1byte) */
 		byte[] btype = new byte[]{'1'};
 		System.arraycopy(btype, 0, sndBin, spos, btype.length);
-		spos += btype.length;
-		/* Seekerid(2byte) */
-		byte[] bseekerid = s2bs(seekerid);
-		System.arraycopy(bseekerid, 0, sndBin, spos, bseekerid.length);
 		return sndBin;
 	}
 	private byte[] createByteArray(int heartbeat) {
-		byte[] sndBin = new byte[14];
+		byte[] sndBin = new byte[16];
 		int spos = 0;
 		/* (ヘッダを含まない)メッセージ長(1byte) 制限:最大256byteまで */
 		byte[] blen = new byte[]{(byte)(sndBin.length-1)};
 		System.arraycopy(blen, 0, sndBin, spos, blen.length);
 		spos += blen.length;
+		/* seekerid(2byte) */
+		byte[] bseekerid = s2bs(mSeekerId);
+		System.arraycopy(bseekerid, 0, sndBin, spos, bseekerid.length);
+		spos += bseekerid.length;
 		/* 日付(8byte) */
 		byte[] bdate = l2bs(new Date().getTime());
 		System.arraycopy(bdate, 0, sndBin, spos, bdate.length);
@@ -477,12 +481,16 @@ public class UwsClientService extends Service {
 		return sndBin;
 	}
 	private byte[] createByteArray(double longitude, double latitude) {
-		byte[] sndBin = new byte[26];
+		byte[] sndBin = new byte[28];
 		int spos = 0;
 		/* (ヘッダを含まない)メッセージ長(1byte) 制限:最大256byteまで */
 		byte[] blen = new byte[]{(byte)(sndBin.length-1)};
 		System.arraycopy(blen, 0, sndBin, spos, blen.length);
 		spos += blen.length;
+		/* seekerid(2byte) */
+		byte[] bseekerid = s2bs(mSeekerId);
+		System.arraycopy(bseekerid, 0, sndBin, spos, bseekerid.length);
+		spos += bseekerid.length;
 		/* 日付(8byte) */
 		byte[] bdate = l2bs(new Date().getTime());
 		System.arraycopy(bdate, 0, sndBin, spos, bdate.length);
