@@ -66,10 +66,6 @@ public class MainActivity extends AppCompatActivity {
 				requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_PERMISSIONS);
 		}
 
-		Set<BluetoothDevice> devices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
-		if (devices.size() == 0)
-			ErrDialog.create(MainActivity.this, "ペアリング済デバイスがありません。\n先にペアリングを終了してください。\n終了します。").show();
-
 		/* BluetoothManager取得 */
 		final BluetoothManager bluetoothManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
 		BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
@@ -345,6 +341,10 @@ public class MainActivity extends AppCompatActivity {
 		/* 設定の位置情報ON/OFF判定 */
 		if( !mViewModel.mIsSetedLocationON)
 			return false;
+
+		Set<BluetoothDevice> devices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
+		if (devices.size() == 0)
+			ErrDialog.create(MainActivity.this, "ペアリング済デバイスがありません。\n先にペアリングを終了してください。\n終了します。").show();
 
 		return true;
 	}
