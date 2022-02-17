@@ -57,14 +57,10 @@ public class MainActivity extends AppCompatActivity {
 		/* 権限(Bluetooth/位置情報)が許可されていない場合はリクエスト. */
 		if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-				requestPermissions(new String[]{Manifest.permission.BODY_SENSORS, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.BLUETOOTH_ADVERTISE, Manifest.permission.BLUETOOTH_CONNECT}, REQUEST_PERMISSIONS);
+				requestPermissions(new String[]{Manifest.permission.BODY_SENSORS, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.BLUETOOTH_CONNECT}, REQUEST_PERMISSIONS);
 			else
 				requestPermissions(new String[]{Manifest.permission.BODY_SENSORS, Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_PERMISSIONS);
 		}
-
-		Set<BluetoothDevice> devices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
-		if (devices.size() == 0)
-			ErrDialog.create(MainActivity.this, "ペアリング済デバイスがありません。\n先にペアリングを終了してください。\n終了します。").show();
 
 		/* BluetoothManager取得 */
 		final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
@@ -351,6 +347,10 @@ public class MainActivity extends AppCompatActivity {
 		/* 設定の位置情報ON/OFF判定 */
 		if( !mViewModel.mIsSetedLocationON)
 			return false;
+
+		Set<BluetoothDevice> devices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
+		if (devices.size() == 0)
+			ErrDialog.create(MainActivity.this, "ペアリング済デバイスがありません。\n先にペアリングを終了してください。\n終了します。").show();
 
 		return true;
 	}
