@@ -26,6 +26,7 @@ import java.util.List;
 
 import static com.tks.uwsserverunit00.Constants.BT_CLASSIC_UUID;
 import static com.tks.uwsserverunit00.Constants.BT_NORTIFY_SEEKERID;
+import static com.tks.uwsserverunit00.Constants.BT_NORTIFY_CLOSE;
 import static com.tks.uwsserverunit00.Constants.d2Str;
 
 /**
@@ -140,7 +141,7 @@ public class UwsServerService extends Service {
 					addr = btSocket.getRemoteDevice().getAddress();
 
 					TLog.d("Client接続OK {0}:{1}", name, addr);
-					try { mStatusCb.OnChangeStatus(name, addr, R.string.status_connected); }
+					try { mStatusCb.onChangeStatus(name, addr, R.string.status_connected); }
 					catch(RemoteException ignore) {/* ここで例外が発生してもどうもしない */}
 
 					try {
@@ -150,7 +151,7 @@ public class UwsServerService extends Service {
 					}
 					catch(IOException e) {
 						e.printStackTrace();
-						try { mStatusCb.OnChangeStatus(name, addr, R.string.err_btconnect_failured); }
+						try { mStatusCb.onChangeStatus(name, addr, R.string.err_btconnect_failured); }
 						catch(RemoteException ignore) {/* ここで例外が発生するとどうしようもない */}
 					}
 				}
@@ -185,6 +186,8 @@ public class UwsServerService extends Service {
 			while(true) {
 				/* スレッド停止チェック */
 				if (Thread.interrupted()) {
+					mBtSndRcvThreads.remove(this);
+					TLog.d("送受信 Tread終了 Thread数={0} {1}:{2}", mBtSndRcvThreads.size(), name, addr);
 					try { inputStream    .close(); }catch(IOException ignore) { }
 					try { outputStream   .close(); }catch(IOException ignore) { }
 					try { bluetoothSocket.close(); }catch(IOException ignore) { }
@@ -192,7 +195,7 @@ public class UwsServerService extends Service {
 				}
 
 				TLog.d("受信待ち... {0}:{1}", name, addr);
-				try { mStatusCb.OnChangeStatus(name, addr, R.string.status_waitforrecieve); }
+				try { mStatusCb.onChangeStatus(name, addr, R.string.status_waitforrecieve); }
 				catch(RemoteException ignore) {/* ここで例外が発生してもどうもしない */}
 
 				/* 1st-メッセージ長受信 */
@@ -203,14 +206,14 @@ public class UwsServerService extends Service {
 				}
 				catch(IOException e) {
 					e.printStackTrace();
-					try { mStatusCb.OnChangeStatus(name, addr, R.string.err_btdisconnected); }
+					try { mStatusCb.onChangeStatus(name, addr, R.string.err_btdisconnected); }
 					catch(RemoteException ignore) {/* ここで例外が発生してもどうしようもない */}
 					super.interrupt();
 					continue;
 				}
 
 				TLog.d("受信!! {0}:{1}", name, addr);
-				try { mStatusCb.OnChangeStatus(name, addr, R.string.status_recieved); }
+				try { mStatusCb.onChangeStatus(name, addr, R.string.status_recieved); }
 				catch(RemoteException ignore) {/* ここで例外が発生してもどうもしない */}
 
 				/* 2nd-body受信 */
@@ -229,13 +232,18 @@ public class UwsServerService extends Service {
 				}
 				catch(IOException e) {
 					e.printStackTrace();
-					try { mStatusCb.OnChangeStatus(name, addr, R.string.err_btdisconnected); }
+					try { mStatusCb.onChangeStatus(name, addr, R.string.err_btdisconnected); }
 					catch(RemoteException ignore) {/* ここで例外が発生してもどうしようもない */}
 					super.interrupt();
 					continue;
 				}
 				TLog.d("body受信 {0}:{1} rcv:({2},{3})", name, addr, completedata.length, Arrays.toString(completedata));
-				parseRcvAndCallback(name, addr, completedata);
+				char rcvtype = parseRcvAndCallback(name, addr, completedata);
+				if(rcvtype == 'c') {
+					/* Closeメッセージを受信したのでLoop終了する。 */
+					TLog.d("CloseメッセージだったのでThred終了");
+					this.interrupt();
+				}
 
 //				try {
 //					outputStream.write((new Date().toString() + " OK").getBytes(StandardCharsets.UTF_8));}
@@ -253,28 +261,32 @@ public class UwsServerService extends Service {
 	/** **********
 	 * データParse
 	 ** **********/
-	private void parseRcvAndCallback(String name, String addr, byte[] buff) {
+	private char parseRcvAndCallback(String name, String addr, byte[] buff) {
 		/* seekerid */
 		short 	seekerid	= ByteBuffer.wrap(buff).getShort();
 		/* 日付 */
 		long 	ldatetime	= ByteBuffer.wrap(buff).getLong(2);
 		/* データ種別 */
 		char	datatype	= (char)buff[10];	/* '1':初回msg, 'h':脈拍, 'l':位置情報  */
+
+		/* 初回受信 */
 		if(datatype == '1') {
 			/* seekerid */
 			TLog.d("初回受信 {0} seekerid={1} {2}:{3}", d2Str(new Date(ldatetime)), seekerid, name, addr);
 			/* 脈拍コールバック */
-			try { mStatusCb.OnChangeStatus(BT_NORTIFY_SEEKERID/*←例外的にSeekerid通知に使う*/, addr, seekerid);}
+			try { mStatusCb.onChangeStatus(BT_NORTIFY_SEEKERID/*←例外的にSeekerid通知に使う*/, addr, seekerid);}
 			catch(RemoteException e) { e.printStackTrace(); }
 		}
+		/* 脈拍受信 */
 		else if(datatype == 'h') {
 			/* 脈拍 */
 			int	heartbeat	= ByteBuffer.wrap(buff).getInt(11);
 			TLog.d("脈拍データ {0} {1} {2}:{3}", d2Str(new Date(ldatetime)), heartbeat, name, addr);
 			/* 脈拍コールバック */
-			try { mHearbertGb.OnChange(seekerid, name, addr, ldatetime, heartbeat);}
+			try { mHearbertGb.onChange(seekerid, name, addr, ldatetime, heartbeat);}
 			catch(RemoteException e) { e.printStackTrace(); }
 		}
+		/* 位置情報受信 */
 		else if(datatype == 'l') {
 			/* 位置情報 */
 			double longitude= ByteBuffer.wrap(buff).getDouble(11);
@@ -284,8 +296,19 @@ public class UwsServerService extends Service {
 			retloc.setLongitude(longitude);
 			retloc.setLatitude(latitude);
 			/* 位置情報コールバック */
-			try { mLocationGb.OnChange(seekerid, name, addr, ldatetime, retloc); }
+			try { mLocationGb.onChange(seekerid, name, addr, ldatetime, retloc); }
 			catch(RemoteException e) { e.printStackTrace(); }
 		}
+		/* Close受信 */
+		else if(datatype == 'c') {
+			/* seekerid */
+			TLog.d("Close受信 {0} seekerid={1} {2}:{3}", d2Str(new Date(ldatetime)), seekerid, name, addr);
+			/* 脈拍コールバック */
+			try { mStatusCb.onChangeStatus(BT_NORTIFY_CLOSE/*←例外的にClose通知に使う*/, addr, seekerid);}
+			catch(RemoteException e) { e.printStackTrace(); }
+		}
+
+		/* 受信種別を返却 */
+		return datatype;
 	}
 }

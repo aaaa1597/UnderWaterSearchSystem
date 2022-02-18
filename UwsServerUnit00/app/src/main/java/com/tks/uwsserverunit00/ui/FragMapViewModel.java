@@ -5,14 +5,12 @@ import androidx.lifecycle.ViewModel;
 import android.graphics.Color;
 import android.location.Location;
 import android.util.Pair;
-
-import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.Polygon;
-import com.tks.uwsserverunit00.ui.FragMap.MapDrawInfo;
-
 import java.util.Date;
+
+import com.tks.uwsserverunit00.ui.FragMap.MapDrawInfo;
+import static com.tks.uwsserverunit00.Constants.BT_NORTIFY_CLOSE;
+import static com.tks.uwsserverunit00.Constants.BT_NORTIFY_SEEKERID;
 
 public class FragMapViewModel extends ViewModel {
 	/* Permission */
@@ -22,11 +20,14 @@ public class FragMapViewModel extends ViewModel {
 	private final MutableLiveData<MapDrawInfo>	mOnLocationUpdated = new MutableLiveData<>();
 	public MutableLiveData<MapDrawInfo>			OnLocationUpdated() { return mOnLocationUpdated; }
 	/* Selected Seeker */
-	private final MutableLiveData<Pair<Short, Boolean>>	mSelectedSeeker = new MutableLiveData<>(Pair.create((short)-32768, false));
-	public MutableLiveData<Pair<Short, Boolean>>		SelectedSeeker() { return mSelectedSeeker; }
-	public void setSelected(short seekerid, boolean isChecked) {
-		mSelectedSeeker.setValue(Pair.create(seekerid, isChecked));
+	private final MutableLiveData<Pair<String, Boolean>>mSelectedSeeker = new MutableLiveData<>();
+	public MutableLiveData<Pair<String, Boolean>>		SelectedSeeker() { return mSelectedSeeker; }
+	public void setSelected(String addr, boolean isChecked) {
+		mSelectedSeeker.setValue(Pair.create(addr, isChecked));
 	}
+	/* 状態変化通知 */
+	private final MutableLiveData<MapDrawInfo>	mOnChangeStatus = new MutableLiveData<>();
+	public MutableLiveData<MapDrawInfo>			onChangeStatus() { return mOnChangeStatus; }
 
 	/* Change Fill Color */
 	private int mFillColorCnt = 0;
@@ -72,5 +73,30 @@ public class FragMapViewModel extends ViewModel {
 			circle	= null;
 		}};
 		mOnLocationUpdated.postValue(mapinfo);
+	}
+
+	public void onChangeStatus(String aname, String aaddr, int resourceid) {
+		short lseekerid;
+		if(aname.equals(BT_NORTIFY_SEEKERID)) {
+			lseekerid = (short)resourceid;
+		}
+		else if(aname.equals(BT_NORTIFY_CLOSE)) {
+			lseekerid = -1;
+		}
+		else {
+			return;	/* 開始でも終了でもない時は、処理不要 */
+		}
+
+		MapDrawInfo mapinfo = new MapDrawInfo() {{
+			seekerid= lseekerid;
+			name	= aname;
+			address	= aaddr;
+			date	= new Date();
+			pos		= new LatLng(0, 0);
+			maker	= null;
+			polygon	= null;
+			circle	= null;
+		}};
+		mOnChangeStatus.postValue(mapinfo);
 	}
 }

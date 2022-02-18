@@ -221,8 +221,8 @@ public class MainActivity extends AppCompatActivity {
 			mIsBuoy			= false;
 		}}).collect(Collectors.toList());
 		mBleViewModel.setDeviceListAdapter(new DeviceListAdapter(pairedlist,
-				(seekerid, isChecked) -> {mMapViewModel.setSelected(seekerid, isChecked);
-										  mBizViewModel.setSelected(seekerid, isChecked);},
+				(addr, seekerid, isChecked) -> {mMapViewModel.setSelected(addr, isChecked);
+										  		mBizViewModel.setSelected(seekerid, isChecked);},
 				(seekerid, isChecked) -> mBleViewModel.setBuoy(seekerid, isChecked)
 		));
 
@@ -246,7 +246,7 @@ public class MainActivity extends AppCompatActivity {
 				try {
 					serverIf.setListners(new IHearbertChangeListner.Stub() {
 						@Override
-						public void OnChange(int seekerid, String name, String addr, long datetime, int hearbeat) {
+						public void onChange(int seekerid, String name, String addr, long datetime, int hearbeat) {
 							runOnUiThread(() -> {
 								mBleViewModel.setHeartBeat(name, addr, datetime, (short)hearbeat);
 								mBizViewModel.setHeartBeat((short)seekerid, name, addr, datetime, (short)hearbeat);
@@ -254,7 +254,7 @@ public class MainActivity extends AppCompatActivity {
 						}
 					}, new ILocationChangeListner.Stub() {
 						@Override
-						public void OnChange(int seekerid, String name, String addr, long datetime, Location loc) {
+						public void onChange(int seekerid, String name, String addr, long datetime, Location loc) {
 							runOnUiThread(() -> {
 								mBleViewModel.setLocation((short)seekerid, name, addr, datetime, loc);
 								mMapViewModel.onLocationUpdated((short)seekerid, name, addr, datetime, loc);
@@ -262,9 +262,10 @@ public class MainActivity extends AppCompatActivity {
 						}
 					}, new IStatusNotifier.Stub() {
 						@Override
-						public void OnChangeStatus(String name, String addr, int resourceid) {
+						public void onChangeStatus(String name, String address, int resourceid) {
 							runOnUiThread(() -> {
-								mBleViewModel.OnChangeStatus(name, addr, resourceid);
+								mBleViewModel.onChangeStatus(name, address, resourceid);
+								mMapViewModel.onChangeStatus(name, address, resourceid);
 							});
 						}
 					});

@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 
 import com.tks.uwsserverunit00.R;
 
+import static com.tks.uwsserverunit00.Constants.BT_NORTIFY_CLOSE;
 import static com.tks.uwsserverunit00.Constants.BT_NORTIFY_SEEKERID;
 import static com.tks.uwsserverunit00.Constants.d2Str;
 
@@ -62,7 +63,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 
 	/* インターフェース */
 	public interface OnSelectedChangeListener {
-		void onSelectedChanged(short seekerid, boolean isChecked);
+		void onSelectedChanged(String address, short seekerid, boolean isChecked);
 	}
 
 	public interface OnSetBuoyListener {
@@ -128,7 +129,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			/* メンバ決定 */
 			holder.mllRow.setOnClickListener(view -> {
 				model.mSelected = !model.mSelected;
-				mOnSelectedChangeListener.onSelectedChanged(seekerid, model.mSelected);
+				mOnSelectedChangeListener.onSelectedChanged(deviceAddress, seekerid, model.mSelected);
 				if(model.mSelected)
 					holder.mImvConnectStatus.setImageResource(R.drawable.status_ready0);
 				else
@@ -210,6 +211,13 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		if(device != null) {
 			if(name.equals(BT_NORTIFY_SEEKERID)) {
 				device.mSeekerId = (short)resourceid;
+				notifyItemChanged(index.get());
+			}
+			else if(name.equals(BT_NORTIFY_CLOSE)) {
+				device.mSeekerId = -1;
+				device.mConnected= false;
+				device.mStatusResId = R.drawable.statusx_waitforconnect;
+				notifyItemChanged(index.get());
 			}
 			else {
 				device.mStatusResId = resourceid;

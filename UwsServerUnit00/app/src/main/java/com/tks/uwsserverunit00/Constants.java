@@ -39,7 +39,8 @@ public class Constants {
 	/* Bluetooth */
 	/* ***********/
 	public static final UUID BT_CLASSIC_UUID = UUID.fromString("41eb5f39-6c3a-4067-8bb9-bad64e6e0908");
-	public static final String BT_NORTIFY_SEEKERID = "com.tsk.setSeekerid";
+	public static final String BT_NORTIFY_SEEKERID	= "com.tsk.setSeekerid";
+	public static final String BT_NORTIFY_CLOSE		= "com.tsk.close";
 
 
 

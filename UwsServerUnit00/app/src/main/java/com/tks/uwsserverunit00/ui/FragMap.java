@@ -52,7 +52,7 @@ public class FragMap extends SupportMapFragment {
 	private FragBizLogicViewModel			mBizLogicViewModel;
 	private GoogleMap						mGoogleMap;
 	private Location						mLocation;
-	private final Map<Short, MapDrawInfo>	mMapDrawInfos = new HashMap<>();
+	private final Map<String, MapDrawInfo>	mMapDrawInfos = new HashMap<>();
 	/* 検索情報 */
 	static class MapDrawInfo {
 		public Short	seekerid;
@@ -85,7 +85,9 @@ public class FragMap extends SupportMapFragment {
 		mMapViewModel.OnLocationUpdated().observe(getViewLifecycleOwner(), mapDrawInfo -> {
 			updMapDrawInfo(mGoogleMap, mapDrawInfo);
 		});
-
+		mMapViewModel.onChangeStatus().observe(getViewLifecycleOwner(), mapDrawInfo -> {
+			updMapDrawInfo(mGoogleMap, mapDrawInfo);
+		});
 
 		/* SupportMapFragmentを取得し、マップを使用する準備ができたら通知を受取る */
 		SupportMapFragment mapFragment = (SupportMapFragment) getActivity().getSupportFragmentManager().findFragmentById(R.id.frgMap);
@@ -107,33 +109,20 @@ public class FragMap extends SupportMapFragment {
 		/* 現在値取得 → 地図更新 */
 		getNowPosAndDraw();
 
-		mMapViewModel.SelectedSeeker().observe(getViewLifecycleOwner(), new Observer<Pair<Short, Boolean>>() {
+		mMapViewModel.SelectedSeeker().observe(getViewLifecycleOwner(), new Observer<Pair<String, Boolean>>() {
 			@Override
-			public void onChanged(Pair<Short, Boolean> selected) {
-				if(selected.first==-32768) return;/* 初期設定なので、何もしない。 */
-				short	seekerid	= selected.first;
+			public void onChanged(Pair<String, Boolean> selected) {
+				String address		= selected.first;
 				boolean	isSelected	= selected.second;
 
-				/* TODO */ TLog.d("選択メンバ seekerid={0} isSelected={1}", seekerid, isSelected);
-
-				MapDrawInfo si = mMapDrawInfos.get(seekerid);
-				/* TODO */ if(si==null) {
-					TLog.d("選択メンバ mapDrawInfo=null seekerid={0}", seekerid);
-					TLog.d("選択メンバ	mMapDrawInfos.size()={0}", mMapDrawInfos.size());
-					for(Map.Entry<Short, MapDrawInfo> item : mMapDrawInfos.entrySet()) {
-						TLog.d("選択メンバ key={0} val=(seekerid:{1} name:{2},address={3},pos={4},date={5})", item.getKey(), item.getValue().seekerid, item.getValue().name, item.getValue().address, item.getValue().pos, item.getValue().date);
-					}
-				}
-				else {
-					/* TODO */ TLog.d("選択メンバ si=(seekerid:{0} name:{1},address={2},pos={3},date={4})", si.seekerid,  si.name, si.address, si.pos, si.date);
-				}
+				MapDrawInfo si = mMapDrawInfos.get(address);
 				if(si==null) return;
 
 				if(isSelected) {
 					Marker marker = mGoogleMap.addMarker(new MarkerOptions()
 							.position(si.pos)
-							.title(String.valueOf(seekerid))
-							.icon(createIcon(seekerid)));
+							.title(String.valueOf(si.seekerid))
+							.icon(createIcon(si.seekerid)));
 					Circle nowPoint = mGoogleMap.addCircle(new CircleOptions().center(si.pos)
 							.radius(0.5)
 							.fillColor(Color.MAGENTA)
@@ -200,7 +189,7 @@ public class FragMap extends SupportMapFragment {
 												.fillColor(Color.CYAN)
 												.strokeColor(Color.CYAN));
 
-		mMapDrawInfos.put((short)9999, new MapDrawInfo(){{pos=nowposgps;maker=basemarker; circle=nowPoint; polygon=null;}});
+		mMapDrawInfos.put("指揮所", new MapDrawInfo(){{pos=nowposgps;maker=basemarker; circle=nowPoint; polygon=null;}});
 
 		/* 現在地マーカを中心に */
 		googleMap.moveCamera(CameraUpdateFactory.newLatLng(nowposgps));
@@ -233,37 +222,104 @@ public class FragMap extends SupportMapFragment {
 	}
 
 	/* Map用描画情報 表示 */
-	private void updMapDrawInfo(GoogleMap googleMap, MapDrawInfo mapInfo) {
-		String	aaddress	= mapInfo.address;
-		LatLng	apos		= mapInfo.pos;
-		short	aseekerid	= mBleViewModel.getDeviceListAdapter().getSeekerId(aaddress);
+	private void updMapDrawInfo(GoogleMap googleMap, MapDrawInfo newmapInfo) {
+		String	aaddress	= newmapInfo.address;
+		LatLng	newpos		= (((int)newmapInfo.pos.latitude) == 0) ? null : newmapInfo.pos;
+		short	oldseekerid	= mBleViewModel.getDeviceListAdapter().getSeekerId(aaddress);
 		boolean	aIsSelected	= mBleViewModel.getDeviceListAdapter().isSelected(aaddress);/*選択中*/
 
-		MapDrawInfo drawinfo = mMapDrawInfos.get(aseekerid);
+		MapDrawInfo drawinfo = mMapDrawInfos.get(aaddress);
 		if(drawinfo == null) {
 			/* 新規追加 */
-			if(aIsSelected) {
+			if(aIsSelected && newpos != null) {
 				Marker lmarker = googleMap.addMarker(new MarkerOptions()
-						.position(apos)
-						.title(String.valueOf(aseekerid))
-						.icon(createIcon(aseekerid)));
+						.position(newpos)
+						.title(String.valueOf(oldseekerid))
+						.icon(createIcon(oldseekerid)));
 
 				Circle nowPoint = googleMap.addCircle(new CircleOptions()
-						.center(apos)
+						.center(newpos)
 						.radius(0.5)
 						.fillColor(Color.MAGENTA)
 						.strokeColor(Color.MAGENTA));
 				TLog.d("Circle = {0}", nowPoint);
-				mMapDrawInfos.put(aseekerid, new MapDrawInfo(){{pos=apos;maker=lmarker;circle=nowPoint;}});
+
+				MapDrawInfo mi = new MapDrawInfo(){{
+					seekerid= newmapInfo.seekerid;
+					name	= newmapInfo.name;
+					address	= newmapInfo.address;
+					date	= newmapInfo.date;
+					pos		= newpos;
+					maker	= lmarker;
+					polygon = null;
+					circle	= nowPoint;
+				}};
+				mMapDrawInfos.put(aaddress, mi);
+				return;
 			}
 			else {
-				mMapDrawInfos.put(aseekerid, new MapDrawInfo(){{pos=apos;maker=null;circle=null;}});
+				MapDrawInfo mi = new MapDrawInfo(){{
+					seekerid= newmapInfo.seekerid;
+					name	= newmapInfo.name;
+					address	= newmapInfo.address;
+					date	= newmapInfo.date;
+					pos		= newpos;
+					maker	= null;
+					polygon = null;
+					circle	= null;
+				}};
+				mMapDrawInfos.put(aaddress, mi);
+				return;
 			}
 		}
 		else {
+			/* Cliant終了/再開位置設定の場合 */
+			if(newpos == null) {
+				/* 現在マーカとposを消去(検索矩形は消さない) */
+				if(drawinfo.maker!=null) {
+					drawinfo.maker.remove();
+					drawinfo.maker = null;
+				}
+				if(drawinfo.circle!=null) {
+					drawinfo.circle.remove();
+					drawinfo.circle = null;
+				}
+				drawinfo.seekerid= newmapInfo.seekerid;
+				drawinfo.name	= newmapInfo.name;
+				drawinfo.address= newmapInfo.address;
+				drawinfo.date	= newmapInfo.date;
+				drawinfo.pos	= null;
+				drawinfo.maker	= null;
+//				drawinfo.polygon= null;
+				drawinfo.circle	= null;
+				return;
+			}
+
+			/* 初回位置設定の場合 */
+			if(drawinfo.pos == null) {
+				drawinfo.pos = newpos;
+				Marker marker = googleMap.addMarker(new MarkerOptions()
+						.position(newpos)
+						.title(String.valueOf(oldseekerid))
+						.icon(createIcon(oldseekerid)));
+				Circle nowPoint = googleMap.addCircle(new CircleOptions()
+						.center(newpos)
+						.radius(0.5)
+						.fillColor(Color.MAGENTA)
+						.strokeColor(Color.MAGENTA));
+				drawinfo.maker = marker;
+				drawinfo.circle= nowPoint;
+				return;
+			}
+
+			/* 値更新 */
+			drawinfo.seekerid	= newmapInfo.seekerid;
+			drawinfo.date		= newmapInfo.date;
+
 			/* 位置更新 */
 			LatLng spos = drawinfo.pos;
-			LatLng epos = apos;
+			LatLng epos = newpos;
+
 			drawinfo.pos = epos;
 			double dx = epos.longitude- spos.longitude;
 			double dy = epos.latitude - spos.latitude;
@@ -287,8 +343,8 @@ public class FragMap extends SupportMapFragment {
 			if(aIsSelected) {
 				Marker marker = googleMap.addMarker(new MarkerOptions()
 						.position(epos)
-						.title(String.valueOf(aseekerid))
-						.icon(createIcon(aseekerid)));
+						.title(String.valueOf(oldseekerid))
+						.icon(createIcon(oldseekerid)));
 				Circle nowPoint = googleMap.addCircle(new CircleOptions()
 						.center(epos)
 						.radius(0.5)
