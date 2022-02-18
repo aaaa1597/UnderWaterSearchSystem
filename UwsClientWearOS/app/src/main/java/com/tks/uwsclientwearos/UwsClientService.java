@@ -34,10 +34,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import static com.tks.uwsclientwearos.Constants.ACTION.INITIALIZE;
 import static com.tks.uwsclientwearos.Constants.ACTION.FINALIZE;
@@ -76,11 +79,13 @@ public class UwsClientService extends Service {
 		uwsFin();
 	}
 
-	private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+	private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context context, Intent intent) {
 			if(!intent.getAction().equals(FINALIZE)) return;
 
+			mBtClientThread.sndClosing();
+			uwsStopBt();
 			LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mReceiver);
 			stopForeground(true);
 			stopSelf();
@@ -156,7 +161,7 @@ public class UwsClientService extends Service {
 		}
 
 		@Override
-		public void notifyStartCheckCleared() throws RemoteException {
+		public void notifyStartCheckCleared() {
 			/* 位置情報取得開始 */
 			startLoc();
 
@@ -185,8 +190,21 @@ public class UwsClientService extends Service {
 			mStatus = R.string.status_btconnecting;
 			mSeekerId = (short)seekerid;
 
+			/* 一旦全取り出し */
+			List<byte[]> tmplist = new ArrayList<>();
+			for(int lpct = 0; lpct < mSndQue.size(); lpct++) {
+				try { tmplist.add(mSndQue.poll(0, TimeUnit.MILLISECONDS)); }
+				catch(InterruptedException ignore) {}
+			}
+			/* クリア */
+			mSndQue.clear();
 			try { mSndQue.put(createFstMsg()); }
 			catch(InterruptedException ignore) {}
+			/* 全戻し */
+			for(int lpct = 0; lpct < tmplist.size(); lpct++) {
+				try { mSndQue.put(tmplist.get(lpct)); }
+				catch(InterruptedException ignore) {}
+			}
 
 			return uwsStartBt(mSeekerId, btServer);
 		}
@@ -208,10 +226,9 @@ public class UwsClientService extends Service {
 		@Override
 		public void notifyHeartBeat(int heartbeat) {
 			TLog.d("脈拍通知 from HeartBeat-Service!! = {0}", heartbeat);
-			if(mStatus == R.string.status_btconnected_and_loc_beat) {
-				try { mSndQue.put(createByteArray(heartbeat)); }
-				catch(InterruptedException ignore) {}
-			}
+			mSndQue.removeIf(item->item[11]=='h');
+			try { mSndQue.put(createByteArray(heartbeat)); }
+			catch(InterruptedException ignore) {}
 			try {
 				mCallback.onHeartbeatResultChange((short)heartbeat);
 			}
@@ -254,10 +271,9 @@ public class UwsClientService extends Service {
 			super.onLocationResult(locationResult);
 			Location location = locationResult.getLastLocation();
 			TLog.d("1秒定期 (緯度:{0} 経度:{1})", d2Str(location.getLatitude()), d2Str(location.getLongitude()));
-			if(mStatus == R.string.status_btconnected_and_loc_beat) {
-				try { mSndQue.put(createByteArray(location.getLongitude(), location.getLatitude())); }
-				catch(InterruptedException ignore) {}
-			}
+			mSndQue.removeIf(item->item[11]=='l');
+			try { mSndQue.put(createByteArray(location.getLongitude(), location.getLatitude())); }
+			catch(InterruptedException ignore) {}
 
 			if(mCallback != null) {
 				try {
@@ -318,8 +334,8 @@ public class UwsClientService extends Service {
 
 	/* Bluetooth通信実行スレッド */
 	public class BtClientThread extends Thread {
-		private BluetoothDevice bluetoothDevice;
-		private BluetoothSocket bluetoothSocket;
+		private final BluetoothDevice bluetoothDevice;
+		private boolean mFlgClosing = false;
 
 		public BtClientThread(BluetoothDevice device) {
 			if(device == null) throw new RuntimeException("デバイスが選択されてない!!");
@@ -333,6 +349,7 @@ public class UwsClientService extends Service {
 					throw new RuntimeException("ここではありえない。");
 			}
 
+			BluetoothSocket bluetoothSocket;
 			try {
 				bluetoothSocket = bluetoothDevice.createRfcommSocketToServiceRecord(BT_CLASSIC_UUID);
 			}
@@ -388,6 +405,13 @@ public class UwsClientService extends Service {
 			mStatus = R.string.status_btconnected_and_loc_beat;
 			/* 接続確立 -> 送受信中 */
 			while(true) {
+				if(mFlgClosing) {
+					mFlgClosing = false;
+					byte[] closemsg = createCloseMsg();
+					try { outputStrem.write(closemsg);}
+					catch(IOException ignore) {}
+					continue;
+				}
 				if(Thread.interrupted()){
 					try {
 						inputStream.close();
@@ -433,6 +457,10 @@ public class UwsClientService extends Service {
 
 				TLog.d("	送信終了");
 			}
+		}
+
+		public void sndClosing() {
+			mFlgClosing = true;
 		}
 	}
 
@@ -506,6 +534,26 @@ public class UwsClientService extends Service {
 		/* 緯度(8byte) */
 		byte[] blatitude = d2bs(latitude);
 		System.arraycopy(blatitude, 0, sndBin, spos, blatitude.length);
+		return sndBin;
+	}
+	private byte[] createCloseMsg() {
+		byte[] sndBin = new byte[12];
+		int spos = 0;
+		/* (ヘッダを含まない)メッセージ長(1byte) 制限:最大256byteまで */
+		byte[] blen = new byte[]{(byte)(sndBin.length-1)};
+		System.arraycopy(blen, 0, sndBin, spos, blen.length);
+		spos += blen.length;
+		/* seekerid(2byte) */
+		byte[] bseekerid = s2bs(mSeekerId);
+		System.arraycopy(bseekerid, 0, sndBin, spos, bseekerid.length);
+		spos += bseekerid.length;
+		/* 日付(8byte) */
+		byte[] bdate = l2bs(new Date().getTime());
+		System.arraycopy(bdate, 0, sndBin, spos, bdate.length);
+		spos += bdate.length;
+		/* データ種別(1byte) */
+		byte[] btype = new byte[]{'c'};
+		System.arraycopy(btype, 0, sndBin, spos, btype.length);
 		return sndBin;
 	}
 	private byte[] s2bs(short value) {
