@@ -63,7 +63,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 
 	/* インターフェース */
 	public interface OnSelectedChangeListener {
-		void onSelectedChanged(String address, short seekerid, boolean isChecked);
+		void onSelectedChanged(String address,boolean isChecked);
 	}
 
 	public interface OnSetBuoyListener {
@@ -129,7 +129,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			/* メンバ決定 */
 			holder.mllRow.setOnClickListener(view -> {
 				model.mSelected = !model.mSelected;
-				mOnSelectedChangeListener.onSelectedChanged(deviceAddress, seekerid, model.mSelected);
+				mOnSelectedChangeListener.onSelectedChanged(deviceAddress, model.mSelected);
 				if(model.mSelected)
 					holder.mImvConnectStatus.setImageResource(R.drawable.status_ready0);
 				else

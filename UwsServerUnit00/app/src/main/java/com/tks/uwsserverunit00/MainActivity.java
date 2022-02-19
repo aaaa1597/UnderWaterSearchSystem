@@ -221,8 +221,7 @@ public class MainActivity extends AppCompatActivity {
 			mIsBuoy			= false;
 		}}).collect(Collectors.toList());
 		mBleViewModel.setDeviceListAdapter(new DeviceListAdapter(pairedlist,
-				(addr, seekerid, isChecked) -> {mMapViewModel.setSelected(addr, isChecked);
-										  		mBizViewModel.setSelected(seekerid, isChecked);},
+				(addr    , isChecked) -> mMapViewModel.setSelected(addr, isChecked),
 				(seekerid, isChecked) -> mBleViewModel.setBuoy(seekerid, isChecked)
 		));
 
@@ -266,6 +265,7 @@ public class MainActivity extends AppCompatActivity {
 							runOnUiThread(() -> {
 								mBleViewModel.onChangeStatus(name, address, resourceid);
 								mMapViewModel.onChangeStatus(name, address, resourceid);
+								mBizViewModel.onSeekeridChange(name, address, resourceid);
 							});
 						}
 					});

@@ -53,20 +53,39 @@ public class FragBizLogic extends Fragment {
 				case 9: ((TextView)view.findViewById(R.id.txtHb9)).setText(String.valueOf(hearbeat)); break;
 			}
 		});
-		mBizLogicViewModel.onSelectedChange().observe(getViewLifecycleOwner(), pair -> {
-			short   seekerid  = pair.first;
-			boolean isselected= pair.second;
-			switch(seekerid) {
-				case 0: view.findViewById(R.id.llHb0).setVisibility(isselected?View.VISIBLE:View.GONE); break;
-				case 1: view.findViewById(R.id.llHb1).setVisibility(isselected?View.VISIBLE:View.GONE); break;
-				case 2: view.findViewById(R.id.llHb2).setVisibility(isselected?View.VISIBLE:View.GONE); break;
-				case 3: view.findViewById(R.id.llHb3).setVisibility(isselected?View.VISIBLE:View.GONE); break;
-				case 4: view.findViewById(R.id.llHb4).setVisibility(isselected?View.VISIBLE:View.GONE); break;
-				case 5: view.findViewById(R.id.llHb5).setVisibility(isselected?View.VISIBLE:View.GONE); break;
-				case 6: view.findViewById(R.id.llHb6).setVisibility(isselected?View.VISIBLE:View.GONE); break;
-				case 7: view.findViewById(R.id.llHb7).setVisibility(isselected?View.VISIBLE:View.GONE); break;
-				case 8: view.findViewById(R.id.llHb8).setVisibility(isselected?View.VISIBLE:View.GONE); break;
-				case 9: view.findViewById(R.id.llHb9).setVisibility(isselected?View.VISIBLE:View.GONE); break;
+		mBizLogicViewModel.onSeekeridChange().observe(getViewLifecycleOwner(), pair -> {
+			short   oldseekerid  = pair.first;
+			short   newseekerid  = pair.second;
+			if(oldseekerid == newseekerid) return;
+
+			/* 非表示に */
+			switch(oldseekerid) {
+				case -1: /* 何もする必要なし */ break;
+				case 0: view.findViewById(R.id.llHb0).setVisibility(View.GONE); break;
+				case 1: view.findViewById(R.id.llHb1).setVisibility(View.GONE); break;
+				case 2: view.findViewById(R.id.llHb2).setVisibility(View.GONE); break;
+				case 3: view.findViewById(R.id.llHb3).setVisibility(View.GONE); break;
+				case 4: view.findViewById(R.id.llHb4).setVisibility(View.GONE); break;
+				case 5: view.findViewById(R.id.llHb5).setVisibility(View.GONE); break;
+				case 6: view.findViewById(R.id.llHb6).setVisibility(View.GONE); break;
+				case 7: view.findViewById(R.id.llHb7).setVisibility(View.GONE); break;
+				case 8: view.findViewById(R.id.llHb8).setVisibility(View.GONE); break;
+				case 9: view.findViewById(R.id.llHb9).setVisibility(View.GONE); break;
+			}
+
+			/* 表示に */
+			switch(newseekerid) {
+				case -1: /* 何もする必要なし */ break;
+				case 0: view.findViewById(R.id.llHb0).setVisibility(View.VISIBLE); break;
+				case 1: view.findViewById(R.id.llHb1).setVisibility(View.VISIBLE); break;
+				case 2: view.findViewById(R.id.llHb2).setVisibility(View.VISIBLE); break;
+				case 3: view.findViewById(R.id.llHb3).setVisibility(View.VISIBLE); break;
+				case 4: view.findViewById(R.id.llHb4).setVisibility(View.VISIBLE); break;
+				case 5: view.findViewById(R.id.llHb5).setVisibility(View.VISIBLE); break;
+				case 6: view.findViewById(R.id.llHb6).setVisibility(View.VISIBLE); break;
+				case 7: view.findViewById(R.id.llHb7).setVisibility(View.VISIBLE); break;
+				case 8: view.findViewById(R.id.llHb8).setVisibility(View.VISIBLE); break;
+				case 9: view.findViewById(R.id.llHb9).setVisibility(View.VISIBLE); break;
 			}
 		});
 
