@@ -117,6 +117,11 @@ public class FragMap extends SupportMapFragment {
 
 				MapDrawInfo si = mMapDrawInfos.get(address);
 				if(si==null) return;
+				if(si.pos == null) {
+					TLog.d("si.pos(LatLng) is null.");
+					getActivity().runOnUiThread(() -> mBleViewModel.onChangeStatus("", address, R.string.status_recieved_nolatlong));
+					return;
+				}
 
 				if(isSelected) {
 					Marker marker = mGoogleMap.addMarker(new MarkerOptions()
