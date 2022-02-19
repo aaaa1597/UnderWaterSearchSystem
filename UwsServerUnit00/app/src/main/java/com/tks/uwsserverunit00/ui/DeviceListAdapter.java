@@ -216,7 +216,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			else if(name.equals(BT_NORTIFY_CLOSE)) {
 				device.mSeekerId = -1;
 				device.mConnected= false;
-				device.mStatusResId = R.drawable.statusx_waitforconnect;
+				device.mStatusResId = R.string.status_waitforconnect;
 				notifyItemChanged(index.get());
 			}
 			else {
