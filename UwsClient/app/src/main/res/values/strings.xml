@@ -6,4 +6,5 @@
     <string name="status_btconnecting">接続中…</string>
     <string name="status_btconnected_and_loc_beat">Bluetooth接続中</string>
     <string name="status_btdisconnected">切断!!</string>
+    <string name="status_btdisconnected_and_retry">切断!! -> リトライ.</string>
 </resources>

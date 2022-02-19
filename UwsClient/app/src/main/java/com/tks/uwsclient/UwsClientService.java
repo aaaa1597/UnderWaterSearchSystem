@@ -189,21 +189,7 @@ public class UwsClientService extends Service {
 			mStatus = R.string.status_btconnecting;
 			mSeekerId = (short)seekerid;
 
-			/* 送信キュー詰め替え 一旦全取り出し */
-			List<byte[]> tmplist = new ArrayList<>();
-			for(int lpct = 0; lpct < mSndQue.size(); lpct++) {
-				try { tmplist.add(mSndQue.poll(0, TimeUnit.MILLISECONDS)); }
-				catch(InterruptedException ignore) {}
-			}
-			/* クリア */
-			mSndQue.clear();
-			try { mSndQue.put(createFstMsg()); }
-			catch(InterruptedException ignore) {}
-			/* 全戻し */
-			for(int lpct = 0; lpct < tmplist.size(); lpct++) {
-				try { mSndQue.put(tmplist.get(lpct)); }
-				catch(InterruptedException ignore) {}
-			}
+			setFstMsg();
 
 			return uwsStartBt(mSeekerId, btServer);
 		}
@@ -326,12 +312,30 @@ public class UwsClientService extends Service {
 
 	private void uwsStopBt() {
 		/* Bluetooth接続終了 */
-		mBtClientThread.sndClosing();
 		try { Thread.sleep(100);}
 		catch(InterruptedException ignore) {}
 		if(mBtClientThread == null) return;    /* 停止済なら、停止不要。 */
+		mBtClientThread.sndClosing();
 		mBtClientThread.interrupt();
 		mBtClientThread = null;
+	}
+
+	/* 接続再トライ */
+	private int uwsRestartBt(short seekerid, BluetoothDevice btServer) {
+		TLog.d("seekerid={0} device={1}", seekerid, btServer);
+
+		/* 初回メッセージ生成 */
+		setFstMsg();
+
+		if(mBtClientThread != null) {
+			mBtClientThread.interrupt();
+			try { Thread.sleep(100); }	/* 少し待つ */
+			catch(InterruptedException ignore) {}
+		}
+		mBtClientThread = new BtClientThread(btServer);
+		mBtClientThread.start();
+
+		return ERR_OK;
 	}
 
 	/* Bluetooth通信実行スレッド */
@@ -391,7 +395,7 @@ public class UwsClientService extends Service {
 			}
 			catch(IOException e) {
 				e.printStackTrace();
-				TLog.d("切断!!というより接続失敗!! {0}:{1}", name, addr);
+				TLog.d("接続失敗!! {0}:{1}", name, addr);
 				try { mListner2.onStatusChange(R.string.status_btdisconnected); }
 				catch(RemoteException ignore) {}
 				try {
@@ -421,7 +425,7 @@ public class UwsClientService extends Service {
 						bluetoothSocket.close();
 					}
 					catch(IOException ioException) { ioException.printStackTrace(); /* ここで発生してもどうしようもない */}
-					break;
+					return;	/* Stream取得に失敗したらThread終了。 */
 				}
 
 				/* 送信データがなければ待つ。 */
@@ -445,16 +449,14 @@ public class UwsClientService extends Service {
 				try { outputStrem.write(sndData);}
 				catch(IOException e) {
 					e.printStackTrace();
-					TLog.d("切断!! {0}:{1}", name, addr);
-					try { mListner2.onStatusChange(R.string.status_btdisconnected); }
+					TLog.d("切断検知!! -> 再リトライします。 {0}:{1}", name, addr);
+					try { mListner2.onStatusChange(R.string.status_btdisconnected_and_retry); }
 					catch(RemoteException ignore) {}
-					try {
-						inputStream.close();
-						outputStrem.close();
-						bluetoothSocket.close();
-					}
-					catch(IOException ioException) { ioException.printStackTrace(); /* ここで発生してもどうしようもない */}
-					return;	/* Stream取得に失敗したらThread終了。 */
+					/* リトライ */
+					new Handler(Looper.getMainLooper()).postDelayed((Runnable) () -> uwsRestartBt( mSeekerId, bluetoothDevice), 1000);
+					/* このスレッドは停止する */
+					this.interrupt();
+					continue;
 				}
 
 				TLog.d("	送信終了");
@@ -463,6 +465,25 @@ public class UwsClientService extends Service {
 
 		public void sndClosing() {
 			mFlgClosing = true;
+		}
+	}
+
+	/* 初回メッセージ生成 */
+	private void setFstMsg() {
+		/* 送信キュー詰め替え 一旦全取り出し */
+		List<byte[]> tmplist = new ArrayList<>();
+		for(int lpct = 0; lpct < mSndQue.size(); lpct++) {
+			try { tmplist.add(mSndQue.poll(0, TimeUnit.MILLISECONDS)); }
+			catch(InterruptedException ignore) {}
+		}
+		/* クリア */
+		mSndQue.clear();
+		try { mSndQue.put(createFstMsg()); }
+		catch(InterruptedException ignore) {}
+		/* 全戻し */
+		for(int lpct = 0; lpct < tmplist.size(); lpct++) {
+			try { mSndQue.put(tmplist.get(lpct)); }
+			catch(InterruptedException ignore) {}
 		}
 	}
 
