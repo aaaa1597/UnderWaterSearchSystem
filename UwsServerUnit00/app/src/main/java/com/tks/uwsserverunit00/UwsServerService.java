@@ -168,28 +168,28 @@ public class UwsServerService extends Service {
 		private String	addr;
 		private final BluetoothSocket	bluetoothSocket;
 		private final InputStream		inputStream;
-		private final OutputStream		outputStream;
+//		private final OutputStream		outputStream;
 		public BtSndRcvThread(String aname, String aaddr, BluetoothSocket btSocket) throws IOException {
-			TLog.d("送受信スレッド起動 {0}:{1}", name, addr);
+			TLog.d("受信スレッド起動 {0}:{1}", name, addr);
 			name = aname;
 			addr = aaddr;
 			bluetoothSocket	= btSocket;
 			inputStream		= bluetoothSocket.getInputStream();
-			outputStream	= bluetoothSocket.getOutputStream();
+//			outputStream	= bluetoothSocket.getOutputStream();
 		}
 
 		@Override
 		public void run() {
-			TLog.d("送受信スレッド開始 {0}:{1}", name, addr);
+			TLog.d("受信スレッド開始 {0}:{1}", name, addr);
 			byte[] incomingLength = new byte[1]; /* 制限:最大256byteまで */
 			byte[] incomingBuff = new byte[256];
 			while(true) {
 				/* スレッド停止チェック */
 				if (Thread.interrupted()) {
 					mBtSndRcvThreads.remove(this);
-					TLog.d("送受信 Tread終了 Thread数={0} {1}:{2}", mBtSndRcvThreads.size(), name, addr);
+					TLog.d("受信 Tread終了 Thread数={0} {1}:{2}", mBtSndRcvThreads.size(), name, addr);
 					try { inputStream    .close(); }catch(IOException ignore) { }
-					try { outputStream   .close(); }catch(IOException ignore) { }
+//					try { outputStream   .close(); }catch(IOException ignore) { }
 					try { bluetoothSocket.close(); }catch(IOException ignore) { }
 					break;
 				}
@@ -225,10 +225,6 @@ public class UwsServerService extends Service {
 						System.arraycopy(incomingBuff, 0, completedata, recieved, rcvSize);
 						recieved+=rcvSize;
 					}
-					/* TODO 削除予定 */if(recieved > completedata.length) {
-					/* TODO 削除予定 */	TLog.d("ありえない!! 受信データが(recieved({0}) > completedata.length({1}))になるのは想定外。", recieved, completedata.length);
-					/* TODO 削除予定 */	throw new RuntimeException("ありえない!! 受信データが(recieved > rcvdata.length)になるのは想定外。");
-					/* TODO 削除予定 */}
 				}
 				catch(IOException e) {
 					e.printStackTrace();
