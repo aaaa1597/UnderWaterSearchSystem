@@ -11,5 +11,5 @@
     <string name="status_connected">接続OK</string>
     <string name="status_waitforrecieve">受信待ち…</string>
     <string name="status_recieved">受信!!</string>
-    <string name="status_recieved_nolatlong">位置情報(0)受信!!</string>
+    <string name="status_no_recieved_location">位置情報-未受信!!</string>
 </resources>

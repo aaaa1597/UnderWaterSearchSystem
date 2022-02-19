@@ -119,7 +119,7 @@ public class FragMap extends SupportMapFragment {
 				if(si==null) return;
 				if(si.pos == null) {
 					TLog.d("si.pos(LatLng) is null.");
-					getActivity().runOnUiThread(() -> mBleViewModel.onChangeStatus("", address, R.string.status_recieved_nolatlong));
+					getActivity().runOnUiThread(() -> mBleViewModel.onChangeStatus("", address, R.string.status_no_recieved_location));
 					return;
 				}
 
