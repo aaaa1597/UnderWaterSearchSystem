@@ -46,7 +46,6 @@ import static com.tks.uwsserverunit00.Constants.UWS_LOC_BASE_DISTANCE_Y;
 import static com.tks.uwsserverunit00.Constants.d2Str;
 
 public class FragMap extends SupportMapFragment {
-	private final short						BASE_COMMANDER_LOCATION_IDX = 9999;
 	private FragBleViewModel				mBleViewModel;
 	private FragMapViewModel				mMapViewModel;
 	private FragBizLogicViewModel			mBizLogicViewModel;
@@ -117,13 +116,13 @@ public class FragMap extends SupportMapFragment {
 
 				MapDrawInfo si = mMapDrawInfos.get(address);
 				if(si==null) return;
-				if(si.pos == null) {
-					TLog.d("si.pos(LatLng) is null.");
-					getActivity().runOnUiThread(() -> mBleViewModel.onChangeStatus("", address, R.string.status_no_recieved_location));
-					return;
-				}
 
 				if(isSelected) {
+					if(si.pos == null) {
+						TLog.d("si.pos(LatLng) is null.");
+						getActivity().runOnUiThread(() -> mBleViewModel.onChangeStatus("", address, R.string.status_no_recieved_location));
+						return;
+					}
 					Marker marker = mGoogleMap.addMarker(new MarkerOptions()
 							.position(si.pos)
 							.title(String.valueOf(si.seekerid))
@@ -136,10 +135,14 @@ public class FragMap extends SupportMapFragment {
 					si.circle= nowPoint;
 				}
 				else {
-					si.maker.remove();
-					si.maker = null;
-					si.circle.remove();
-					si.circle = null;
+					if(si.maker!=null) {
+						si.maker.remove();
+						si.maker = null;
+					}
+					if(si.circle != null) {
+						si.circle.remove();
+						si.circle = null;
+					}
 				}
 			}
 		});
@@ -278,17 +281,22 @@ public class FragMap extends SupportMapFragment {
 			}
 		}
 		else {
+			/* 現在マーカとposを消去(検索矩形は消さない) */
+			if(drawinfo.maker!=null) {
+				drawinfo.maker.remove();
+				drawinfo.maker = null;
+			}
+			if(drawinfo.circle!=null) {
+				drawinfo.circle.remove();
+				drawinfo.circle = null;
+			}
+//			if(drawinfo.polygon!=null) {	/* 検索矩形は保持したまま */
+//				drawinfo.polygon.remove();
+//				drawinfo.polygon = null;
+//			}
+
 			/* Cliant終了/再開位置設定の場合 */
 			if(newpos == null) {
-				/* 現在マーカとposを消去(検索矩形は消さない) */
-				if(drawinfo.maker!=null) {
-					drawinfo.maker.remove();
-					drawinfo.maker = null;
-				}
-				if(drawinfo.circle!=null) {
-					drawinfo.circle.remove();
-					drawinfo.circle = null;
-				}
 				drawinfo.seekerid= newmapInfo.seekerid;
 				drawinfo.name	= newmapInfo.name;
 				drawinfo.address= newmapInfo.address;
@@ -324,7 +332,6 @@ public class FragMap extends SupportMapFragment {
 			/* 位置更新 */
 			LatLng spos = drawinfo.pos;
 			LatLng epos = newpos;
-
 			drawinfo.pos = epos;
 			double dx = epos.longitude- spos.longitude;
 			double dy = epos.latitude - spos.latitude;
@@ -333,18 +340,6 @@ public class FragMap extends SupportMapFragment {
 				return;
 			}
 
-			if(drawinfo.maker!=null) {
-				drawinfo.maker.remove();
-				drawinfo.maker = null;
-			}
-			if(drawinfo.circle!=null) {
-				drawinfo.circle.remove();
-				drawinfo.circle = null;
-			}
-//			if(drawinfo.polygon!=null) {	/* 検索矩形は保持したまま */
-//				drawinfo.polygon.remove();
-//				drawinfo.polygon = null;
-//			}
 			if(aIsSelected) {
 				Marker marker = googleMap.addMarker(new MarkerOptions()
 						.position(epos)
