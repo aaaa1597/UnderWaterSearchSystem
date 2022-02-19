@@ -100,6 +100,14 @@ public class FragMain extends Fragment {
 				rvw.scrollToPosition(pos);
 			}
 		});
+		/* 状態変化通知 */
+		mViewModel.OnStatusChange().observe(getActivity(), new Observer<Integer>() {
+			@Override
+			public void onChanged(Integer integer) {
+				((TextView)view.findViewById(R.id.txtStatus)).setText((int)integer);
+			}
+		});
+
 		/* 終了ボタン */
 		view.findViewById(R.id.btnFin).setOnClickListener(
 			v -> {

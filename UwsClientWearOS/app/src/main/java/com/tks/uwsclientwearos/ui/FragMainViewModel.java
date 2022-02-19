@@ -9,7 +9,6 @@ import android.util.Pair;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.ViewModel;
 import com.tks.uwsclientwearos.Constants.Sender;
 import com.tks.uwsclientwearos.IClientService;
 import com.tks.uwsclientwearos.IStatusNotifier;
@@ -20,7 +19,7 @@ public class FragMainViewModel extends AndroidViewModel {
 	private final MutableLiveData<Double>					mLatitude		= new MutableLiveData<>(0.0);
 	private final MutableLiveData<Double>					mLongitude		= new MutableLiveData<>(0.0);
 	private final MutableLiveData<Short>					mHearBeat		= new MutableLiveData<>((short)0);
-	private final MutableLiveData<String>					mStatusStr		= new MutableLiveData<>("");
+	private final MutableLiveData<Integer>					mOnStatusChange = new MutableLiveData<>();
 	private final MutableLiveData<Pair<Sender, Boolean>>	mUnLock			= new MutableLiveData<>(Pair.create(Sender.App, true));
 	private Application										mContext;
 
@@ -32,7 +31,7 @@ public class FragMainViewModel extends AndroidViewModel {
 	public MutableLiveData<Double>					Latitude()		{ return mLatitude; }
 	public MutableLiveData<Double>					Longitude()		{ return mLongitude; }
 	public MutableLiveData<Short>					HearBeat()		{ return mHearBeat; }
-	public MutableLiveData<String>					StatusStr()		{ return mStatusStr; }
+	public MutableLiveData<Integer>					OnStatusChange(){ return mOnStatusChange; }
 	public MutableLiveData<Pair<Sender, Boolean>>	UnLock()		{ return mUnLock; }
 
 	private short	mSeekerId = 0;
@@ -60,10 +59,11 @@ public class FragMainViewModel extends AndroidViewModel {
 				public void onHeartbeatResultChange(int heartbeat) {
 					mHearBeat.postValue((short)heartbeat);
 				}
-			}, new IStatusNotifier.Stub() {
+			}
+			, new IStatusNotifier.Stub() {
 				@Override
 				public void onStatusChange(int statusid) {
-					mStatusStr.postValue(mContext.getString(statusid));
+					mOnStatusChange.postValue(statusid);
 				}
 			});
 		}

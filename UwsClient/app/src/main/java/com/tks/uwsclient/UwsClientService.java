@@ -84,7 +84,6 @@ public class UwsClientService extends Service {
 		public void onReceive(Context context, Intent intent) {
 			if(!intent.getAction().equals(FINALIZE)) return;
 
-			mBtClientThread.sndClosing();
 			uwsStopBt();
 			LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mReceiver);
 			stopForeground(true);
@@ -155,9 +154,9 @@ public class UwsClientService extends Service {
 		}
 
 		@Override
-		public void setListners(IOnUwsInfoChangeListner onUwsInfoChangeListner, IStatusNotifier onServiceStatusChangeListner) {
+		public void setListners(IOnUwsInfoChangeListner onUwsInfoChangeListner, IStatusNotifier onStatusChangeListner) {
 			mCallback = onUwsInfoChangeListner;
-			mListner2 = onServiceStatusChangeListner;
+			mListner2 = onStatusChangeListner;
 		}
 
 		@Override
@@ -190,7 +189,7 @@ public class UwsClientService extends Service {
 			mStatus = R.string.status_btconnecting;
 			mSeekerId = (short)seekerid;
 
-			/* 一旦全取り出し */
+			/* 送信キュー詰め替え 一旦全取り出し */
 			List<byte[]> tmplist = new ArrayList<>();
 			for(int lpct = 0; lpct < mSndQue.size(); lpct++) {
 				try { tmplist.add(mSndQue.poll(0, TimeUnit.MILLISECONDS)); }
@@ -327,6 +326,9 @@ public class UwsClientService extends Service {
 
 	private void uwsStopBt() {
 		/* Bluetooth接続終了 */
+		mBtClientThread.sndClosing();
+		try { Thread.sleep(100);}
+		catch(InterruptedException ignore) {}
 		if(mBtClientThread == null) return;    /* 停止済なら、停止不要。 */
 		mBtClientThread.interrupt();
 		mBtClientThread = null;
