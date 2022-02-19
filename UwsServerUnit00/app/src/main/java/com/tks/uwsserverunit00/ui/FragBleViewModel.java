@@ -69,9 +69,8 @@ public class FragBleViewModel extends AndroidViewModel {
 	/* 状態変化通知 */
 	public void onChangeStatus(String name, String addr, int resourceid) {
 		/* (seekerid通知 or Close通知)の時は、resourceidはseekeridになっている。 */
-		if( name.equals(BT_NORTIFY_CLOSE)) {
+		if( name.equals(BT_NORTIFY_CLOSE))
 			TLog.d(" 状態変化通知 Close通知 seekerid={0}", resourceid);/* Close通知の時は、resourceidはseekeridになっている。 */
-		}
 		else if( name.equals(BT_NORTIFY_SEEKERID))
 			TLog.d(" 状態変化通知 Seekerid通知 seekerid={0}", resourceid);
 		else/* (seekerid通知|Close通知)の時は、resourceidはseekeridになっている。 */
