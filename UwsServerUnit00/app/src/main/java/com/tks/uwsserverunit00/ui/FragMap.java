@@ -110,9 +110,9 @@ public class FragMap extends SupportMapFragment {
 
 		mMapViewModel.SelectedSeeker().observe(getViewLifecycleOwner(), new Observer<Pair<String, Boolean>>() {
 			@Override
-			public void onChanged(Pair<String, Boolean> selected) {
-				String address		= selected.first;
-				boolean	isSelected	= selected.second;
+			public void onChanged(Pair<String, Boolean> pair) {
+				String address		= pair.first;
+				boolean	isSelected	= pair.second;
 
 				MapDrawInfo si = mMapDrawInfos.get(address);
 				if(si==null) return;
@@ -319,17 +319,23 @@ public class FragMap extends SupportMapFragment {
 			/* 初回位置設定の場合 */
 			if(drawinfo.pos == null) {
 				drawinfo.pos = newpos;
-				Marker marker = googleMap.addMarker(new MarkerOptions()
-						.position(newpos)
-						.title(String.valueOf(oldseekerid))
-						.icon(createIcon(oldseekerid)));
-				Circle nowPoint = googleMap.addCircle(new CircleOptions()
-						.center(newpos)
-						.radius(0.5)
-						.fillColor(Color.MAGENTA)
-						.strokeColor(Color.MAGENTA));
-				drawinfo.maker = marker;
-				drawinfo.circle= nowPoint;
+				if(aIsSelected) {
+					Marker marker = googleMap.addMarker(new MarkerOptions()
+							.position(newpos)
+							.title(String.valueOf(oldseekerid))
+							.icon(createIcon(oldseekerid)));
+					Circle nowPoint = googleMap.addCircle(new CircleOptions()
+							.center(newpos)
+							.radius(0.5)
+							.fillColor(Color.MAGENTA)
+							.strokeColor(Color.MAGENTA));
+					drawinfo.maker = marker;
+					drawinfo.circle= nowPoint;
+				}
+				else {
+					drawinfo.maker = null;
+					drawinfo.circle= null;
+				}
 				return;
 			}
 
