@@ -123,6 +123,14 @@ public class FragMap extends SupportMapFragment {
 						getActivity().runOnUiThread(() -> mBleViewModel.onChangeStatus("", address, R.string.status_no_recieved_location));
 						return;
 					}
+					if(si.maker!=null) {
+						si.maker.remove();
+						si.maker = null;
+					}
+					if(si.circle != null) {
+						si.circle.remove();
+						si.circle = null;
+					}
 					Marker marker = mGoogleMap.addMarker(new MarkerOptions()
 							.position(si.pos)
 							.title(String.valueOf(si.seekerid))
