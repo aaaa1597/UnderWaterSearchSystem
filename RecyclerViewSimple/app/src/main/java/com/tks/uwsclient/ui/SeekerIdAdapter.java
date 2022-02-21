@@ -1,19 +1,19 @@
-package com.example.recyclerviewsimple;
+package com.tks.uwsclient.ui;
 
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+import com.example.recyclerviewsimple.R;
 import java.util.Arrays;
 import java.util.List;
 
-public class FlowerAdapter extends RecyclerView.Adapter<FlowerAdapter.FlowerViewHolder> {
-    static class FlowerViewHolder extends RecyclerView.ViewHolder {
+public class SeekerIdAdapter extends RecyclerView.Adapter<SeekerIdAdapter.ViewHolder> {
+    static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView mImvSeekerId;
-        public FlowerViewHolder(@NonNull View aView) {
+        public ViewHolder(@NonNull View aView) {
             super(aView);
             mImvSeekerId = aView.findViewById(R.id.imvSeekerId);
         }
@@ -27,13 +27,13 @@ public class FlowerAdapter extends RecyclerView.Adapter<FlowerAdapter.FlowerView
 
     @NonNull
     @Override
-    public FlowerViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.flower_item, parent, false);
-        return new FlowerViewHolder(view);
+        return new ViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull FlowerViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         int resid = mSeekersResIdList.get(position);
         holder.mImvSeekerId.setImageResource(resid);
     }
