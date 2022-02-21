@@ -3,6 +3,7 @@ package com.example.recyclerviewsimple;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -11,33 +12,18 @@ import java.util.List;
 
 public class FlowerAdapter extends RecyclerView.Adapter<FlowerAdapter.FlowerViewHolder> {
     static class FlowerViewHolder extends RecyclerView.ViewHolder {
-        TextView        flowerTextView;
+        ImageView mImvSeekerId;
         public FlowerViewHolder(@NonNull View aView) {
             super(aView);
-            flowerTextView = aView.findViewById(R.id.flower_text);
+            mImvSeekerId = aView.findViewById(R.id.imvSeekerId);
         }
 
     }
 
-    private final List<String>    flowerList = Arrays.asList(
-            "Lily",
-            "Poppy",
-            "Sunflower",
-            "Freesia",
-            "Daisy",
-            "Rose",
-            "Daffodil",
-            "Lavender",
-            "Peony",
-            "Lilac",
-            "Dahlia",
-            "Tulip",
-            "Dandelion"
-    );
-//    private final List<Integer> mSeekersResIdList = Arrays.asList(
-//            R.drawable.num0, R.drawable.num1, R.drawable.num2, R.drawable.num3,
-//            R.drawable.num4, R.drawable.num5, R.drawable.num6, R.drawable.num7,
-//            R.drawable.num8, R.drawable.num9);
+    private final List<Integer> mSeekersResIdList = Arrays.asList(
+            R.drawable.num0, R.drawable.num1, R.drawable.num2, R.drawable.num3,
+            R.drawable.num4, R.drawable.num5, R.drawable.num6, R.drawable.num7,
+            R.drawable.num8, R.drawable.num9);
 
     @NonNull
     @Override
@@ -48,11 +34,12 @@ public class FlowerAdapter extends RecyclerView.Adapter<FlowerAdapter.FlowerView
 
     @Override
     public void onBindViewHolder(@NonNull FlowerViewHolder holder, int position) {
-        holder.flowerTextView.setText(flowerList.get(position));
+        int resid = mSeekersResIdList.get(position);
+        holder.mImvSeekerId.setImageResource(resid);
     }
 
     @Override
     public int getItemCount() {
-        return flowerList.size();
+        return mSeekersResIdList.size();
     }
 }
