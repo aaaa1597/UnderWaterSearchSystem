@@ -1,25 +1,42 @@
 package com.tks.uwsclient;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.lifecycle.ViewModelProvider;
-
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.IntentSender;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-
+import android.os.IBinder;
+import android.os.RemoteException;
+import android.util.Pair;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.common.api.ResolvableApiException;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsStatusCodes;
+import com.google.android.gms.location.SettingsClient;
 import com.tks.uwsclient.ui.FragMainViewModel;
+import com.tks.uwsclient.Constants.Sender;
+import static com.tks.uwsclient.Constants.ACTION.FINALIZE;
 
 public class MainActivity extends AppCompatActivity {
 	private final static int	REQUEST_LOCATION_SETTINGS	= 1111;
@@ -69,6 +86,40 @@ public class MainActivity extends AppCompatActivity {
 
 		/* ViewModelインスタンス取得 */
 		mViewModel = new ViewModelProvider(this).get(FragMainViewModel.class);
+
+		/* 設定の位置情報ON/OFFチェック */
+		LocationSettingsRequest locationSettingsRequest = new LocationSettingsRequest.Builder().build();
+		SettingsClient settingsClient = LocationServices.getSettingsClient(this);
+		settingsClient.checkLocationSettings(locationSettingsRequest)
+				.addOnSuccessListener(this, locationSettingsResponse -> {
+					mViewModel.mIsSetedLocationON = true;
+				})
+				.addOnFailureListener(this, exception -> {
+					int statusCode = ((ApiException)exception).getStatusCode();
+					switch (statusCode) {
+						case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
+							try {
+								ResolvableApiException rae = (ResolvableApiException)exception;
+								rae.startResolutionForResult(MainActivity.this, REQUEST_LOCATION_SETTINGS);
+							}
+							catch (IntentSender.SendIntentException sie) {
+								ErrDialog.create(MainActivity.this, "システムエラー!\n再起動で直ることがあります。\n終了します。").show();
+							}
+							break;
+						case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
+							ErrDialog.create(MainActivity.this, "このアプリには位置情報をOnにする必要があります。\n再起動後にOnにしてください。\n終了します。").show();
+							break;
+						case LocationSettingsStatusCodes.DEVELOPER_ERROR:
+							if(((ApiException)exception).getMessage().contains("Not implemented")) {
+								/* checkLocationSettings()の実装がない=常にONと想定する。 */
+								mViewModel.mIsSetedLocationON = true;
+								break;
+							}
+							ErrDialog.create(MainActivity.this, "位置情報の機能が存在しない端末です。\n動作しないので、終了します。").show();
+							break;
+					}
+				});
+
 	}
 
 	@Override
@@ -102,6 +153,109 @@ public class MainActivity extends AppCompatActivity {
 				ErrDialog.create(MainActivity.this, "このアプリには位置情報をOnにする必要があります。\n再起動後にOnにしてください。\n終了します。").show();
 				break;
 		}
+	}
+
+	@Override
+	protected void onStart() {
+		super.onStart();
+		TLog.d("xxxxx");
+		IntentFilter filter = new IntentFilter();
+		filter.addAction(FINALIZE);
+		LocalBroadcastManager.getInstance(getApplicationContext()).registerReceiver(mReceiver, filter);
+		startForeServ();
+		bindService(new Intent(getApplicationContext(), UwsClientService.class), mCon, Context.BIND_AUTO_CREATE);
+	}
+
+	@Override
+	protected void onStop() {
+		super.onStop();
+		unbindService(mCon);
+//		stopForeServ();			通知からの終了だけをサポートする。
+		LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mReceiver);
+		TLog.d("xxxxx");
+	}
+
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		TLog.d("xxxxx");
+	}
+
+	/* Serviceからの終了要求 受信設定 */
+	BroadcastReceiver mReceiver = new BroadcastReceiver() {
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			if( !intent.getAction().equals(FINALIZE))
+				return;
+			unbindService(mCon);
+			LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mReceiver);
+			ErrDialog.create(MainActivity.this, "裏で動作している位置情報/BLEが終了しました。\nアプリも終了します。").show();
+		}
+	};
+
+	private final ServiceConnection mCon = new ServiceConnection() {
+		@Override
+		public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+			IClientService serviceIf = IClientService.Stub.asInterface(iBinder);
+//			mViewModel.setClientServiceIf(serviceIf);
+
+			if(checkExecution(getApplicationContext()))
+				mViewModel.notifyStartCheckCleared();
+
+			/* サービス状態を取得 */
+			StatusInfo si;
+			try { si = serviceIf.getServiceStatus(); }
+			catch (RemoteException e) { e.printStackTrace(); throw new RuntimeException(e.getMessage()); }
+
+			TLog.d("si=(seekerid={0} Status={1})", si.getSeekerId(), si.getStatus());
+
+			/* サービス状態が、BT接続中 */
+			List<Integer> connctstatuses = Arrays.asList(R.string.status_btconnecting, R.string.status_btconnected_and_loc_beat);
+			if(connctstatuses.contains(si.getStatus())) {
+				/* SeekerIdを設定 */
+				mViewModel.setSeekerIdSmoothScrollToPosition(si.getSeekerId());
+				/* 画面を接続中に更新 */
+				runOnUiThread(() -> {
+					boolean ischecked = ((SwitchCompat)findViewById(R.id.swhUnLock)).isChecked();
+					if(ischecked)
+						mViewModel.UnLock().setValue(Pair.create(Sender.Service, false));
+				});
+			}
+			else {
+				/* 画面をIDLE中に更新 */
+				runOnUiThread(() -> {
+					boolean ischecked = ((SwitchCompat)findViewById(R.id.swhUnLock)).isChecked();
+					if(!ischecked)
+						mViewModel.UnLock().setValue(Pair.create(Sender.Service, true));
+				});
+			}
+		}
+
+		@Override
+		public void onServiceDisconnected(ComponentName componentName) {
+//			mViewModel.setClientServiceIf(null);
+		}
+	};
+
+	/* フォアグランドサービス起動 */
+	private Intent mStartServiceintent = null;
+	private void startForeServ() {
+		if(mStartServiceintent != null) return;
+		/* サービス(位置情報+BLE)起動 */
+		mStartServiceintent = new Intent(MainActivity.this, UwsClientService.class);
+		mStartServiceintent.setAction(Constants.ACTION.INITIALIZE);
+		startForegroundService(mStartServiceintent);
+	}
+
+	/* フォアグランドサービス終了 */
+	private void stopForeServ() {
+		/* サービス起動済チェック */
+		if(mStartServiceintent == null) return;
+		/* サービス(位置情報+BLE)終了 */
+		mStartServiceintent = null;
+		Intent intent = new Intent(MainActivity.this, UwsClientService.class);
+		intent.setAction(FINALIZE);
+		startService(intent);
 	}
 
 	/* 実行前の権限/条件チェック */
