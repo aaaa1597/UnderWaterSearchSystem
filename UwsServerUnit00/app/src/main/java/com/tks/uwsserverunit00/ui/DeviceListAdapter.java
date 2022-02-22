@@ -9,10 +9,9 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -210,14 +209,30 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 
 		if(device != null) {
 			if(name.equals(BT_NORTIFY_SEEKERID)) {
-				device.mSeekerId = (short)resourceid;
-				notifyItemChanged(index.get());
+				if(device.mSeekerId != (short)resourceid) {
+					device.mSeekerId = (short)resourceid;
+					/* 並び替え */
+					mDeviceList.sort((li, ri) -> {
+						if(li.mSeekerId != ri.mSeekerId)return ri.mSeekerId - li.mSeekerId;
+						else							return ri.mDeviceName.compareTo(li.mDeviceName);
+					});
+					notifyDataSetChanged();
+				}
 			}
 			else if(name.equals(BT_NORTIFY_CLOSE)) {
-				device.mSeekerId = -1;
 				device.mConnected= false;
 				device.mStatusResId = R.string.status_waitforconnect;
-				notifyItemChanged(index.get());
+				if(device.mSeekerId != -1) {
+					device.mSeekerId = -1;
+					mDeviceList.sort((li, ri) -> {
+						if(li.mSeekerId != ri.mSeekerId)return ri.mSeekerId - li.mSeekerId;
+						else							return ri.mDeviceName.compareTo(li.mDeviceName);
+					});
+					notifyDataSetChanged();
+				}
+				else {
+					notifyItemChanged(index.get());
+				}
 			}
 			else {
 				device.mStatusResId = resourceid;
