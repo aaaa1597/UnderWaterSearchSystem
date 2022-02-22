@@ -17,6 +17,7 @@ import android.location.Location;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.RemoteException;
@@ -164,23 +165,23 @@ public class UwsClientService extends Service {
 			/* 位置情報取得開始 */
 			startLoc();
 
-			/* 脈拍サービスと接続待ち */
-			mHandler.postDelayed(new Runnable() {
-				@Override
-				public void run() {
-					if(mCb == null) {
-						mHandler.postDelayed(this, 1000);
-						return;
-					}
-
-					TLog.d("脈拍サービスと接続待ち..");
-					try {
-						mCb.notifyStartCheckCleared();
-					}
-					catch(RemoteException ignore) {
-					}
-				}
-			}, 1000);
+//			/* 脈拍サービスと接続待ち */
+//			mHandler.postDelayed(new Runnable() {
+//				@Override
+//				public void run() {
+//					if(mCb == null) {
+//						mHandler.postDelayed(this, 1000);
+//						return;
+//					}
+//
+//					TLog.d("脈拍サービスと接続待ち..");
+//					try {
+//						mCb.notifyStartCheckCleared();
+//					}
+//					catch(RemoteException ignore) {
+//					}
+//				}
+//			}, 1000);
 		}
 
 		@Override
@@ -249,6 +250,7 @@ public class UwsClientService extends Service {
 	/* *************/
 	private final static int			LOC_UPD_INTERVAL = 2000;
 	private FusedLocationProviderClient mFlc;
+	private HandlerThread				mLocThread;
 	private final LocationRequest		mLocationRequest = LocationRequest.create().setInterval(LOC_UPD_INTERVAL).setFastestInterval(LOC_UPD_INTERVAL).setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 	private final LocationCallback		mLocationCallback = new LocationCallback() {
 		@Override
@@ -285,13 +287,17 @@ public class UwsClientService extends Service {
 		TLog.d("xxxxx");
 		if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
 			throw new RuntimeException("ありえない権限エラー。すでにチェック済。");
-		mFlc.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
+		mLocThread = new HandlerThread("LocThread");
+		mLocThread.start();
+		mFlc.requestLocationUpdates(mLocationRequest, mLocationCallback, mLocThread.getLooper());
 	}
 
 	/* 位置情報取得停止 */
 	private void stoptLoc() {
 		TLog.d("xxxxx");
 		mFlc.removeLocationUpdates(mLocationCallback);
+		mLocThread.quit();
+		mLocThread = null;
 	}
 
 	/* **************/
