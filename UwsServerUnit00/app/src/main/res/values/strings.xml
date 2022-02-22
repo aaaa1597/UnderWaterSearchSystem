@@ -3,4 +3,13 @@
     <string name="startscan">Scan開始</string>
     <string name="stopscan">Scan停止</string>
     <string name="connect_device">connect</string>
+    <string name="error_end">終了</string>
+    <string name="err_btconnect_failured">Bluetoothの接続に失敗。\nクライアントを確認してください。</string>
+    <string name="err_btdisconnected">Bluetoothが切断されました。</string>
+    <string name="status_none">- NONE -</string>
+    <string name="status_waitforconnect">接続待ち</string>
+    <string name="status_connected">接続OK</string>
+    <string name="status_waitforrecieve">受信待ち…</string>
+    <string name="status_recieved">受信!!</string>
+    <string name="status_no_recieved_location">位置情報-未受信!!</string>
 </resources>
