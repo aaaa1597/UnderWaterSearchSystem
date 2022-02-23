@@ -114,4 +114,11 @@ public class FragMapViewModel extends ViewModel {
 	public void setCommanderPos(int x, int y) {
 		mOnCommanderPosChange.postValue(new Point(x, y));
 	}
+
+	/* 隊員位置 点滅実行 */
+	private final MutableLiveData<String>	mOnMarkerTicked = new MutableLiveData<>();
+	public MutableLiveData<String>			onMarkerTicked() { return mOnMarkerTicked; }
+	public void onMarkerTicked(short seekerid, String address) {
+		mOnMarkerTicked.postValue(address);
+	}
 }

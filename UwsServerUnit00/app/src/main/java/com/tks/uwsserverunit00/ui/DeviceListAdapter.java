@@ -7,15 +7,12 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import com.tks.uwsserverunit00.R;
 
@@ -33,7 +30,6 @@ import static com.tks.uwsserverunit00.Constants.d2Str;
 
 public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.ViewHolder> {
 	static class ViewHolder extends RecyclerView.ViewHolder {
-		LinearLayout mllRow;
 		TextView	mtxtDatetime;
 		TextView	mTxtSeekerId;
 		TextView	mTxtDeviceName;
@@ -46,7 +42,6 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		TextView	mTxtLatitude;
 		ViewHolder(View view) {
 			super(view);
-			mllRow					= view.findViewById(R.id.ll_row);
 			mtxtDatetime			= view.findViewById(R.id.txtDatetime);
 			mTxtSeekerId			= view.findViewById(R.id.txtSeekerId);
 			mTxtDeviceName			= view.findViewById(R.id.txtDeeviceName);
@@ -69,16 +64,22 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		void onSetBuoyListener(short seekerid, boolean isChecked);
 	}
 
+	public interface OnMarkerTickedListener {
+		void onMarkerTicked(short seekerid, String address);
+	}
+
 	/* メンバ変数 */
 	private final List<DeviceInfoModel>		mDeviceList;
 	private final OnSelectedChangeListener	mOnSelectedChangeListener;
 	private final OnSetBuoyListener			mOnSetBuoyListener;
+	private final OnMarkerTickedListener	mOnTickMarkerListener;
 
 	/* コンストラクタ */
-	public DeviceListAdapter(List<DeviceInfoModel> list, OnSelectedChangeListener lisner, OnSetBuoyListener lisner2) {
+	public DeviceListAdapter(List<DeviceInfoModel> list, OnSelectedChangeListener lisner, OnSetBuoyListener lisner2, OnMarkerTickedListener listner3) {
 		mDeviceList				= list;
 		mOnSelectedChangeListener= lisner;
 		mOnSetBuoyListener		= lisner2;
+		mOnTickMarkerListener	= listner3;
 	}
 
 	public static class DeviceInfoModel {
@@ -120,13 +121,14 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 		final int constsresid		= (!model.mConnected)? R.drawable.statusx_waitforconnect :
 									    model.mSelected  ? R.drawable.status_ready0 : R.drawable.status_none;
 		if( !model.mConnected) {
-			holder.mllRow.setOnClickListener(null);
+			holder.mImvConnectStatus.setOnClickListener(null);
 			holder.mImvBuoy.setOnClickListener(null);
 			holder.mImvBuoy.setImageResource(R.drawable.buoy_disable);
+			holder.mTxtSeekerId.setOnClickListener(null);
 		}
 		else {
 			/* メンバ決定 */
-			holder.mllRow.setOnClickListener(view -> {
+			holder.mImvConnectStatus.setOnClickListener(view -> {
 				model.mSelected = !model.mSelected;
 				mOnSelectedChangeListener.onSelectedChanged(deviceAddress, model.mSelected);
 				if(model.mSelected)
@@ -139,6 +141,10 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.Vi
 			else				holder.mImvBuoy.setImageResource(R.drawable.buoy_disable);
 			holder.mImvBuoy.setOnClickListener(view -> {
 				mOnSetBuoyListener.onSetBuoyListener(seekerid, !model.mIsBuoy);
+			});
+			/* メンバ確認 */
+			holder.mTxtSeekerId.setOnClickListener(view -> {
+				mOnTickMarkerListener.onMarkerTicked(seekerid, deviceAddress);
 			});
 		}
 		holder.mtxtDatetime.setText(d2Str(model.mDatetime));

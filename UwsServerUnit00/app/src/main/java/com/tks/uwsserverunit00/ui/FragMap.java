@@ -15,6 +15,7 @@ import android.location.Location;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import android.os.Handler;
 import android.os.Looper;
 import android.util.Pair;
 import android.view.LayoutInflater;
@@ -93,6 +94,31 @@ public class FragMap extends SupportMapFragment {
 						.fillColor(Color.CYAN)
 						.strokeColor(Color.CYAN));
 			}
+		});
+		mMapViewModel.onMarkerTicked().observe(getViewLifecycleOwner(), address -> {
+			/* 描画情報取得 */
+			MapDrawInfo di = mMapDrawInfos.get(address);
+			if(di != null && di.maker != null) {
+				/* UIスレッドで実行 */
+				getActivity().runOnUiThread(() -> {
+					/* カメラ移動 */
+					mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(di.maker.getPosition()));
+					Handler mhandler = new Handler();
+					/* 点滅実装(5回繰り返し) */
+					mhandler.postDelayed(new Runnable() {
+						private int mtickcnt = 0;
+						@Override
+						public void run() {
+							if(mtickcnt >= 5) return;
+							if(mtickcnt%2 == 0)	di.maker.setVisible(false);
+							else				di.maker.setVisible(true);
+							mtickcnt++;
+							mhandler.postDelayed(this, 100);
+						}
+					}, 300);
+				});
+			}
+
 		});
 		mMapViewModel.Permission().observe(getViewLifecycleOwner(), aBoolean -> {
 			getNowPosAndDraw();

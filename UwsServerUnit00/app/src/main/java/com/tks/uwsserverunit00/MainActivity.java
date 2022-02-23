@@ -222,7 +222,8 @@ public class MainActivity extends AppCompatActivity {
 		}}).collect(Collectors.toList());
 		mBleViewModel.setDeviceListAdapter(new DeviceListAdapter(pairedlist,
 				(addr    , isChecked) -> mMapViewModel.setSelected(addr, isChecked),
-				(seekerid, isChecked) -> mBleViewModel.setBuoy(seekerid, isChecked)
+				(seekerid, isChecked) -> mBleViewModel.setBuoy(seekerid, isChecked),
+				(seekerid, address)   -> mMapViewModel.onMarkerTicked(seekerid, address)
 		));
 
 		mCon = createServiceConnection();
