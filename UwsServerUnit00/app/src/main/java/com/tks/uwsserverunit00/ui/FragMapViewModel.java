@@ -3,6 +3,7 @@ package com.tks.uwsserverunit00.ui;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 import android.graphics.Color;
+import android.graphics.Point;
 import android.location.Location;
 import android.util.Pair;
 import com.google.android.gms.maps.model.LatLng;
@@ -98,5 +99,19 @@ public class FragMapViewModel extends ViewModel {
 			circle	= null;
 		}};
 		mOnChangeStatus.postValue(mapinfo);
+	}
+
+	/* 地図角度設定 */
+	private final MutableLiveData<Integer>	mOnTiltChange = new MutableLiveData<>();
+	public MutableLiveData<Integer>			onTiltChange() { return mOnTiltChange; }
+	public void setTilt0() {
+		mOnTiltChange.postValue(0);
+	}
+
+	/* 指揮所位置設定 */
+	private final MutableLiveData<Point>	mOnCommanderPosChange = new MutableLiveData<>();
+	public MutableLiveData<Point>			onCommanderPosChange() { return mOnCommanderPosChange; }
+	public void setCommanderPos(int x, int y) {
+		mOnCommanderPosChange.postValue(new Point(x, y));
 	}
 }

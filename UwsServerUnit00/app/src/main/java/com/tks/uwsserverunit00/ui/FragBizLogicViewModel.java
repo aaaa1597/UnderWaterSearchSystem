@@ -1,6 +1,5 @@
 package com.tks.uwsserverunit00.ui;
 
-import android.app.Application;
 import android.util.Pair;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
