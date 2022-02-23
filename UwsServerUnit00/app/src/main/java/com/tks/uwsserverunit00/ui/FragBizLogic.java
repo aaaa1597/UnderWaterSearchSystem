@@ -2,20 +2,19 @@ package com.tks.uwsserverunit00.ui;
 
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import android.os.Bundle;
-import android.util.Pair;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
-import java.util.List;
+import android.widget.Toast;
 
 import com.tks.uwsserverunit00.R;
 import com.tks.uwsserverunit00.TLog;
@@ -37,6 +36,7 @@ public class FragBizLogic extends Fragment {
 		mMapViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
 		mBleViewModel = new ViewModelProvider(requireActivity()).get(FragBleViewModel.class);
 		mBizLogicViewModel = new ViewModelProvider(requireActivity()).get(FragBizLogicViewModel.class);
+		/* 脈拍設定 */
 		mBizLogicViewModel.onHearBeatChange().observe(getViewLifecycleOwner(), pair -> {
 			short seekerid = pair.first;
 			short hearbeat = pair.second;
@@ -53,6 +53,7 @@ public class FragBizLogic extends Fragment {
 				case 9: ((TextView)view.findViewById(R.id.txtHb9)).setText(String.valueOf(hearbeat)); break;
 			}
 		});
+		/* seekerid設定 */
 		mBizLogicViewModel.onSeekeridChange().observe(getViewLifecycleOwner(), pair -> {
 			short   oldseekerid  = pair.first;
 			short   newseekerid  = pair.second;
@@ -94,6 +95,7 @@ public class FragBizLogic extends Fragment {
 			DrawerLayout naviview = getActivity().findViewById(R.id.root_view);
 			naviview.openDrawer(GravityCompat.START);
 		});
+
 		/* 検索開始/終了ボタン */
 		view.findViewById(R.id.btnSerchStartStop).setOnClickListener(v -> {
 			Button btnStartStop = (Button)v;
@@ -114,5 +116,43 @@ public class FragBizLogic extends Fragment {
 			((Button)view.findViewById(R.id.btnCngSerchColor)).setTextColor((colidx==9)?0xff000000 : 0xffffffff);
 			view.findViewById(R.id.btnCngSerchColor).setBackgroundColor(mMapViewModel.getFillColor());
 		});
+
+		/*　指揮所位置設定 */
+		view.findViewById(R.id.btnSetCmdrPos).setOnClickListener(v -> {
+			int visibility = view.findViewById(R.id.viwCmdrGuidehline).getVisibility();
+			setCommanderViewsVisibility(view, visibility);
+		});
+
+		/*　指揮所位置設定 OK */
+		view.findViewById(R.id.btnSetCmdrPosOk).setOnClickListener(v -> {
+			TLog.d("w={0}, h={1}", view.getWidth(), view.getHeight());
+			mMapViewModel.setCommanderPos(view.getWidth()/2, view.getHeight()/2);
+			new Handler(Looper.myLooper()).postDelayed(() -> {
+				setCommanderViewsVisibility(view, View.VISIBLE);
+				Toast.makeText(view.getContext(),"指揮所の位置を設定しました。", Toast.LENGTH_SHORT).show();
+			}, 500);
+		});
+
+		/*　指揮所位置設定 Cancel押下 */
+		view.findViewById(R.id.btnSetCmdrPosCancel).setOnClickListener(v -> {
+			setCommanderViewsVisibility(view, View.VISIBLE);
+		});
+	}
+
+	/*　指揮所 位置設定関連viewの表示/非表示設定 */
+	private void setCommanderViewsVisibility(View view, int visibility) {
+		if(visibility == View.VISIBLE) {
+			view.findViewById(R.id.viwCmdrGuidehline).setVisibility(View.GONE);
+			view.findViewById(R.id.viwCmdrGuidevline).setVisibility(View.GONE);
+			view.findViewById(R.id.ll_SetCmdrPos).setVisibility(View.GONE);
+			view.findViewById(R.id.btnSetCmdrPos).setVisibility(View.VISIBLE);
+		}
+		else {
+			view.findViewById(R.id.viwCmdrGuidehline).setVisibility(View.VISIBLE);
+			view.findViewById(R.id.viwCmdrGuidevline).setVisibility(View.VISIBLE);
+			view.findViewById(R.id.ll_SetCmdrPos).setVisibility(View.VISIBLE);
+			view.findViewById(R.id.btnSetCmdrPos).setVisibility(View.GONE);
+			mMapViewModel.setTilt0();
+		}
 	}
 }

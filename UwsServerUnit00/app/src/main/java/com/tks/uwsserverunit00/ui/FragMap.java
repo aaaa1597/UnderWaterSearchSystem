@@ -10,6 +10,7 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.Point;
 import android.location.Location;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
@@ -19,6 +20,7 @@ import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -76,8 +78,22 @@ public class FragMap extends SupportMapFragment {
 
 		mBizLogicViewModel = new ViewModelProvider(requireActivity()).get(FragBizLogicViewModel.class);
 		mBleViewModel = new ViewModelProvider(requireActivity()).get(FragBleViewModel.class);
-
 		mMapViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
+		mMapViewModel.onCommanderPosChange().observe(getViewLifecycleOwner(), point -> {
+			LatLng latlng = mGoogleMap.getProjection().fromScreenLocation(point);
+			MapDrawInfo di = mMapDrawInfos.get("指揮所");
+			if(di != null) {
+				if(di.maker!=null)	di.maker.remove();
+				if(di.circle != null)	di.circle.remove();
+				di.pos = latlng;
+				di.maker = mGoogleMap.addMarker(new MarkerOptions().position(latlng).title("BasePos"));
+				di.circle = mGoogleMap.addCircle(new CircleOptions()
+						.center(latlng)
+						.radius(0.5)
+						.fillColor(Color.CYAN)
+						.strokeColor(Color.CYAN));
+			}
+		});
 		mMapViewModel.Permission().observe(getViewLifecycleOwner(), aBoolean -> {
 			getNowPosAndDraw();
 		});
@@ -86,6 +102,10 @@ public class FragMap extends SupportMapFragment {
 		});
 		mMapViewModel.onChangeStatus().observe(getViewLifecycleOwner(), mapDrawInfo -> {
 			updMapDrawInfo(mGoogleMap, mapDrawInfo);
+		});
+		mMapViewModel.onTiltChange().observe(getViewLifecycleOwner(), tiltint -> {
+			CameraPosition tilt = new CameraPosition.Builder(mGoogleMap.getCameraPosition()).tilt(tiltint).build();
+			mGoogleMap.moveCamera(CameraUpdateFactory.newCameraPosition(tilt));
 		});
 
 		/* SupportMapFragmentを取得し、マップを使用する準備ができたら通知を受取る */
@@ -197,6 +217,12 @@ public class FragMap extends SupportMapFragment {
 		TLog.d("経度:{0} 緯度:{1}", d2Str(location.getLatitude()), d2Str(location.getLongitude()));
 		TLog.d("拡縮 min:{0} max:{1}", googleMap.getMinZoomLevel(), googleMap.getMaxZoomLevel());
 
+		MapDrawInfo di = mMapDrawInfos.get("指揮所");
+		if(di != null) {
+			if(di.maker!=null)		di.maker.remove();
+			if(di.circle != null)	di.circle.remove();
+			mMapDrawInfos.remove("指揮所");
+		}
 		/* 現在地マーカ追加 */
 		Marker basemarker = googleMap.addMarker(new MarkerOptions().position(nowposgps).title("BasePos"));
 		Circle nowPoint = googleMap.addCircle(new CircleOptions()
