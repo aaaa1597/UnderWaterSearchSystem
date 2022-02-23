@@ -81,10 +81,15 @@ public class FragMap extends SupportMapFragment {
 		mBleViewModel = new ViewModelProvider(requireActivity()).get(FragBleViewModel.class);
 		mMapViewModel = new ViewModelProvider(requireActivity()).get(FragMapViewModel.class);
 		mMapViewModel.onCommanderPosChange().observe(getViewLifecycleOwner(), point -> {
-			LatLng latlng = mGoogleMap.getProjection().fromScreenLocation(point);
 			MapDrawInfo di = mMapDrawInfos.get("指揮所");
-			if(di != null) {
-				if(di.maker!=null)	di.maker.remove();
+			if(di == null) return;
+
+			if(point.x==9999 && point.y==9999) {
+				mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(di.pos));
+			}
+			else {
+				LatLng latlng = mGoogleMap.getProjection().fromScreenLocation(point);
+				if(di.maker!=null)		di.maker.remove();
 				if(di.circle != null)	di.circle.remove();
 				di.pos = latlng;
 				di.maker = mGoogleMap.addMarker(new MarkerOptions().position(latlng).title("BasePos"));

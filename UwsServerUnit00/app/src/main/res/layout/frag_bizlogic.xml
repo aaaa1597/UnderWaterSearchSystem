@@ -317,7 +317,19 @@
         app:layout_constraintRight_toRightOf="parent"
         android:background="#ff0000"
         android:visibility="gone"/>
+
+    <!-- 戻る -->
+    <Button
+        android:id="@+id/btnResetCmdrPos"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toTopOf="@+id/ll_SetCmdrPosBase"
+        app:layout_constraintRight_toRightOf="parent"
+        android:text="戻る"/>
+
+    <!-- 指揮所位置設定 -->
     <LinearLayout
+        android:id="@+id/ll_SetCmdrPosBase"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"

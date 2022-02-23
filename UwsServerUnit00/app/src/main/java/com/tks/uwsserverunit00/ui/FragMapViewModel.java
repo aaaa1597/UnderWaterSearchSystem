@@ -101,6 +101,11 @@ public class FragMapViewModel extends ViewModel {
 		mOnChangeStatus.postValue(mapinfo);
 	}
 
+	/* 指揮所位置リセット */
+	public void resetCommanderPos() {
+		mOnCommanderPosChange.postValue(new Point(9999, 9999));	/* 指揮所リセット */
+	}
+
 	/* 地図角度設定 */
 	private final MutableLiveData<Integer>	mOnTiltChange = new MutableLiveData<>();
 	public MutableLiveData<Integer>			onTiltChange() { return mOnTiltChange; }

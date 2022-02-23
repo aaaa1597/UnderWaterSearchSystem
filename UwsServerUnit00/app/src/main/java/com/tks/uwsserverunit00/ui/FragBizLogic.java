@@ -117,6 +117,11 @@ public class FragBizLogic extends Fragment {
 			view.findViewById(R.id.btnCngSerchColor).setBackgroundColor(mMapViewModel.getFillColor());
 		});
 
+		/*　戻る設定 */
+		view.findViewById(R.id.btnResetCmdrPos).setOnClickListener(v -> {
+			mMapViewModel.resetCommanderPos();
+		});
+
 		/*　指揮所位置設定 */
 		view.findViewById(R.id.btnSetCmdrPos).setOnClickListener(v -> {
 			int visibility = view.findViewById(R.id.viwCmdrGuidehline).getVisibility();
