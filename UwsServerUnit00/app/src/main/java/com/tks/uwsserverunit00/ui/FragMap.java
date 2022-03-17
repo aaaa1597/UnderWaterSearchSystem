@@ -406,7 +406,8 @@ public class FragMap extends SupportMapFragment {
 			drawinfo.pos = epos;
 			double dx = epos.longitude- spos.longitude;
 			double dy = epos.latitude - spos.latitude;
-			if(Math.abs(dx) < 2*Float.MIN_VALUE && Math.abs(dy) < 2*Float.MIN_VALUE) {
+			if( drawinfo.maker != null &&
+				Math.abs(dx) < 2*Float.MIN_VALUE && Math.abs(dy) < 2*Float.MIN_VALUE) {
 				TLog.d("matrix 移動量が小さいので処理しない dx={0} dy={1} Double.MIN_VALUE={2}", dx, dy, Double.MIN_VALUE);
 				return;
 			}
