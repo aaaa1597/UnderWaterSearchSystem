@@ -59,6 +59,14 @@ public class UwsClientService extends Service {
 	private IStartCheckClearedCallback	mCb;
 	private final Handler				mHandler = new Handler();
 	private final BlockingQueue<byte[]>	mSndQue = new LinkedBlockingQueue<>();
+	private final Runnable				mHeatBeat0 = () -> {
+		/* 10秒間,脈拍の受信がなければ0を送信する。 */
+		mSndQue.removeIf(item->item[11]=='h');
+		try { mSndQue.put(createByteArray(0)); }
+		catch(InterruptedException ignore) {}
+		try {mCallback.onHeartbeatResultChange((short)0);}
+		catch(RemoteException e) { e.printStackTrace();}
+	};
 
 	@Override
 	public void onCreate() {
@@ -221,6 +229,9 @@ public class UwsClientService extends Service {
 			catch(RemoteException e) {
 				e.printStackTrace();
 			}
+			/* 脈拍通知受信から10秒間、次の脈拍通知受信がなければ、0にする */
+			mHandler.removeCallbacks(mHeatBeat0);
+			mHandler.postDelayed(mHeatBeat0, 10*1000);
 		}
 	};
 
