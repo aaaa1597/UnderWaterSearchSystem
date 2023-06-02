@@ -1,41 +1,42 @@
 package com.tks.uwsclientwearos.ui;
 
-import static android.content.Context.WIFI_P2P_SERVICE;
-import androidx.core.app.ActivityCompat;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.widget.SwitchCompat;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
-import android.Manifest;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.pm.PackageManager;
-import android.net.NetworkInfo;
-import android.net.wifi.p2p.WifiP2pDevice;
-import android.net.wifi.p2p.WifiP2pInfo;
-import android.net.wifi.p2p.WifiP2pManager;
-import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.LinearSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
-import android.util.Log;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.os.Bundle;
+import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import com.tks.uwsclientwearos.ErrDialog;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
+
 import com.tks.uwsclientwearos.R;
 import com.tks.uwsclientwearos.TLog;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import com.tks.uwsclientwearos.Constants.Sender;
+import static com.tks.uwsclientwearos.Constants.ACTION.FINALIZE;
 
 public class FragMain extends Fragment {
-	private FragMainViewModel		mViewModel;
-	private WifiP2pManager			mWifiP2pManager;
-	private WifiP2pManager.Channel	mChannel;
+	private FragMainViewModel mViewModel;
+	private final RecyclerView.OnItemTouchListener mOnItemTouchListener = new RecyclerView.OnItemTouchListener() {
+		@Override public void onTouchEvent(@NonNull RecyclerView rv, @NonNull MotionEvent e) {}
+		@Override public void onRequestDisallowInterceptTouchEvent(boolean disallowIntercept) {}
+		@Override public boolean onInterceptTouchEvent(@NonNull RecyclerView rv, @NonNull MotionEvent e) {
+			return true;
+		}
+	};
 
 	@Nullable
 	@Override
@@ -48,14 +49,88 @@ public class FragMain extends Fragment {
 		super.onViewCreated(view, savedInstanceState);
 		/* ViewModelインスタンス取得 */
 		mViewModel = new ViewModelProvider(requireActivity()).get(FragMainViewModel.class);
+		/* Lock/Lock解除 設定 */
+		mViewModel.UnLock().observe(getActivity(), new Observer<Pair<Sender, Boolean>>() {
+			@Override
+			public void onChanged(Pair<Sender, Boolean> pair) {
+				if(pair == null) return;
+				boolean isUnLock = pair.second;
+				if(pair.first == Sender.Service)
+					((SwitchCompat)getActivity().findViewById(R.id.swhUnLock)).setChecked(isUnLock);
+
+				/* ClickListnerの処理はMainActivityで実行しているのでここでは、リストViewを無効化するだけ */
+				RecyclerView rvw = getActivity().findViewById(R.id.rvw_seekerid);
+				if(isUnLock)
+					rvw.removeOnItemTouchListener(mOnItemTouchListener);
+				else
+					rvw.addOnItemTouchListener(mOnItemTouchListener);
+			}
+		});
+		((SwitchCompat)view.findViewById(R.id.swhUnLock)).setOnCheckedChangeListener((btnView, isChecked) -> {
+			TLog.d("UnLock isChecked={0}", isChecked);
+			mViewModel.UnLock().setValue(Pair.create(Sender.App, isChecked));
+		});
+		/* 情報表示(経度) */
+		mViewModel.Longitude().observe(getActivity(), new Observer<Double>() {
+			@Override
+			public void onChanged(Double lng) {
+				((TextView)view.findViewById(R.id.txtLongitude)).setText(String.valueOf(lng));
+			}
+		});
+		/* 情報表示(緯度) */
+		mViewModel.Latitude().observe(getActivity(), new Observer<Double>() {
+			@Override
+			public void onChanged(Double lat) {
+				((TextView)view.findViewById(R.id.txtLatitude)).setText(String.valueOf(lat));
+			}
+		});
+		/* 情報表示(脈拍) */
+		mViewModel.HearBeat().observe(getActivity(), new Observer<Short>() {
+			@Override
+			public void onChanged(Short heartbeat) {
+				((TextView)view.findViewById(R.id.txtHeartbeat)).setText(String.valueOf(heartbeat));
+			}
+		});
+		/* SeekerId表示更新 */
+		mViewModel.UpdDisplaySeerkerId.observe(getActivity(), new Observer<Short>() {
+			@Override
+			public void onChanged(Short pos) {
+				TLog.d("scrollToPosition({0})", pos);
+				RecyclerView rvw = getActivity().findViewById(R.id.rvw_seekerid);
+				rvw.scrollToPosition(pos);
+			}
+		});
+		/* 状態変化通知 */
+		mViewModel.OnStatusChange().observe(getActivity(), new Observer<Integer>() {
+			@Override
+			public void onChanged(Integer integer) {
+				((TextView)view.findViewById(R.id.txtStatus)).setText((int)integer);
+			}
+		});
+
+		/* 終了ボタン */
+		view.findViewById(R.id.btnFin).setOnClickListener(
+			v -> {
+				new AlertDialog.Builder(getActivity())
+						.setTitle("確認!!")
+						.setMessage("終了しますか?")
+						.setPositiveButton("OK", (dialog, which) -> {
+							/* Broadcastで終了のインテントを送信 -> 後は各々の終了処理を実行 */
+							LocalBroadcastManager.getInstance(getActivity()).sendBroadcastSync(new Intent(FINALIZE));
+						})
+						.setNegativeButton("Cancel", null)
+						.show();
+			}
+		);
 
 		/* SeekerIDのlistView定義 */
 		RecyclerView recyclerView = getActivity().findViewById(R.id.rvw_seekerid);
+//		recyclerView.setLayoutManager(new LinearLayoutManager(getActivity().getApplicationContext(), LinearLayoutManager.HORIZONTAL, false));
 		recyclerView.setLayoutManager(new LinearLayoutManager(getActivity().getApplicationContext(), LinearLayoutManager.VERTICAL, false));
 		recyclerView.setAdapter(new SeekerIdAdapter());
+		/* SeekerIDのlistView(子の中心で収束する設定) */
 		LinearSnapHelper linearSnapHelper = new LinearSnapHelper();
 		linearSnapHelper.attachToRecyclerView(recyclerView);
-		/* SeekerIDのlistView(子の中心で収束する設定) */
 		recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
 			@Override
 			public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
@@ -64,82 +139,9 @@ public class FragMain extends Fragment {
 					View lview = linearSnapHelper.findSnapView(recyclerView.getLayoutManager());
 					int pos =  recyclerView.getChildAdapterPosition(lview);
 					TLog.d("aaaaa pos={0}", pos);
-//					mViewModel.setSeekerID(pos);
+					mViewModel.setSeekerId((short)pos);
 				}
 			}
 		});
-
-		/* インテントフィルタ設定 */
-		IntentFilter ifr = new IntentFilter();
-		ifr.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
-		ifr.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);
-		ifr.addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);
-		ifr.addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
-		getActivity().registerReceiver(mBroadcastReceiver, ifr);
-
-		/* TODO : スマートウォッチ(TicWatch E2)だとここは無効になって動かんかった。 */
-		mWifiP2pManager = (WifiP2pManager)getActivity().getSystemService(WIFI_P2P_SERVICE);
-		if(mWifiP2pManager==null)
-			ErrDialog.create(getActivity(), "Wifi Direct未サポートの端末です。\n終了します。").show();
-		else
-			mChannel = mWifiP2pManager.initialize(getActivity().getApplicationContext(), getActivity().getMainLooper(), () -> { TLog.d("onChannelDisconnected() Channelからの切断を検知."); });
 	}
-
-	BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
-		@Override
-		public void onReceive(Context context, Intent intent) {
-			String action = intent.getAction();
-			if (action != null) {
-				switch (action) {
-					/* Wifi P2P ON/OFF */
-					case WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION: {
-						int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -100);
-						if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
-//							mDirectActionListener.wifiP2pEnabled(true);
-							TLog.d("Wifi ON.");
-						}
-						else {
-							TLog.d("Wifi OFF.");
-//							mDirectActionListener.wifiP2pEnabled(false);
-//							List<WifiP2pDevice> wifiP2pDeviceList = new ArrayList<>();
-//							mDirectActionListener.onPeersAvailable(wifiP2pDeviceList);
-						}
-						break;
-					}
-					/* ピアリスト変更 */
-					case WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION: {
-						if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-							return;
-						}
-//						mWifiP2pManager.requestPeers(mChannel, peers -> mDirectActionListener.onPeersAvailable(peers.getDeviceList()));
-						break;
-					}
-					// Wifi P2P接続ステータス変更
-					case WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION: {
-						NetworkInfo networkInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
-						if (networkInfo != null && networkInfo.isConnected()) {
-//							mWifiP2pManager.requestConnectionInfo(mChannel, new WifiP2pManager.ConnectionInfoListener() {
-//								@Override
-//								public void onConnectionInfoAvailable(WifiP2pInfo info) {
-//									mDirectActionListener.onConnectionInfoAvailable(info);
-//								}
-//							});
-							TLog.e("接続OK.");
-						} else {
-//							mDirectActionListener.onDisconnection();
-							TLog.e("切断.");
-						}
-						break;
-					}
-					//このデバイスのデバイス情報 変更
-					case WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION: {
-						WifiP2pDevice wifiP2pDevice = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE);
-						TLog.e("このデバイスのデバイス情報 変更.wifiP2pDevice={0}", wifiP2pDevice);
-//						mDirectActionListener.onSelfDeviceAvailable(wifiP2pDevice);
-						break;
-					}
-				}
-			}
-		}
-	};
 }
